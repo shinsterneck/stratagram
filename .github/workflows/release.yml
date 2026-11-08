@@ -6,22 +6,33 @@
 # then a GitHub release with what it made: the Windows installer, the
 # Windows zip and the NetBox plugin's package. The release notes are the
 # tag's message; a release made by hand beforehand keeps its notes and
-# gets the files added.
+# gets the files added. The plugin's package also goes to PyPI
+# (netbox-stratagram), by trusted publishing: PyPI accepts it from this
+# workflow in the "pypi" environment, without a token.
+# Run by hand with a tag (Actions → Release → Run workflow), it only sends
+# the plugin's package of that existing GitHub release to PyPI.
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Released tag whose plugin package goes to PyPI (e.g. v1.0.1)"
+        required: true
 
 permissions:
   contents: read
 
 jobs:
   build:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/build.yml
 
   release:
     needs: build
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -52,3 +63,27 @@ jobs:
             git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
             gh release create "$tag" "${files[@]}" --verify-tag --notes-from-tag --title "Stratagram ${tag#v}"
           fi
+
+  pypi:
+    needs: release
+    if: ${{ !cancelled() && (needs.release.result == 'success' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/netbox-stratagram/
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - if: github.event_name == 'push'
+        uses: actions/download-artifact@v8
+        with:
+          name: netbox-plugin
+          path: dist
+      - if: github.event_name == 'workflow_dispatch'
+        name: The package from the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'netbox_stratagram-*.whl' --dir dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

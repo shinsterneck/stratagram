@@ -88,7 +88,9 @@ The icon and version details are built into `stratagram.exe` (`build.rs`, from
 Pushing a tag `vX.Y.Z` that matches the version in `Cargo.toml` runs the
 [Release workflow](https://github.com/shinsterneck/stratagram/actions/workflows/release.yml): the
 whole build with its tests, then a GitHub release with the Windows installer, the Windows zip
-and the NetBox plugin's package, with the tag's message as the release notes.
+and the NetBox plugin's package, with the tag's message as the release notes, and the plugin
+on [PyPI](https://pypi.org/project/netbox-stratagram/) (trusted publishing from the `pypi`
+environment, no token).
 
 ### Desktop launcher (Linux)
 

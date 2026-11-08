@@ -48,17 +48,28 @@ Requires NetBox 4.5, 4.6 or 4.7.
 
 ## Install
 
-Build the package (needs Rust with the `wasm32-unknown-unknown` target and
-`wasm-bindgen-cli` 0.2.129, see the main README, `pip install build`, and
-`cargo install cargo-about` for the licenses of the libraries built into the
-editor, which go into the package as `THIRD-PARTY-LICENSES.txt`):
+Install it from [PyPI](https://pypi.org/project/netbox-stratagram/) into
+NetBox's virtual environment:
+
+```sh
+sudo /opt/netbox/venv/bin/pip install netbox-stratagram
+```
+
+With [netbox-docker](https://github.com/netbox-community/netbox-docker), add
+`netbox-stratagram` to `plugin_requirements.txt` and build the image (see
+netbox-docker's guide to plugins; `collectstatic` is part of it).
+
+To build the package yourself (needs Rust with the `wasm32-unknown-unknown`
+target and `wasm-bindgen-cli` 0.2.129, see the main README, `pip install
+build`, and `cargo install cargo-about` for the licenses of the libraries
+built into the editor, which go into the package as
+`THIRD-PARTY-LICENSES.txt`):
 
 ```sh
 netbox-plugin/build.sh          # makes netbox-plugin/dist/netbox_stratagram-*.whl
 ```
 
-Install the wheel into NetBox's virtual environment and enable it in
-`configuration.py`:
+and install that wheel instead. Then enable the plugin in `configuration.py`:
 
 ```python
 PLUGINS = ["netbox_stratagram"]
