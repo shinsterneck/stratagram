@@ -1,0 +1,24 @@
+{
+  "id": "./",
+  "name": "Stratagram",
+  "short_name": "Stratagram",
+  "description": "Network diagram editor: standardized stencils and line types, quick add and auto layout. Works offline once installed.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f1f5f9",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "pkg/stratagram.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": { "application/x-stratagram": [".stratagram"] }
+    }
+  ]
+}

@@ -8,6 +8,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Stratagram</title>
 <link rel="icon" href="pkg/stratagram.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#f1f5f9">
+<meta name="description" content="Stratagram, the network diagram editor, in the browser. Install it as an app to use it offline.">
 <link rel="stylesheet" href="stratagram.css">
 <style>
   html, body { height: 100%; margin: 0; }
@@ -18,10 +22,75 @@
 <div id="editor"></div>
 <script type="module">
   import { mount, fileHost } from "./app.js"
-  // A file given in the address (index.html#file=demo.stratagram) opens at start.
-  const file = new URLSearchParams(location.hash.slice(1)).get("file")
-  const initial = file ? { json: await (await fetch(file)).text(), name: file.split("/").pop() } : null
-  window.stratagram = await mount(document.getElementById("editor"), { host: Object.assign(fileHost(), { initial }) })
+
+  // Chrome and Edge say when the editor can be installed as an app; kept
+  // for the Install button (the browser's own offer, e.g. Android's
+  // banner, stays as it is).
+  let installOffer = null
+  let installed = false
+  window.addEventListener("beforeinstallprompt", (e) => { installOffer = e; showInstall() })
+  window.addEventListener("appinstalled", () => { installOffer = null; installed = true; showInstall() })
+  let showInstall = () => {}
+
+  // A file given in the address (index.html#file=examples/demo.stratagram)
+  // opens at start: only one from this site, never from elsewhere.
+  async function fileInAddress() {
+    const file = new URLSearchParams(location.hash.slice(1)).get("file")
+    if (!file) return null
+    const url = new URL(file, location.href)
+    if (url.origin !== location.origin) return null
+    const r = await fetch(url)
+    return r.ok ? { json: await r.text(), name: url.pathname.split("/").pop() } : null
+  }
+  const initial = await fileInAddress().catch(() => null)
+  const host = Object.assign(fileHost(), { initial })
+  const app = window.stratagram = await mount(document.getElementById("editor"), { host })
+
+  // Installed as an app: .stratagram files opened from the system come
+  // here, and Save writes back to them.
+  if ("launchQueue" in window) {
+    window.launchQueue.setConsumer(async (params) => {
+      const [handle] = params.files || []
+      if (!handle) return
+      const file = await handle.getFile()
+      if (app.openFile({ json: await file.text(), name: file.name })) host.useHandle(handle)
+    })
+  }
+
+  // Install app: in Chrome and Edge once they offer it, in Safari as a hint
+  // (it has no way for a page to install); not in the installed app itself.
+  const inApp = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true
+  const ua = navigator.userAgent
+  const apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  const safari = apple || (/Safari\//.test(ua) && !/Chrome|Chromium|Edg\/|OPR\/|Firefox/.test(ua))
+  const installButton = document.createElement("button")
+  installButton.textContent = "Install app"
+  installButton.className = "sg-install"
+  installButton.title = "Install Stratagram as an app: its own window, works offline"
+  installButton.hidden = true
+  installButton.addEventListener("click", async () => {
+    if (installOffer) {
+      const offer = installOffer
+      installOffer = null
+      await offer.prompt()
+      const { outcome } = await offer.userChoice
+      if (outcome === "accepted") installed = true
+      showInstall()
+    } else if (safari) {
+      app.run(() => app.ctl.setStatus(apple
+        ? "To install Stratagram: tap Share, then Add to Home Screen. It then works offline."
+        : "To install Stratagram: File › Add to Dock (Safari 17 or newer). It then works offline."))
+    }
+  })
+  const version = document.querySelector(".sg-statusline .sg-version")
+  version?.parentNode.insertBefore(installButton, version)
+  showInstall = () => { installButton.hidden = inApp || installed || !(installOffer || safari) }
+  showInstall()
+
+  // Offline use: the editor's files are kept by sw.js (https or localhost).
+  if ("serviceWorker" in navigator && window.isSecureContext) {
+    navigator.serviceWorker.register("sw.js").catch(() => { /* works online without it */ })
+  }
 </script>
 </body>
 </html>

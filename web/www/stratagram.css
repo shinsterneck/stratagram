@@ -405,6 +405,21 @@
 }
 .sg-status { flex: 1 1 auto; min-width: 0; color: var(--sg-help); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sg-version { color: var(--sg-faint); font-size: 11px; white-space: nowrap; }
+/* Install app (the hosted editor, web/www/index.html). */
+.sg-app .sg-install {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 1px 10px;
+    border: 1px solid var(--sg-border);
+    border-radius: 10px;
+    background: var(--sg-bg);
+    color: var(--sg-accent);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.sg-app .sg-install:hover { background: var(--sg-hover); }
+.sg-app .sg-install[hidden] { display: none; }
 
 @media (max-width: 700px) {
     .sg-panel { flex-basis: 240px; }

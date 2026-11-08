@@ -2,14 +2,17 @@
 # Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
 # SPDX-License-Identifier: Apache-2.0
 
-# The homepage (site/) on GitHub Pages, on every push to main that
-# changes it (or by hand from the Actions tab).
+# The homepage (site/) on GitHub Pages, with the browser editor built
+# from the same commit at /editor/ (web/www), on every push to main that
+# changes either (or by hand from the Actions tab). The editor opens a
+# diagram of the site given in the address, e.g.
+#   https://stratagram.app/editor/#file=../examples/berlin-hq.stratagram
 name: Homepage
 
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/pages.yml"]
+    paths: ["site/**", "web/**", "core/**", "Cargo.lock", "packaging/stratagram.svg", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -30,9 +33,25 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+      - name: Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.129
+      - name: Browser editor
+        run: web/build.sh
+      - name: Homepage with the editor
+        run: |
+          mkdir _site
+          cp -r site/. _site/
+          rm -rf _site/__pycache__ _site/make-shots.sh _site/netbox-seed.py _site/README.md
+          cp -r web/www _site/editor
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: site
+          path: _site
       - id: deploy
         uses: actions/deploy-pages@v5

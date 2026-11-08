@@ -1860,6 +1860,16 @@ impl Diagram {
 
     /// Drop dangling links and make sure new ids never collide with loaded ones.
     fn repair(&mut self) {
+        // Logos only from inside the file: one from elsewhere (a web
+        // address) would be fetched by whoever opens the diagram.
+        for f in self.layers.iter_mut().filter_map(|l| l.frame.as_mut()) {
+            for (logo, w, h) in [(&mut f.logo, &mut f.logo_w, &mut f.logo_h), (&mut f.logo2, &mut f.logo2_w, &mut f.logo2_h)] {
+                if !logo.is_empty() && !crate::frame::is_embedded_logo(logo) {
+                    logo.clear();
+                    (*w, *h) = (0.0, 0.0);
+                }
+            }
+        }
         // Written without a color: the type's.
         for d in self.devices.iter_mut().filter(|d| d.color.trim().is_empty()) {
             let kind = crate::editor::known_kind(&d.kind).unwrap_or(&d.kind);

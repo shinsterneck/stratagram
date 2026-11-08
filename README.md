@@ -117,6 +117,22 @@ The same editor runs in the browser: the core compiled to WebAssembly, with
 the canvas and panel in plain JavaScript (`web/`). It is the base for editing
 inside NetBox; on its own it opens and saves files on your computer.
 
+Try it at **<https://stratagram.app/editor/>** (built from `main` with the homepage), or with an
+example: <https://stratagram.app/editor/#file=../examples/berlin-hq.stratagram>. Everything runs in
+the browser; diagrams are not uploaded anywhere. `#file=` opens a diagram from the same site
+only.
+
+It can be installed as an app (a PWA: `manifest.webmanifest`, `sw.js`): **Install app** at the
+bottom right of the editor, shown when Chrome or Edge offer to install it (it opens their install
+dialog); in Safari it tells how (*Add to Dock*, *Add to Home Screen*). It is hidden in the
+installed app and where installing is not possible (Firefox). It
+then runs in its own window, works offline (the service worker keeps the editor's files; online,
+it always takes the newest from the site first) and, in Chrome and Edge, opens `.stratagram`
+files from the system, saving back to them. Firefox has no install for web apps on the desktop;
+there it works online like any page.
+
+To build and serve it yourself:
+
 ```sh
 rustup target add wasm32-unknown-unknown
 cargo binstall wasm-bindgen-cli@0.2.129   # same version as in web/Cargo.toml

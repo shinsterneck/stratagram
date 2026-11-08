@@ -259,6 +259,7 @@ figure.shot figcaption { margin: 0; padding: 8px 10px; font: 12px var(--mono); c
 }
 .step h3 { margin-top: 9px; }
 .step p { margin: 4px 0 10px; color: var(--muted); }
+.step .cta { justify-content: flex-start; margin: 6px 0 4px; }
 
 .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
 

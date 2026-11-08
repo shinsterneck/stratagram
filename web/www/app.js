@@ -623,7 +623,19 @@ export class App {
     async open() {
         if (!this.discardOk()) return
         const got = await this.host.open()
-        if (!got) return
+        if (got) this.showDiagram(got)
+    }
+
+    // Open a diagram handed over from elsewhere ({json, name}), e.g. a file
+    // the system opens with the installed app; false if the user keeps the
+    // unsaved one.
+    openFile(got) {
+        if (!this.discardOk()) return false
+        this.showDiagram(got)
+        return true
+    }
+
+    showDiagram(got) {
         this.forgetSheetViews()
         const err = this.ctl.load(got.json, got.name)
         this.changed()
@@ -729,6 +741,10 @@ export function fileHost() {
                 input.addEventListener("cancel", () => resolve(null))
                 input.click()
             })
+        },
+        // Save writes to this file from now on (one opened from the system).
+        useHandle(h) {
+            handle = h
         },
         async save(json, name, as) {
             const suggested = name.replace(/\.(netdiag|json)$/i, "").replace(/(\.stratagram)?$/i, ".stratagram")

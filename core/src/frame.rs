@@ -942,6 +942,13 @@ pub fn logo_from(value: &str) -> Result<(String, f64, f64), String> {
     logo_from_bytes(&base64_decode(data).ok_or("the logo's data is not valid base64")?)
 }
 
+/// Whether `logo` is a PNG or JPEG kept inside the diagram (a data URI),
+/// as every logo set in Stratagram is. Anything else, such as a web
+/// address, would be fetched from elsewhere when the diagram is shown.
+pub fn is_embedded_logo(logo: &str) -> bool {
+    ["data:image/png;base64,", "data:image/jpeg;base64,"].iter().any(|p| logo.starts_with(p))
+}
+
 /// A PNG or JPEG image as a data URI, with its size in pixels.
 pub fn logo_from_bytes(bytes: &[u8]) -> Result<(String, f64, f64), String> {
     if bytes.len() > LOGO_MAX_BYTES {
@@ -1153,6 +1160,19 @@ mod tests {
         let l = layout(&f, Rect { x: 0.0, y: 0.0, w: 600.0, h: 300.0 }, &info());
         assert!(matches!(&l.overlay[..], [Prim::Watermark { text, at, .. }] if text == "DRAFT" && *at == Pt::new(300.0, 150.0)));
         assert!(l.prims.iter().all(|p| !matches!(p, Prim::Watermark { .. })));
+    }
+
+    #[test]
+    fn logos_from_elsewhere_are_dropped_when_a_diagram_is_opened() {
+        let file = r#"{"format": "stratagram", "version": 1, "devices": [], "links": [], "layers": [
+            {"id": 1, "name": "Layer 1"},
+            {"id": 2, "name": "Frame", "frame": {"logo": "https://tracker.example/pixel.png", "logo_w": 5, "logo_h": 5,
+                "logo2": "data:image/png;base64,AAAA", "logo2_w": 2, "logo2_h": 1}}]}"#;
+        let d = crate::model::Diagram::from_json(file).unwrap();
+        let f = d.layers.iter().find_map(|l| l.frame.as_ref()).unwrap();
+        assert_eq!((f.logo.as_str(), f.logo_w, f.logo_h), ("", 0.0, 0.0));
+        assert_eq!((f.logo2.as_str(), f.logo2_w), ("data:image/png;base64,AAAA", 2.0));
+        assert!(is_embedded_logo("data:image/jpeg;base64,/9j/") && !is_embedded_logo("data:image/svg+xml;base64,PHN2Zz4="));
     }
 
     #[test]
