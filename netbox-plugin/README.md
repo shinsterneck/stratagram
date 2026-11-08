@@ -44,7 +44,7 @@ editor (the same as the desktop app, compiled to WebAssembly).
   is then remembered in your browser. SVG and PNG exports come out in the
   theme; the saved diagram keeps its colors.
 
-Requires NetBox 4.5 or 4.6.
+Requires NetBox 4.5, 4.6 or 4.7.
 
 ## Install
 

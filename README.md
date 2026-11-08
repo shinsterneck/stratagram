@@ -1,5 +1,9 @@
 # Stratagram
 
+[![Build](https://github.com/shinsterneck/stratagram/actions/workflows/build.yml/badge.svg)](https://github.com/shinsterneck/stratagram/actions/workflows/build.yml)
+
+Homepage: **<https://stratagram.app>**
+
 A small, fast network diagram editor (formerly *netdiag*). Rust holds the model and all editing
 logic; QML (Qt Quick, via [CXX-Qt](https://github.com/KDAB/cxx-qt)) renders
 it on a `Canvas` and provides the toolbar and properties panel.
@@ -16,18 +20,18 @@ it on a `Canvas` and provides the toolbar and properties panel.
 
 ## Build
 
-Needs Rust 1.85+ (edition 2024) and Qt 6.5 or newer with Qt Quick, Quick Controls, Quick Dialogs and the QtCore QML module.
+Needs Rust 1.85+ (edition 2024) and Qt 6.8 or newer with Qt Quick, Quick Controls, Quick Dialogs, Qt Svg and the QtCore QML module.
 
 ```sh
 # Debian / Ubuntu
-sudo apt install qt6-base-dev qt6-declarative-dev qml6-module-qtquick \
+sudo apt install qt6-base-dev qt6-declarative-dev qt6-svg-dev qml6-module-qtquick \
   qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtquick-dialogs \
   qml6-module-qtquick-templates qml6-module-qtquick-window qml6-module-qtqml-workerscript \
   qml6-module-qt-labs-folderlistmodel qml6-module-qtqml-models qml6-module-qtcore
 # Fedora
-sudo dnf install qt6-qtbase-devel qt6-qtdeclarative-devel
+sudo dnf install qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg-devel
 # Arch
-sudo pacman -S qt6-base qt6-declarative
+sudo pacman -S qt6-base qt6-declarative qt6-svg
 
 cargo build --release
 ./target/release/stratagram [file.stratagram]
@@ -41,6 +45,51 @@ Passing a file name opens it; if it does not exist yet, Ctrl+S saves to that nam
 The version shows in the lower right corner of the window; `stratagram --version` prints it.
 Releases are tagged `vX.Y.Z` in git.
 
+### Windows
+
+The [releases](https://github.com/shinsterneck/stratagram/releases) have an installer
+(`stratagram-X.Y.Z-windows-x64-setup.exe`) and the same as a zip to unpack anywhere. The
+installer asks whether to install for you or for everyone, adds Stratagram to the Start menu
+and opens `.stratagram` files with it (a choice in the installer); the uninstaller takes the app,
+its menu entry and the file type out again (your settings stay). `/VERYSILENT` installs without questions, `/ALLUSERS` or `/CURRENTUSER` picks
+for whom.
+
+On Windows, `stratagram.exe` is a window application: the command line modes (`--export-svg`,
+`--layout`, ...) print to the console they are started from, but the prompt does not wait for
+them; in scripts, wait with `start /wait stratagram ...` (cmd) or `Start-Process -Wait`
+(PowerShell).
+
+To build it yourself, install Rust (with the MSVC toolchain, through [rustup](https://rustup.rs) and the Visual Studio
+Build Tools) and Qt 6.8 for MSVC 2022 64-bit with the Qt online installer, put Qt's `bin` folder
+on the `PATH` (so `qmake` is found), then:
+
+```powershell
+cargo build --release
+mkdir dist; copy target\release\stratagram.exe dist\
+windeployqt --release --qmldir qml dist\stratagram.exe   # Qt's DLLs and QML modules next to it
+```
+
+The [Build workflow](https://github.com/shinsterneck/stratagram/actions/workflows/build.yml) does
+the same on every push to `main`: each run has a `stratagram-windows` download with the
+installer and the zip (the app, Qt and their licenses, `packaging/qt/`), next to the Linux
+build, the NetBox plugin's package and a smoke test of the plugin in NetBox 4.5, 4.6 and 4.7.
+The installer is made with [Inno Setup](https://jrsoftware.org/isinfo.php) 6 from
+`packaging/windows/stratagram.iss`, then installed, tried and uninstalled in the same run:
+
+```powershell
+iscc /DVersion=1.0.0 packaging\windows\stratagram.iss   # dist\stratagram-1.0.0-windows-x64-setup.exe
+```
+
+The icon and version details are built into `stratagram.exe` (`build.rs`, from
+`packaging/windows/stratagram.ico`).
+
+### Releases
+
+Pushing a tag `vX.Y.Z` that matches the version in `Cargo.toml` runs the
+[Release workflow](https://github.com/shinsterneck/stratagram/actions/workflows/release.yml): the
+whole build with its tests, then a GitHub release with the Windows installer, the Windows zip
+and the NetBox plugin's package, with the tag's message as the release notes.
+
 ### Desktop launcher (Linux)
 
 `packaging/` has a `.desktop` entry and an icon, so stratagram shows up in the application menu
@@ -51,10 +100,14 @@ sudo install -Dm755 target/release/stratagram /usr/local/bin/stratagram
 # for your user only:
 install -Dm644 packaging/stratagram.desktop ~/.local/share/applications/stratagram.desktop
 install -Dm644 packaging/stratagram.svg ~/.local/share/icons/hicolor/scalable/apps/stratagram.svg
+install -Dm644 packaging/stratagram-mime.xml ~/.local/share/mime/packages/stratagram.xml
+update-mime-database ~/.local/share/mime
+update-desktop-database ~/.local/share/applications
 # or system wide: the same under /usr/local/share (with sudo)
 ```
 
-Files opened from a file manager with "Open with stratagram" are passed on as the file to open.
+The file manager then shows `.stratagram` files as Stratagram diagrams, with its icon, and
+opens them with Stratagram on a double-click.
 
 ### In the browser
 
@@ -80,7 +133,7 @@ at the top of `app.js`).
 
 ### In NetBox
 
-`netbox-plugin/` is a NetBox 4.5 and 4.6 plugin with this editor on every site's
+`netbox-plugin/` is a NetBox 4.5 to 4.7 plugin with this editor on every site's
 **Diagram** tab: the site is drawn from its devices and cables (with a
 sheet for each location, also shown on the location's own Diagram tab), saved in
 NetBox, and refreshed from it later without moving what you arranged. See
@@ -100,7 +153,7 @@ NetBox, and refreshed from it later without moving what you arranged. See
 | Insert into a line | Drag a device onto a line so the line runs through its middle: the line lights up green, and dropping the device there puts it in between. The line now ends at a new port on the device, and a second line with the same type, label and style goes on from another new port to where the first went (each port on the side facing its end; the start arrow stays on the first half, the end arrow moves to the second). One undo step. Deleting a device joins its lines back up: lines with the same type and label pair up, and a pair that is the only one with that type and label becomes one line between their far ends. Lines that do not pair up are removed with the device, as before. |
 | Bend a line | Drag a line (not its ends) and a connection point appears where you grab it: the line is split there into two that both attach to the point, and the point follows the mouse. Each half keeps the line's style; the label and start arrow stay on the first half, the end arrow moves to the second. Bend again to add more corners, drag the point later to reroute, or drop it on a device border to route the line through a port there. Deleting a bend point (one with exactly two lines) joins them back into one line. A plain click still just selects the line. A line bent through points is drawn as one line: where exactly two lines of the same type meet at a point, there are no arrowheads or end marks (the L2 squares, L3 circles), a tunnel's band runs on through the bend, and the type's tag shows once (with the label); on screen, in SVG/PNG and in draw.io. Lines of different types meeting at a point keep their ends. |
 | Layer background | The square icon in a layer's row opens its background: a rectangle behind the layer's devices and texts, grouping them, with a **margin** around them. Choose **rounded** (with a radius) or **square** corners, a **border** (none, solid, dashed, dotted) with its width and color, and a **fill** color with its **opacity** in percent. It follows the devices as they move and resize, sits under everything else (clicks go through it), is left out while the layer is hidden or empty, and the frame and Fit include it. Lines do not count, since they may run to other layers. SVG, PNG and draw.io show it (on the layer's draw.io layer, skipped when read back). The icon shows its fill and border; it is outlined when the layer has none. |
-| Frame (border with header and footer) | With nothing selected, pick a **Frame** template in the panel; the list is grouped by category. *Basic*: **lines** (a plain outline, title in a ruled header, footer below), **banner** (a colored header band with the title in white and a tinted footer band), **minimal** (no outline: a large title above, a thin rule and small print below), **card** (a rounded card with a soft shadow). *Business*: **corporate** (an accent bar down the left, company name and logo top right, one line of small print), **report page** (centered title, rules, page number in the middle, the note in capitals on the right), **presentation** (a 16:9 slide around the diagram: large title, slim footer with logo, page number and an accent bar), **executive summary** (a title band and a summary text panel beside the diagram, wrapped to fit), **customer proposal** (the customer's logo left and yours right, "Prepared for" and "Prepared by", a confidentiality notice). *Technical drawing*: **title block** (double border and a labeled table along the bottom with title, author, note, page and last change), **ISO title block** (coordinate zones 1, 2, 3… and A, B, C… around the edges and a title block in the bottom right corner with drawing number, revision, sheet, drawn and checked by, and date), **revision block** (the title block with a revision table above it: one row per line in the panel, *rev | date | change | by*), **blueprint** (white lines and text on blueprint blue with a grid; the diagram keeps its colors), **as-built** (a red AS-BUILT stamp and a handover table: installed by, commissioned, accepted by with a signature line, last change, page). *Documentation & governance*: **controlled document** (a document control table with ID, version, classification, owner, next review and last change; "Uncontrolled when printed" in the footer), **sign-off** (three signature boxes: prepared, reviewed and approved by, each with signature and date lines), **solution design** (version, owner, reviewers and a status badge: draft, in review, final), **change request** (change ID under the title and a status badge: draft gray, approved green, implemented blue, rejected red; footer with author and approver), **classification banner** (bars at the top and bottom with the level: PUBLIC green, INTERNAL blue, CONFIDENTIAL amber, RESTRICTED red). *Operations*: **site sheet** (site name, address and a site code box in the header, and a legend in the footer of the line types the diagram uses, with a sample of each), **data center location** (a location path like EU › Berlin › HQ › Room 2.14 above the title and the location code in a box), **incident report** (a severity badge P1 critical to P4 low and a colored top bar, incident ID, start and end, affected services), **NOC display** (dark wall display with a status pill: operational, degraded, outage, maintenance; dark lines show little contrast on it). The panel shows the fields the chosen template uses. Any template can carry a **watermark** (e.g. DRAFT, CONFIDENTIAL, SAMPLE: large, faint and diagonal over the diagram; red for confidential or restricted) and a **second logo** (the customer's: left in the customer proposal, otherwise beside the first). Every template can show a page number (e.g. 1/3), the file name and a **logo** (a PNG or JPEG of up to 1 MB, kept inside the .stratagram file so it travels with it). Choose whether to show the date and time of the last change, the margin and the color. **Defaults** for the fields go into the configuration file `~/.config/stratagram.conf` (where the app keeps its other settings; `$XDG_CONFIG_HOME` is honored): keys under `[frame]` apply to every template, keys under `[frame-<template>]` (e.g. `[frame-site]`, `[frame-classification]`) override them for that one. A new frame takes all of them; switching templates fills in only what is still empty, so nothing typed is lost. `logo=` takes the path of a PNG or JPEG, `auto=true` gives every new diagram a frame right away (with `template=`, default lines). **Save as default** in the Frame section writes the current frame's reusable fields there for you: **All templates** into `[frame]` (with the template, which `auto=true` uses), **Only <template>** into that template's section. Saved are author, company, note, color, margin, the show date and file name options, classification level, owner, reviewer, approver, installer and both logos (copied to `~/.config/stratagram/logos/`, so they keep working when the diagram moves); title, subtitle, IDs, versions, dates, customer, status and revisions stay with the diagram. Fields left empty are taken out of that section; the rest of the file is kept. The file is read whenever a frame is made, so changes apply without a restart; values that do not fit (e.g. `margin=wide`) are reported in the status bar. The frame sizes itself to everything shown plus the margin, widens to fit its texts, and follows the diagram as it changes. It lives on its own **Frame** layer at the bottom of the stack, which holds only the frame: it cannot be the active layer, items cannot be moved onto it, and items found on it in a file move to the first other layer. Untick the layer to hide the frame, remove the layer (or pick *none*) to drop it; clicks go through it. The time of the last change is saved with the file. SVG export uses the frame as the page; draw.io gets it as plain shapes on the Frame layer (left out when opened or pasted back into stratagram, and not copied to the clipboard). |
+| Frame (border with header and footer) | With nothing selected, pick a **Frame** template in the panel; the list is grouped by category. *Basic*: **lines** (a plain outline, title in a ruled header, footer below), **banner** (a colored header band with the title in white and a tinted footer band), **minimal** (no outline: a large title above, a thin rule and small print below), **card** (a rounded card with a soft shadow). *Business*: **corporate** (an accent bar down the left, company name and logo top right, one line of small print), **report page** (centered title, rules, page number in the middle, the note in capitals on the right), **presentation** (a 16:9 slide around the diagram: large title, slim footer with logo, page number and an accent bar), **executive summary** (a title band and a summary text panel beside the diagram, wrapped to fit), **customer proposal** (the customer's logo left and yours right, "Prepared for" and "Prepared by", a confidentiality notice). *Technical drawing*: **title block** (double border and a labeled table along the bottom with title, author, note, page and last change), **ISO title block** (coordinate zones 1, 2, 3… and A, B, C… around the edges and a title block in the bottom right corner with drawing number, revision, sheet, drawn and checked by, and date), **revision block** (the title block with a revision table above it: one row per line in the panel, *rev | date | change | by*), **blueprint** (white lines and text on blueprint blue with a grid; the diagram keeps its colors), **as-built** (a red AS-BUILT stamp and a handover table: installed by, commissioned, accepted by with a signature line, last change, page). *Documentation & governance*: **controlled document** (a document control table with ID, version, classification, owner, next review and last change; "Uncontrolled when printed" in the footer), **sign-off** (three signature boxes: prepared, reviewed and approved by, each with signature and date lines), **solution design** (version, owner, reviewers and a status badge: draft, in review, final), **change request** (change ID under the title and a status badge: draft gray, approved green, implemented blue, rejected red; footer with author and approver), **classification banner** (bars at the top and bottom with the level: PUBLIC green, INTERNAL blue, CONFIDENTIAL amber, RESTRICTED red). *Operations*: **site sheet** (site name, address and a site code box in the header, and a legend in the footer of the line types the diagram uses, with a sample of each), **data center location** (a location path like EU › Berlin › HQ › Room 2.14 above the title and the location code in a box), **incident report** (a severity badge P1 critical to P4 low and a colored top bar, incident ID, start and end, affected services), **NOC display** (dark wall display with a status pill: operational, degraded, outage, maintenance; dark lines show little contrast on it). The panel shows the fields the chosen template uses. Any template can carry a **watermark** (e.g. DRAFT, CONFIDENTIAL, SAMPLE: large, faint and diagonal over the diagram; red for confidential or restricted) and a **second logo** (the customer's: left in the customer proposal, otherwise beside the first). Every template can show a page number (e.g. 1/3), the file name and a **logo** (a PNG or JPEG of up to 1 MB, kept inside the .stratagram file so it travels with it). Choose whether to show the date and time of the last change, the margin and the color. **Defaults** for the fields go into the configuration file `~/.config/stratagram.conf` (where the app keeps its other settings; `$XDG_CONFIG_HOME` is honored; on Windows `%APPDATA%\stratagram.conf`, on macOS `~/Library/Application Support/stratagram.conf`): keys under `[frame]` apply to every template, keys under `[frame-<template>]` (e.g. `[frame-site]`, `[frame-classification]`) override them for that one. A new frame takes all of them; switching templates fills in only what is still empty, so nothing typed is lost. `logo=` takes the path of a PNG or JPEG, `auto=true` gives every new diagram a frame right away (with `template=`, default lines). **Save as default** in the Frame section writes the current frame's reusable fields there for you: **All templates** into `[frame]` (with the template, which `auto=true` uses), **Only <template>** into that template's section. Saved are author, company, note, color, margin, the show date and file name options, classification level, owner, reviewer, approver, installer and both logos (copied to `~/.config/stratagram/logos/`, so they keep working when the diagram moves); title, subtitle, IDs, versions, dates, customer, status and revisions stay with the diagram. Fields left empty are taken out of that section; the rest of the file is kept. The file is read whenever a frame is made, so changes apply without a restart; values that do not fit (e.g. `margin=wide`) are reported in the status bar. The frame sizes itself to everything shown plus the margin, widens to fit its texts, and follows the diagram as it changes. It lives on its own **Frame** layer at the bottom of the stack, which holds only the frame: it cannot be the active layer, items cannot be moved onto it, and items found on it in a file move to the first other layer. Untick the layer to hide the frame, remove the layer (or pick *none*) to drop it; clicks go through it. The time of the last change is saved with the file. SVG export uses the frame as the page; draw.io gets it as plain shapes on the Frame layer (left out when opened or pasted back into stratagram, and not copied to the clipboard). |
 | Frame defaults (example) | <pre>[frame]<br>auto=true<br>template=site<br>author=Shin<br>company=ACME Networks<br>color=#0f766e<br>logo=/home/shin/Pictures/acme.png<br>show_file=true<br><br>[frame-site]<br>doc_id=BER-01<br>address="Hauptstr. 1, Berlin"<br><br>[frame-classification]<br>level=confidential</pre>Keys: title, subtitle, author, note, company, customer, doc_id, version, revision, owner, review_date, reviewer, approver, status, level, severity, start, end, services, address, location, installer, commissioned, summary, page, watermark, show_date, show_file, margin, color, logo, logo2. Sections per template use the names in the file format: `[frame-proposal]`, `[frame-incident]`, `[frame-asbuilt]` and so on. |
 | Line types | **Type** in the link panel says what a line carries: **trunk (802.1Q)** is a double line, **Layer 2 (switched)** a line with a small filled square near each end for the switch ports (tag L2), **Layer 3 (routed)** a line with a small open circle near each end for the IP interfaces (tag L3), **L3 subinterface (802.1Q)** the double line of a trunk with those circles (tag L3 subif; put the subinterfaces or VLANs in the label), **IPsec**, **VXLAN** and **CAPWAP** (access point to wireless LAN controller) tunnels are a tinted band around the line (its edge solid for IPsec, dashed for VXLAN, dotted for CAPWAP), **SD-WAN** lines are dashed by default (choosing SD-WAN turns a solid line dashed, and leaving it turns it solid again; other dash choices are kept), and **MPLS** lines get short strokes across them, like a label stack. Each shows its tag (802.1Q, IPsec, VXLAN, CAPWAP, SD-WAN, MPLS, L2, L3, L3 subif) in bold in the label box in the middle, before the label. A label that would overlap another one slides along its line to a free spot (keeping its label margin to the ends where it can), on the canvas and in every export. To place a label yourself, drag it: it moves only along its line (to the point of the line nearest the mouse, around bends too) and stops before the ends, so it never covers a port. On a line bent through points it moves on through them, along the whole line, onto the next piece (up to a piece with a label of its own); only the line's real ends stop it. Hold Ctrl while dragging it to line its middle up with devices (edges and centers), ports, points, texts and other line labels, with a guide. The spot is saved with the line and used in every export; other labels keep clear of it. **Auto position** in the link panel lets it be placed automatically again. A click on a label selects its line, a double-click edits it. Color, width, dashes and arrows still apply; bulk editing sets the type of many lines at once. SVG export draws the same; draw.io gets a double line (`shape=link`) for trunks and L3 subinterfaces and a band (`flexArrow`) for tunnels (MPLS strokes and the L2 and L3 end marks are left out), with the tag in the label, and reads the type back when pasted or opened again. **Encapsulation**: below Type, **Carried over** adds what the line is transported over, as many layers as needed (e.g. VXLAN over IPsec, or VXLAN over IPsec over MPLS); **Remove outer** takes the outermost away. Each carrier is a tinted band around what it carries, outermost widest, its edge solid or dashed by type (dashed VXLAN, dotted CAPWAP, long dashes SD-WAN), and the tag reads "VXLAN over IPsec". SVG/PNG draw the nested bands; draw.io gets one band as wide as the outermost and the full tag, and reads the layers back. |
 | Lines to nowhere (connection points) | Drop a line on empty space (or on a text or another line) and it ends at a free x,y connection point, so it looks attached to nothing, e.g. an arrow pointing at something outside the drawing. The point shows as a small ring in the editor and is never exported; draw.io gets a loose edge end there. Drag the ring to move the end; drop it on a device border and it becomes a port there (or joins the port it is dropped on), with its lines attached (the device lights up while you hover). The reverse works too: pull a port that has lines off its device and it becomes a free point that keeps them. Ctrl+drag lines a point up with ports, Shift+drag from it draws another line, and lines dropped onto it attach to it. A point can carry a **label** (in the panel, or double-click the point): it sits just beyond the end of its line, continuing its direction, so an arrow ending at a point labeled "Internet" points at the word; the point stays invisible in exports, its label does not. **+ Point** (Ctrl+Shift+P) adds a point on its own, e.g. to draw a free-standing arrow between two points. X/Y can be typed in the panel. Points live on layers, can be selected, duplicated and deleted (deleting one removes its lines, unless it is a bend between exactly two). Very short drags onto empty space are ignored as slips. |
@@ -304,7 +357,9 @@ QML (and the browser's JavaScript) only converts mouse positions to world coordi
 
 ## Notes
 
-- UI preferences (panel visibility) are stored in `~/.config/stratagram.conf`.
+- UI preferences (panel visibility, theme, layout options) are stored by Qt: in `~/.config/stratagram.conf`
+  on Linux, in the registry (`HKEY_CURRENT_USER\Software\stratagram`) on Windows, and in
+  `~/Library/Preferences` on macOS.
 - With Qt's built-in (non-native) save dialog, press Enter in the file name field
   before the Save button becomes active. Native dialogs (GNOME, KDE, portals) are unaffected.
 

@@ -7,7 +7,7 @@ and cables and edited in the browser on the site's Diagram tab."""
 
 from netbox.plugins import PluginConfig
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class StratagramConfig(PluginConfig):
@@ -18,7 +18,7 @@ class StratagramConfig(PluginConfig):
     version = __version__
     base_url = "stratagram"
     min_version = "4.5.0"
-    max_version = "4.6.99"
+    max_version = "4.7.99"
     default_settings = {
         # Device type by device role (slug or name), before the built-in
         # guesses, e.g. {"patch-panel": "switch", "dmz-host": "server"}.

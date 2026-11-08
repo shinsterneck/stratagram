@@ -3,10 +3,12 @@ members = [".", "core", "web"]
 default-members = [".", "core"]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Shin Sterneck"]
+homepage = "https://stratagram.app/"
+repository = "https://github.com/shinsterneck/stratagram"
 
 [workspace.dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
@@ -19,6 +21,8 @@ edition.workspace = true
 publish = false
 license.workspace = true
 authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 stratagram-core = { path = "core" }
@@ -30,6 +34,10 @@ serde_json.workspace = true
 
 [build-dependencies]
 cxx-qt-build = "0.10"
+
+# The icon and version details in stratagram.exe (build.rs).
+[target.'cfg(windows)'.build-dependencies]
+embed-resource = "3"
 
 # The browser editor: small to download (web/build.sh).
 [profile.wasm-release]

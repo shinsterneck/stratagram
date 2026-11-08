@@ -9,6 +9,7 @@
 <title>Stratagram — network diagrams, fast and consistent</title>
 <meta name="description" content="Stratagram is a focused network diagram editor: standardized stencils and line types, quick add and auto layout, so ideas are drawn in minutes and every diagram reads the same across a team. With a NetBox plugin that draws sites from NetBox.">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="canonical" href="https://stratagram.app/">
 <link rel="stylesheet" href="style.css">
 <script>document.documentElement.classList.add("js")</script>
 </head>
@@ -296,12 +297,12 @@
   <section class="wrap" id="app-start">
     <div class="kicker">Get started</div>
     <h2>Build it</h2>
-    <p class="section-lead">Stratagram builds from source with Rust 1.85 or newer and Qt 6.5 or newer.</p>
+    <p class="section-lead">Stratagram builds from source with Rust 1.85 or newer and Qt 6.8 or newer.</p>
     <div class="steps">
       <div class="step"><div>
         <h3>Install Qt 6</h3>
-        <p>For example on Debian or Ubuntu; Fedora and Arch have the same as <code>qt6-qtdeclarative-devel</code> and <code>qt6-declarative</code>.</p>
-        <div class="term"><pre><span class="p">$</span> sudo apt install qt6-base-dev qt6-declarative-dev qml6-module-qtquick \
+        <p>For example on Debian or Ubuntu; Fedora and Arch have the same as <code>qt6-qtdeclarative-devel qt6-qtsvg-devel</code> and <code>qt6-declarative qt6-svg</code>.</p>
+        <div class="term"><pre><span class="p">$</span> sudo apt install qt6-base-dev qt6-declarative-dev qt6-svg-dev qml6-module-qtquick \
     qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtquick-dialogs</pre></div>
       </div></div>
       <div class="step"><div>
@@ -323,7 +324,7 @@
 <div class="page" id="netbox">
 
   <div class="hero wrap">
-    <span class="eyebrow"><span class="dot"></span>NetBox plugin · NetBox 4.5 and 4.6</span>
+    <span class="eyebrow"><span class="dot"></span>NetBox plugin · NetBox 4.5 to 4.7</span>
     <h1>Your NetBox, <span class="grad">drawn.</span></h1>
     <p class="lead">The plugin adds a Diagram tab to every site and location. It draws the site from what NetBox
       knows (devices, cables, circuits, patch panels) with Stratagram's stencils, and keeps your arrangement when NetBox

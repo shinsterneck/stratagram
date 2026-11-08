@@ -7,6 +7,8 @@ import json
 from django.db import transaction
 from django.http import HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.template import TemplateDoesNotExist
+from django.template.loader import get_template
 from django.urls import reverse
 from django.middleware.csrf import get_token
 from django.templatetags.static import static
@@ -106,6 +108,18 @@ def _editor_context(request, site, base_template, sheet=None):
     }
 
 
+def _page_template(obj):
+    """The template of `obj`'s own page, which the Diagram tab extends:
+    "dcim/site.html", say, or NetBox's generic object page where the model
+    has none of its own (locations from NetBox 4.7 on)."""
+    name = f"{obj._meta.app_label}/{obj._meta.model_name}.html"
+    try:
+        get_template(name)
+        return name
+    except TemplateDoesNotExist:
+        return "generic/object.html"
+
+
 @register_model_view(Site, "stratagram", path="diagram")
 class SiteDiagramView(generic.ObjectView):
     """The site's Diagram tab: the editor, with the saved diagram (or the
@@ -116,7 +130,7 @@ class SiteDiagramView(generic.ObjectView):
     tab = ViewTab(label=_("Diagram"), permission=VIEW, weight=1500)
 
     def get_extra_context(self, request, instance):
-        return _editor_context(request, instance, "dcim/site.html")
+        return _editor_context(request, instance, _page_template(instance))
 
 
 @register_model_view(Location, "stratagram", path="diagram")
@@ -129,7 +143,7 @@ class LocationDiagramView(generic.ObjectView):
     tab = ViewTab(label=_("Diagram"), permission=VIEW, weight=1500)
 
     def get_extra_context(self, request, instance):
-        return _editor_context(request, instance.site, "dcim/location.html", f"dcim.location:{instance.pk}")
+        return _editor_context(request, instance.site, _page_template(instance), f"dcim.location:{instance.pk}")
 
 
 class SiteNetBoxDataView(View):

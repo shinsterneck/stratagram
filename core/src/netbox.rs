@@ -394,7 +394,7 @@ pub fn location_diagrams(data: &SiteData, opts: &Options) -> Vec<Diagram> {
     ) {
         let mut kids: Vec<&(u64, String, Option<u64>)> =
             all.iter().filter(|l| l.2.filter(|p| known.contains(p)) == of && !out.iter().any(|o| o.0 == l.0)).collect();
-        kids.sort_by(|a, b| a.1.to_lowercase().cmp(&b.1.to_lowercase()));
+        kids.sort_by_key(|a| a.1.to_lowercase());
         for k in kids {
             out.push(k);
             add(Some(k.0), all, known, out);

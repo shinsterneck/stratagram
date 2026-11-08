@@ -230,8 +230,8 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Y"; onActivated: ctl.redo() }
     Shortcut { sequence: StandardKey.SelectAll; onActivated: ctl.selectAll() }
     Shortcut { sequences: [StandardKey.ZoomIn, "Ctrl+="]; onActivated: canvas.zoomBy(1.2) }
-    Shortcut { sequence: StandardKey.ZoomOut; onActivated: canvas.zoomBy(1 / 1.2) }
-    Shortcut { sequence: StandardKey.Quit; onActivated: win.close() }
+    Shortcut { sequences: [StandardKey.ZoomOut]; onActivated: canvas.zoomBy(1 / 1.2) }
+    Shortcut { sequences: [StandardKey.Quit]; onActivated: win.close() }
 
     // toolbar
     header: ToolBar {

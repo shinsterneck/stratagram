@@ -11,3 +11,4 @@ StartupNotify=true
 StartupWMClass=stratagram
 Categories=Graphics;2DGraphics;VectorGraphics;Qt;
 Keywords=network;diagram;topology;drawio;svg;
+MimeType=application/x-stratagram;

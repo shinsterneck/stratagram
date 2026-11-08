@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+     Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
+     SPDX-License-Identifier: Apache-2.0 -->
+<!-- The .stratagram file type for Linux desktops, so file managers show
+     diagrams with Stratagram's icon and open them with it (README). -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-stratagram">
+    <comment>Stratagram diagram</comment>
+    <sub-class-of type="application/json"/>
+    <generic-icon name="stratagram"/>
+    <glob pattern="*.stratagram"/>
+  </mime-type>
+</mime-info>

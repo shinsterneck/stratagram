@@ -1,0 +1,54 @@
+# This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+# Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
+# SPDX-License-Identifier: Apache-2.0
+
+# For a version tag (vX.Y.Z): the Build workflow, with all its tests, and
+# then a GitHub release with what it made: the Windows installer, the
+# Windows zip and the NetBox plugin's package. The release notes are the
+# tag's message; a release made by hand beforehand keeps its notes and
+# gets the files added.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: The tag matches the version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "tag $GITHUB_REF_NAME, but Cargo.toml says $version"
+            exit 1
+          fi
+      - uses: actions/download-artifact@v8
+        with:
+          path: assets
+          merge-multiple: true
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          files=(assets/*-setup.exe assets/*-windows-x64.zip assets/*.whl)
+          ls -l "${files[@]}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${files[@]}" --clobber
+          else
+            # checkout fetches the tag as a plain ref; its message is needed.
+            git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
+            gh release create "$tag" "${files[@]}" --verify-tag --notes-from-tag --title "Stratagram ${tag#v}"
+          fi

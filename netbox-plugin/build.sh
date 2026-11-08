@@ -25,7 +25,9 @@ cp ../web/www/app.js ../web/www/canvas.js ../web/www/panel.js ../web/www/stratag
 cp ../web/www/pkg/stratagram_web.js ../web/www/pkg/stratagram_web_bg.wasm "$root/$hash/pkg/"
 printf '# Made by build.sh: where the editor build is (static/netbox_stratagram/editor/<this>/).\nEDITOR = "%s"\n' "$hash" > netbox_stratagram/editor_build.py
 if [ "$1" != "--static-only" ]; then
-    # The licenses of the Rust libraries in the editor (about.toml).
+    # The licenses of the Rust libraries in the editor (about.toml), read
+    # offline from the crates (all of Cargo.lock's, for every platform).
+    cargo fetch --locked
     cargo about generate --frozen -c ../about.toml -m ../web/Cargo.toml \
         --target wasm32-unknown-unknown -o THIRD-PARTY-LICENSES.txt ../about.hbs
     python3 -m build

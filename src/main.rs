@@ -2,6 +2,10 @@
 // Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
 // SPDX-License-Identifier: Apache-2.0
 
+// On Windows a window application, so opening a diagram from Explorer
+// shows no console window next to the editor.
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
 mod bridge;
 
 use stratagram_core::{config, editor, model, svg};
@@ -148,8 +152,27 @@ fn run_layout(args: &[String]) -> i32 {
     }
 }
 
+/// The command line modes print to the console they are started from
+/// (on Windows a window application has none of its own).
+#[cfg(windows)]
+fn attach_console() {
+    unsafe extern "system" {
+        fn AttachConsole(process: u32) -> i32;
+    }
+    const ATTACH_PARENT_PROCESS: u32 = u32::MAX;
+    // SAFETY: a plain Win32 call; failing (no console to attach to, or
+    // output already redirected) leaves nothing to undo.
+    unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
+}
+
+#[cfg(not(windows))]
+fn attach_console() {}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.get(1).is_some_and(|a| a.starts_with('-')) {
+        attach_console();
+    }
     if let Some(code) = run_cli(&args) {
         std::process::exit(code);
     }

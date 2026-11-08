@@ -58,6 +58,9 @@ const host = {
         })
         savedAt = r.saved
         config.canSave = true
+        // The new time, also when nothing had changed (no change of the
+        // unsaved state shows it).
+        showSaved(savedAt, false)
         return name
     },
     buttons: [{

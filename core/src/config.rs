@@ -21,17 +21,44 @@
 //!
 //! It is read when needed, so changes apply without a restart.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
-/// Where the file is: `$XDG_CONFIG_HOME/stratagram.conf`, else
-/// `~/.config/stratagram.conf` (the same place Qt keeps the interface settings).
+/// The system a folder is chosen for.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum System {
+    Linux,
+    Windows,
+    MacOs,
+}
+
+const SYSTEM: System = if cfg!(windows) {
+    System::Windows
+} else if cfg!(target_os = "macos") {
+    System::MacOs
+} else {
+    System::Linux
+};
+
+/// Where the file is: on Linux (and other Unix) `$XDG_CONFIG_HOME/stratagram.conf`,
+/// else `~/.config/stratagram.conf`; on Windows `%APPDATA%\stratagram.conf`; on
+/// macOS `~/Library/Application Support/stratagram.conf`. Saved logos go
+/// into `stratagram/logos/` beside it.
 pub fn path() -> PathBuf {
-    let base = std::env::var_os("XDG_CONFIG_HOME")
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
-        .unwrap_or_else(|| PathBuf::from("."));
-    base.join("stratagram.conf")
+    config_dir(SYSTEM, |k| std::env::var_os(k)).join("stratagram.conf")
+}
+
+/// The folder for configuration files on `system`, from environment
+/// variables `var` (the current folder if none is set).
+fn config_dir(system: System, var: impl Fn(&str) -> Option<OsString>) -> PathBuf {
+    let set = |k: &str| var(k).filter(|v| !v.is_empty()).map(PathBuf::from);
+    let home = || set("HOME").or_else(|| set("USERPROFILE"));
+    match system {
+        System::Windows => set("APPDATA").or_else(|| home().map(|h| h.join("AppData").join("Roaming"))),
+        System::MacOs => home().map(|h| h.join("Library").join("Application Support")),
+        System::Linux => set("XDG_CONFIG_HOME").or_else(|| home().map(|h| h.join(".config"))),
+    }
+    .unwrap_or_else(|| PathBuf::from("."))
 }
 
 /// Move the settings of the app's former name (netdiag) over, once: the
@@ -56,7 +83,11 @@ fn migrate_in(dir: &Path) {
         return;
     }
     let Ok(text) = std::fs::read_to_string(&old) else { return };
-    let moved = text.replace(&format!("{}/", old_dir.display()), &format!("{}/", new_dir.display()));
+    // The logo paths in it, with either separator (\\ on Windows).
+    let mut moved = text;
+    for sep in ['/', '\\'] {
+        moved = moved.replace(&format!("{}{sep}", old_dir.display()), &format!("{}{sep}", new_dir.display()));
+    }
     if std::fs::write(&new, moved).is_ok() {
         let _ = std::fs::remove_file(&old);
     }
@@ -64,8 +95,8 @@ fn migrate_in(dir: &Path) {
 
 /// `path` shortened with ~ for the home folder, for showing it.
 pub fn shown(path: &Path) -> String {
-    std::env::var_os("HOME")
-        .and_then(|h| path.strip_prefix(h).ok().map(|rest| format!("~/{}", rest.display())))
+    let home = std::env::var_os("HOME").filter(|h| !h.is_empty()).or_else(|| std::env::var_os("USERPROFILE"));
+    home.and_then(|h| path.strip_prefix(h).ok().map(|rest| Path::new("~").join(rest).display().to_string()))
         .unwrap_or_else(|| path.display().to_string())
 }
 
@@ -205,6 +236,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_folder_is_where_each_system_keeps_settings() {
+        fn env(pairs: &[(&str, &str)]) -> impl Fn(&str) -> Option<OsString> {
+            let pairs: Vec<(String, String)> = pairs.iter().map(|(n, v)| (n.to_string(), v.to_string())).collect();
+            move |k| pairs.iter().find(|(n, _)| n == k).map(|(_, v)| OsString::from(v))
+        }
+        let linux = [("HOME", "/home/u"), ("XDG_CONFIG_HOME", "")];
+        assert_eq!(config_dir(System::Linux, env(&linux)), PathBuf::from("/home/u/.config"));
+        assert_eq!(config_dir(System::Linux, env(&[("HOME", "/home/u"), ("XDG_CONFIG_HOME", "/cfg")])), PathBuf::from("/cfg"));
+        let win = [("APPDATA", r"C:\Users\u\AppData\Roaming"), ("USERPROFILE", r"C:\Users\u")];
+        assert_eq!(config_dir(System::Windows, env(&win)), PathBuf::from(r"C:\Users\u\AppData\Roaming"));
+        assert_eq!(config_dir(System::Windows, env(&[("USERPROFILE", "/u")])), PathBuf::from("/u").join("AppData").join("Roaming"));
+        assert_eq!(config_dir(System::MacOs, env(&[("HOME", "/Users/u")])), PathBuf::from("/Users/u/Library/Application Support"));
+        assert_eq!(config_dir(System::Linux, env(&[])), PathBuf::from("."), "nothing set");
+    }
+
+    #[test]
     fn reads_sections_as_qt_writes_them() {
         let c = Config::parse(
             "[ui]\npanelVisible=true\nlayoutGap=60\n\n; a comment\n[frame]\nauto = true\nauthor=Shin\n\
@@ -237,6 +284,15 @@ mod tests {
         std::fs::write(dir.join("netdiag.conf"), "[ui]\nshowGrid=true\n").unwrap();
         migrate_in(&dir);
         assert_eq!(Config::load(&dir.join("stratagram.conf")).get("ui", "showGrid").as_deref(), Some("false"));
+        std::fs::remove_dir_all(&dir).ok();
+        // Logo paths written with Windows separators move over too.
+        let dir = std::env::temp_dir().join(format!("stratagram-migrate-win-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("netdiag")).unwrap();
+        let old = format!("{}\\logos\\a.png", dir.join("netdiag").display());
+        std::fs::write(dir.join("netdiag.conf"), format!("[frame]\nlogo={old}\n")).unwrap();
+        migrate_in(&dir);
+        let new = format!("{}\\logos\\a.png", dir.join("stratagram").display());
+        assert_eq!(Config::load(&dir.join("stratagram.conf")).get("frame", "logo"), Some(new));
         std::fs::remove_dir_all(&dir).ok();
     }
 

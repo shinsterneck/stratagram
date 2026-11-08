@@ -1,0 +1,200 @@
+# This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+# Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
+# SPDX-License-Identifier: Apache-2.0
+
+# Build and test on every push to main and every pull request:
+# - linux: the tests, clippy, the desktop app, the browser editor and the
+#   NetBox plugin's package (kept as an artifact);
+# - windows: the desktop app with Qt next to it (windeployqt), as a zip
+#   and as an installer (packaging/windows/stratagram.iss), installed,
+#   tried and uninstalled again;
+# - netbox: the plugin's package installed into NetBox 4.5, 4.6 and 4.7
+#   (netbox-docker), with the test site loaded and the smoke test run.
+# The Release workflow runs it for a tag and publishes what it makes.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  QT_VERSION: "6.8.*"
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries Qt links to
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libegl-dev libxkbcommon-dev libfontconfig1-dev
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+      - name: Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy
+          rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.129,cargo-about
+      - name: Tests
+        run: cargo test -p stratagram-core --locked
+      - name: Clippy (desktop app and core)
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Clippy (browser editor)
+        run: cargo clippy -p stratagram-web --target wasm32-unknown-unknown --locked -- -D warnings
+      - name: Desktop app
+        run: cargo build --release --locked
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: NetBox plugin package
+        run: |
+          python -m pip install build
+          netbox-plugin/build.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: netbox-plugin
+          path: netbox-plugin/dist/*
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Rust
+        run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+      - name: Tests
+        run: cargo test -p stratagram-core --locked
+      - name: Desktop app
+        run: cargo build --release --locked -p stratagram
+      - name: Bundle with Qt
+        shell: pwsh
+        run: |
+          $dir = "dist/stratagram"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item target/release/stratagram.exe $dir
+          windeployqt --release --qmldir qml --no-translations "$dir/stratagram.exe"
+          Copy-Item LICENSE, NOTICE, README.md $dir
+          Copy-Item packaging/qt/* $dir
+          cargo about generate --locked -c about.toml -m Cargo.toml --target x86_64-pc-windows-msvc -o "$dir/THIRD-PARTY-LICENSES.txt" about.hbs
+      - name: Installer and zip
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc /Qp "/DVersion=$version" packaging/windows/stratagram.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Compress-Archive -Path dist/stratagram -DestinationPath "dist/stratagram-$version-windows-x64.zip"
+      - name: Install, try and uninstall
+        shell: pwsh
+        run: |
+          $setup = (Get-Item dist/*-setup.exe).FullName
+          Start-Process $setup -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /CURRENTUSER /TASKS=assoc" -Wait
+          $app = "$env:LOCALAPPDATA\Programs\Stratagram"
+          $command = (Get-ItemProperty "HKCU:\Software\Classes\Stratagram.Diagram\shell\open\command").'(default)'
+          if ($command -ne "`"$app\stratagram.exe`" `"%1`"") { throw "file association: $command" }
+          # A window application now: Start-Process to wait for it.
+          $p = Start-Process "$app\stratagram.exe" -ArgumentList "--export-svg examples\demo.stratagram $env:RUNNER_TEMP\demo.svg" -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0 -or -not (Test-Path "$env:RUNNER_TEMP\demo.svg")) { throw "export with the installed app failed" }
+          Start-Process "$app\unins000.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES" -Wait
+          for ($i = 0; $i -lt 30 -and (Test-Path "$app\stratagram.exe"); $i++) { Start-Sleep 1 }
+          if (Test-Path "$app\stratagram.exe") { throw "not uninstalled" }
+          if (Test-Path "HKCU:\Software\Classes\Stratagram.Diagram") { throw "file association left behind" }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: stratagram-windows
+          path: |
+            dist/*-setup.exe
+            dist/*-windows-x64.zip
+
+  netbox:
+    needs: linux
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        netbox: ["v4.5", "v4.6", "v4.7"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: netbox-community/netbox-docker
+          ref: "5.1.1"
+          path: nbd
+      - uses: actions/download-artifact@v8
+        with:
+          name: netbox-plugin
+          path: nbd/dist
+      - name: NetBox ${{ matrix.netbox }} with the plugin
+        working-directory: nbd
+        run: |
+          wheel=$(ls dist/*.whl | head -1)
+          cat > Dockerfile-Plugins <<EOF
+          FROM docker.io/netboxcommunity/netbox:${{ matrix.netbox }}
+          COPY $wheel /opt/
+          RUN /usr/local/bin/uv pip install /opt/$(basename $wheel)
+          COPY configuration/plugins.py /etc/netbox/config/plugins.py
+          RUN SECRET_KEY="build-only-secret-key-not-used-at-runtime-0123456789abcdef" /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py collectstatic --no-input
+          EOF
+          echo 'PLUGINS = ["netbox_stratagram"]' > configuration/plugins.py
+          cat > docker-compose.override.yml <<EOF
+          services:
+            netbox:
+              image: netbox:stratagram
+              pull_policy: never
+              build:
+                context: .
+                dockerfile: Dockerfile-Plugins
+              ports:
+                - "127.0.0.1:8000:8080"
+            netbox-worker:
+              image: netbox:stratagram
+              pull_policy: never
+          EOF
+          docker compose build netbox
+          # NetBox with its database and cache; not the worker, which
+          # waits for NetBox's health check (it stays "unhealthy" here
+          # although NetBox answers; the next step waits for that).
+          docker compose up -d netbox
+      - name: Wait for NetBox
+        working-directory: nbd
+        run: |
+          for i in $(seq 1 90); do
+            if curl -fs -o /dev/null http://127.0.0.1:8000/login/; then exit 0; fi
+            sleep 5
+          done
+          docker compose logs netbox | tail -50
+          exit 1
+      - name: Test site and smoke test
+        working-directory: nbd
+        run: |
+          shell() { docker compose exec -T netbox /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py shell -c "$1"; }
+          shell "from django.contrib.auth import get_user_model; get_user_model().objects.filter(username='admin').exists() or get_user_model().objects.create_superuser('admin', 'admin@example.com', 'admin')"
+          docker compose cp ../site/netbox-seed.py netbox:/tmp/seed.py
+          docker compose cp ../netbox-plugin/tests/smoke.py netbox:/tmp/smoke.py
+          shell "exec(open('/tmp/seed.py').read())"
+          shell "exec(open('/tmp/smoke.py').read())" | tee smoke.log
+          grep -q "smoke test passed" smoke.log
