@@ -420,6 +420,11 @@
 }
 .sg-app .sg-install:hover { background: var(--sg-hover); }
 .sg-app .sg-install[hidden] { display: none; }
+.sg-app .sg-install.sg-install-hint { border-color: var(--sg-accent); animation: sg-install-pulse 1.4s ease-in-out infinite; }
+@keyframes sg-install-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45); }
+    50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+}
 
 @media (max-width: 700px) {
     .sg-panel { flex-basis: 240px; }

@@ -87,6 +87,31 @@
   showInstall = () => { installButton.hidden = inApp || installed || !(installOffer || safari) }
   showInstall()
 
+  const wantsInstall = new URLSearchParams(location.hash.slice(1)).has("install")
+  if (wantsInstall) history.replaceState(null, "", location.pathname + location.search)
+  let asked = false
+  installButton.addEventListener("click", () => { asked = true; installButton.classList.remove("sg-install-hint") })
+  const guide = () => {
+    if (!wantsInstall || asked && !installed) return
+    let hint
+    if (inApp || installed) {
+      hint = "Stratagram is installed: this window is the app, and it works offline."
+    } else if (installOffer) {
+      installButton.classList.add("sg-install-hint")
+      hint = "To install Stratagram as an app, click Install app at the bottom right. It then works offline, in its own window."
+    } else if (safari) {
+      hint = apple
+        ? "To install Stratagram: tap Share, then Add to Home Screen. It then works offline."
+        : "To install Stratagram: File › Add to Dock (Safari 17 or newer). It then works offline."
+    } else {
+      hint = "This browser does not offer to install Stratagram here. In Chrome or Edge it may already be installed (see the address bar); Firefox cannot install web apps."
+    }
+    app.run(() => app.ctl.setStatus(hint))
+  }
+  const showButton = showInstall
+  showInstall = () => { showButton(); guide() }
+  setTimeout(guide, 1500)
+
   // Offline use: the editor's files are kept by sw.js (https or localhost).
   if ("serviceWorker" in navigator && window.isSecureContext) {
     navigator.serviceWorker.register("sw.js").catch(() => { /* works online without it */ })

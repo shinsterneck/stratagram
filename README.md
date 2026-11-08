@@ -20,6 +20,8 @@ reads the result the same way.
 It runs as a desktop app on Linux and Windows, in the browser, and inside NetBox as a plugin that
 draws every site from NetBox's data.
 
+![Stratagram in NetBox](site/shots/netbox-editor.png)
+
 ## Get it
 
 - **Windows:** the installer from the [latest release](https://github.com/shinsterneck/stratagram/releases/latest)

@@ -44,7 +44,7 @@
       Standardized stencils and line types do the styling for you, so you think about the topology,
       and everyone on your team reads the result the same way.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-windows-x64-setup.exe">Download for Windows</a>
+      <a class="btn primary" href="#app-start" data-page="app">Get it</a>
       <a class="btn" href="editor/#file=../examples/berlin-hq.stratagram">Try it in your browser</a>
       <a class="btn" href="#netbox" data-page="netbox">NetBox plugin →</a>
       <a class="btn" href="https://github.com/shinsterneck/stratagram">Source on GitHub</a>
@@ -52,8 +52,8 @@
     <div class="facts"><span>Rust + Qt desktop app</span><span>Same editor in the browser</span><span>SVG · PNG · draw.io · CML</span><span>Plain JSON files</span></div>
 
     <div class="window">
-      <div class="bar"><i></i><i></i><i></i><span>berlin-hq.stratagram — Stratagram</span></div>
-      <a href="shots/desktop-app.png"><img src="shots/desktop-app.png" width="1280" height="800" alt="The Stratagram desktop app: a site diagram with firewalls, core switches, servers and access points in a title frame, the properties panel of a selected firewall on the right"></a>
+      <div class="bar"><i></i><i></i><i></i><span>vienna-dc.stratagram — Stratagram</span></div>
+      <a href="shots/desktop-app.png"><img src="shots/desktop-app.png" width="1280" height="800" alt="The Stratagram desktop app: a data center with its rooms and a rack as tinted areas, firewalls and core switches in room 1, an access switch, patch panel and servers in room 2, the properties panel of a selected firewall on the right"></a>
     </div>
     <p class="caption">The desktop app with a site overview in a frame; the panel edits the selected firewall.</p>
   </div>
@@ -221,7 +221,7 @@
           <li><b>Cisco Modeling Labs</b>: turn the drawing into a lab topology to run.</li>
         </ul>
       </div>
-      <div class="shot"><a href="shots/hero-diagram.png"><img src="shots/hero-diagram.png" width="2720" height="1816" loading="lazy" alt="An exported PNG: the Berlin HQ network in a site frame with title, site code, legend of line types and the date of the last change"></a></div>
+      <div class="shot"><a href="shots/hero-diagram.png"><img src="shots/hero-diagram.png" width="2816" height="1864" loading="lazy" alt="An exported PNG: the Berlin HQ network in a site frame with title, site code, legend of line types and the date of the last change"></a></div>
     </div>
 
     <div class="feature">
@@ -305,17 +305,26 @@
       <div class="step"><div>
         <h3>In the browser</h3>
         <p>Nothing to install: <a href="editor/#file=../examples/berlin-hq.stratagram">try it with an example</a> or <a href="editor/">start empty</a>. It runs entirely in your browser; diagrams are opened from and saved to your computer, nothing is uploaded. Install it with <strong>Install app</strong> at the bottom right of the editor (Chrome, Edge; in Safari it shows how) and it works offline, in its own window, and opens <code>.stratagram</code> files.</p>
-        <div class="cta"><a class="btn primary" href="editor/#file=../examples/berlin-hq.stratagram">Open the editor</a></div>
+        <div class="cta">
+          <a class="btn primary" href="editor/#file=../examples/berlin-hq.stratagram">Open the editor</a>
+          <a class="btn" href="editor/#install">Install as Web App (PWA)</a>
+        </div>
       </div></div>
       <div class="step"><div>
         <h3>Linux</h3>
-        <p>On Arch Linux and its derivatives, from the AUR: <code>yay -S stratagram-bin</code>. Elsewhere, the <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-linux-x86_64.tar.gz">Linux download</a> runs with Qt 6.12 or newer (unpack it into <code>~/.local</code>, see the <a href="https://github.com/shinsterneck/stratagram/wiki/Installation#linux">wiki</a>). With an older Qt, install Qt 6 and build it (step 4); for example on Debian or Ubuntu, and on Fedora as <code>qt6-qtdeclarative-devel qt6-qtsvg-devel</code>:</p>
+        <p>On Arch Linux and its derivatives, from the AUR: <code>yay -S stratagram-bin</code>. Elsewhere, the <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-linux-x86_64.tar.gz">Linux download</a> runs with Qt 6.12 or newer (unpack it into <code>~/.local</code>, see the <a href="https://github.com/shinsterneck/stratagram/wiki/Installation#linux">wiki</a>).</p>
+        <div class="cta"><a class="btn primary" href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-linux-x86_64.tar.gz">Download for Linux</a></div>
+        <p>With an older Qt, install Qt 6 and build it (step 4); for example on Debian or Ubuntu, and on Fedora as <code>qt6-qtdeclarative-devel qt6-qtsvg-devel</code>:</p>
         <div class="term"><pre><span class="p">$</span> sudo apt install qt6-base-dev qt6-declarative-dev qt6-svg-dev qml6-module-qtquick \
     qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtquick-dialogs</pre></div>
       </div></div>
       <div class="step"><div>
         <h3>Windows</h3>
         <p>The <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-windows-x64-setup.exe">installer</a> adds Stratagram to the Start menu and opens <code>.stratagram</code> files with it. Or take the <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-windows-x64.zip">zip</a> and run it from any folder. Both are on the <a href="https://github.com/shinsterneck/stratagram/releases/latest">release page</a>.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-windows-x64-setup.exe">Download installer</a>
+          <a class="btn" href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-windows-x64.zip">Zip</a>
+        </div>
       </div></div>
       <div class="step"><div>
         <h3>Build it</h3>
@@ -348,7 +357,7 @@
 
     <div class="window">
       <div class="bar"><i></i><i></i><i></i><span>Vienna DC | NetBox</span></div>
-      <a href="shots/netbox-editor.png"><img src="shots/netbox-editor.png" width="1920" height="1200" alt="NetBox 4.6 with the Diagram tab of the site Vienna DC: two internet circuits, a firewall pair, core switches with SFP ports, an access switch cabled through a patch panel to four servers, sheets for the site's two rooms, the selected firewall in the panel and the layers by device type"></a>
+      <a href="shots/netbox-editor.png"><img src="shots/netbox-editor.png" width="1920" height="1200" alt="NetBox 4.7 with the Diagram tab of the site Vienna DC: two internet circuits, a firewall pair and core switches in the tinted area of room 1, an access switch in room 2 cabled through a patch panel to four servers in a rack nested inside it, sheets for the site's locations, the selected firewall in the panel and the layers by location"></a>
     </div>
     <p class="caption">The Diagram tab of a site in NetBox 4.6, drawn from its devices, cables and circuits. Each
       location is a sheet (tabs at the bottom); the layer tree has a layer per device type and per device.</p>

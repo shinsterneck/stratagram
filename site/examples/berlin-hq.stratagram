@@ -199,7 +199,7 @@
           "t": 0.75
         }
       ],
-      "layer": 100,
+      "layer": 101,
       "z": 24
     },
     {
@@ -243,7 +243,7 @@
           "t": 0.25
         }
       ],
-      "layer": 100,
+      "layer": 102,
       "z": 25
     },
     {
@@ -263,7 +263,7 @@
           "t": 0.5
         }
       ],
-      "layer": 100,
+      "layer": 101,
       "z": 26
     },
     {
@@ -283,7 +283,7 @@
           "t": 0.5
         }
       ],
-      "layer": 100,
+      "layer": 102,
       "z": 27
     },
     {
@@ -303,7 +303,7 @@
           "t": 0.5
         }
       ],
-      "layer": 100,
+      "layer": 102,
       "z": 28
     },
     {
@@ -323,7 +323,7 @@
           "t": 0.5
         }
       ],
-      "layer": 100,
+      "layer": 102,
       "z": 29
     },
     {
@@ -349,7 +349,7 @@
           "t": 0.5
         }
       ],
-      "layer": 100,
+      "layer": 101,
       "z": 30
     },
     {
@@ -387,7 +387,7 @@
           "t": 0.25
         }
       ],
-      "layer": 100,
+      "layer": 101,
       "z": 31
     },
     {
@@ -413,7 +413,7 @@
           "t": 0.6666666666666666
         }
       ],
-      "layer": 100,
+      "layer": 101,
       "z": 32
     },
     {
@@ -433,7 +433,7 @@
           "t": 0.5
         }
       ],
-      "layer": 100,
+      "layer": 101,
       "z": 33
     },
     {
@@ -453,7 +453,7 @@
           "t": 0.5
         }
       ],
-      "layer": 100,
+      "layer": 101,
       "z": 34
     }
   ],
@@ -857,6 +857,36 @@
       "id": 100,
       "name": "Network",
       "visible": true
+    },
+    {
+      "id": 101,
+      "name": "Office floor",
+      "visible": true,
+      "background": {
+        "margin": 24.0,
+        "fill": "#eff6ff",
+        "opacity": 100.0,
+        "border": "dotted",
+        "border_color": "#60a5fa",
+        "border_width": 2.0,
+        "rounded": true,
+        "radius": 12.0
+      }
+    },
+    {
+      "id": 102,
+      "name": "Server room",
+      "visible": true,
+      "background": {
+        "margin": 24.0,
+        "fill": "#ecfdf5",
+        "opacity": 100.0,
+        "border": "dotted",
+        "border_color": "#34d399",
+        "border_width": 2.0,
+        "rounded": true,
+        "radius": 12.0
+      }
     }
   ],
   "active_layer": 100,
