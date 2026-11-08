@@ -3,6 +3,7 @@ target/
 .qmlls.ini
 /web/www/pkg/
 /netbox-plugin/netbox_stratagram/static/netbox_stratagram/editor/
+/dist/
 /netbox-plugin/dist/
 /netbox-plugin/*.egg-info/
 /netbox-plugin/build/

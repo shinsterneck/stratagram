@@ -8,6 +8,9 @@
 # - windows: the desktop app with Qt next to it (windeployqt), as a zip
 #   and as an installer (packaging/windows/stratagram.iss), installed,
 #   tried and uninstalled again;
+# - arch: the prebuilt Linux download (packaging/linux/bundle.sh), built on
+#   Arch Linux against its Qt, and the AUR package stratagram-bin made,
+#   installed and run from it (packaging/aur-bin/check.sh);
 # - netbox: the plugin's package installed into NetBox 4.5, 4.6 and 4.7
 #   (netbox-docker), with the test site loaded and the smoke test run.
 # The Release workflow runs it for a tag and publishes what it makes.
@@ -129,6 +132,24 @@ jobs:
           path: |
             dist/*-setup.exe
             dist/*-windows-x64.zip
+
+  arch:
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Arch Linux packages
+        run: pacman -Syu --noconfirm --needed qt6-base qt6-declarative qt6-svg rust cargo-about git
+      - uses: actions/checkout@v7
+      - name: Tests
+        run: cargo test -p stratagram-core --locked
+      - name: Linux download
+        run: packaging/linux/bundle.sh
+      - name: The stratagram-bin package from it
+        run: packaging/aur-bin/check.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: stratagram-linux
+          path: dist/*-linux-x86_64.tar.gz
 
   netbox:
     needs: linux

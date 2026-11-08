@@ -94,19 +94,19 @@ environment, no token).
 
 ### Linux packages
 
-- **Flatpak** (Flathub): `flatpak install flathub app.stratagram.Stratagram`, built from
-  `packaging/flatpak/app.stratagram.Stratagram.yml`.
-- **Arch Linux and derivatives** (AUR): `yay -S stratagram` or any other AUR helper, built
-  from `packaging/aur/PKGBUILD`.
+- **Arch Linux and derivatives** (AUR): `yay -S stratagram-bin` installs the prebuilt app in
+  seconds; `yay -S stratagram` builds it from source (needs Rust). Both install the menu entry,
+  the icon, the `.stratagram` file type and the software center details below, and replace
+  each other. Built from `packaging/aur-bin/PKGBUILD` and `packaging/aur/PKGBUILD`.
+- **Other distributions:** each [release](https://github.com/shinsterneck/stratagram/releases)
+  has `stratagram-X.Y.Z-linux-x86_64.tar.gz`, laid out like `/usr`. It is built on Arch Linux,
+  so it needs Qt 6 as new as Arch's (currently 6.12) with Qt Quick and Qt Svg; on older
+  distributions, build it from source. For your user only:
 
-Both install the menu entry, the icon, the `.stratagram` file type and the software center
-details below.
-
-The Flatpak opens and saves diagrams through the desktop's file dialogs and "Open with", so it
-needs no access to your files. The command line modes (`--export-svg`, `--layout`, ...) read and
-write paths directly; give them access where your diagrams are, e.g.
-`flatpak run --filesystem=home app.stratagram.Stratagram --export-svg in.stratagram out.svg`, or
-once with `flatpak override --user --filesystem=home app.stratagram.Stratagram`.
+  ```sh
+  tar -xzf stratagram-*-linux-x86_64.tar.gz --strip-components=1 -C ~/.local
+  update-mime-database ~/.local/share/mime
+  ```
 
 ### Desktop launcher (Linux, built yourself)
 

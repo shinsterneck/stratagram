@@ -2,7 +2,7 @@
 <!-- This file is part of Stratagram: https://github.com/shinsterneck/stratagram
      Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
      SPDX-License-Identifier: Apache-2.0 -->
-<!-- What software centers (GNOME Software, KDE Discover, Flathub) show
+<!-- What software centers (GNOME Software, KDE Discover) show
      about Stratagram; installed as share/metainfo/app.stratagram.Stratagram.metainfo.xml.
      Each release adds itself under <releases>. -->
 <component type="desktop-application">
@@ -92,9 +92,14 @@
   </keywords>
 
   <releases>
+    <release version="1.0.5" date="2026-11-08">
+      <description>
+        <p>A prebuilt Linux download with each release, and the AUR package stratagram-bin, which installs it without compiling.</p>
+      </description>
+    </release>
     <release version="1.0.4" date="2026-11-08">
       <description>
-        <p>Packages for Linux: Flatpak and the Arch User Repository. The app now identifies itself as app.stratagram.Stratagram, so desktops show its icon for its window.</p>
+        <p>A package for Arch Linux in the Arch User Repository. The app now identifies itself as app.stratagram.Stratagram, so desktops show its icon for its window.</p>
       </description>
     </release>
     <release version="1.0.3" date="2026-11-08">

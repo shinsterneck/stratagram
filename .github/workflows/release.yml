@@ -4,8 +4,8 @@
 
 # For a version tag (vX.Y.Z): the Build workflow, with all its tests, and
 # then a GitHub release with what it made: the Windows installer, the
-# Windows zip and the NetBox plugin's package. The release notes are the
-# tag's message; a release made by hand beforehand keeps its notes and
+# Windows zip, the Linux download and the NetBox plugin's package. The
+# release notes are the tag's message; a release made by hand beforehand keeps its notes and
 # gets the files added. The plugin's package also goes to PyPI
 # (netbox-stratagram), by trusted publishing: PyPI accepts it from this
 # workflow in the "pypi" environment, without a token.
@@ -54,7 +54,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="$GITHUB_REF_NAME"
-          files=(assets/*-setup.exe assets/*-windows-x64.zip assets/*.whl)
+          files=(assets/*-setup.exe assets/*-windows-x64.zip assets/*-linux-x86_64.tar.gz assets/*.whl)
           ls -l "${files[@]}"
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "${files[@]}" --clobber
