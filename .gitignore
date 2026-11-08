@@ -1,0 +1,13 @@
+target/
+*.tmp~
+.qmlls.ini
+/web/www/pkg/
+/netbox-plugin/netbox_stratagram/static/netbox_stratagram/editor/
+/netbox-plugin/dist/
+/netbox-plugin/*.egg-info/
+/netbox-plugin/build/
+__pycache__/
+/netbox-plugin/netbox_stratagram/editor_build.py
+/netbox-plugin/LICENSE
+/netbox-plugin/NOTICE
+/netbox-plugin/THIRD-PARTY-LICENSES.txt

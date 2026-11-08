@@ -1,0 +1,199 @@
+{
+  "format": "stratagram",
+  "version": 1,
+  "devices": [
+    {
+      "id": 1,
+      "name": "fw-01",
+      "kind": "firewall",
+      "x": 380.0,
+      "y": 50.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#fecaca",
+      "ports": [
+        {
+          "id": 6,
+          "name": "port3",
+          "side": "bottom",
+          "t": 0.5
+        },
+        {
+          "id": 16,
+          "name": "wan1",
+          "side": "right",
+          "t": 0.5
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "core-sw-01",
+      "kind": "switch",
+      "x": 380.0,
+      "y": 230.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bfdbfe",
+      "ports": [
+        {
+          "id": 7,
+          "name": "Te1/1/1",
+          "side": "top",
+          "t": 0.5
+        },
+        {
+          "id": 9,
+          "name": "Gi1/0/1",
+          "side": "bottom",
+          "t": 0.25
+        },
+        {
+          "id": 12,
+          "name": "Gi1/0/2",
+          "side": "bottom",
+          "t": 0.75
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "srv-01",
+      "kind": "server",
+      "x": 150.0,
+      "y": 420.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 10,
+          "name": "",
+          "side": "top",
+          "t": 0.95
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "srv-02",
+      "kind": "server",
+      "x": 610.0,
+      "y": 420.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 13,
+          "name": "",
+          "side": "top",
+          "t": 0.05
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "internet",
+      "kind": "internet",
+      "x": 740.0,
+      "y": 50.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#e5e7eb",
+      "ports": [
+        {
+          "id": 15,
+          "name": "",
+          "side": "left",
+          "t": 0.5
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "edge-rtr",
+      "kind": "",
+      "x": 610.0,
+      "y": 500.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#dbeafe",
+      "ports": []
+    }
+  ],
+  "links": [
+    {
+      "id": 8,
+      "from": {
+        "device": 1,
+        "port": 6
+      },
+      "to": {
+        "device": 2,
+        "port": 7
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "straight",
+      "label": ""
+    },
+    {
+      "id": 11,
+      "from": {
+        "device": 2,
+        "port": 9
+      },
+      "to": {
+        "device": 3,
+        "port": 10
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "arrow",
+      "head_end": "diamond",
+      "routing": "orthogonal",
+      "label": ""
+    },
+    {
+      "id": 14,
+      "from": {
+        "device": 2,
+        "port": 12
+      },
+      "to": {
+        "device": 4,
+        "port": 13
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "straight",
+      "label": ""
+    },
+    {
+      "id": 17,
+      "from": {
+        "device": 5,
+        "port": 15
+      },
+      "to": {
+        "device": 1,
+        "port": 16
+      },
+      "color": "#dc2626",
+      "width": 2.0,
+      "style": "dashed",
+      "head_start": "none",
+      "head_end": "arrow",
+      "routing": "straight",
+      "label": "ISP 1G"
+    }
+  ]
+}

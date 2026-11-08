@@ -1,0 +1,320 @@
+{
+ "format": "stratagram",
+ "version": 1,
+ "layers": [
+  {
+   "id": 1,
+   "name": "Rack"
+  }
+ ],
+ "active_layer": 1,
+ "devices": [
+  {
+   "id": 101,
+   "name": "access-sw-01",
+   "kind": "switch",
+   "x": 40,
+   "y": 40,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 108,
+     "name": "",
+     "side": "bottom",
+     "t": 0.5,
+     "socket": 1
+    },
+    {
+     "id": 114,
+     "name": "",
+     "side": "bottom",
+     "t": 0.5,
+     "socket": 3
+    },
+    {
+     "id": 120,
+     "name": "",
+     "side": "bottom",
+     "t": 0.5,
+     "socket": 5
+    },
+    {
+     "id": 126,
+     "name": "",
+     "side": "bottom",
+     "t": 0.5,
+     "socket": 49
+    }
+   ],
+   "panel": {
+    "ports": 48,
+    "connector": "rj45",
+    "uplinks": 4
+   }
+  },
+  {
+   "id": 102,
+   "name": "core-sw-01",
+   "kind": "switch",
+   "x": 760,
+   "y": 40,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 129,
+     "name": "",
+     "side": "bottom",
+     "t": 0.5,
+     "socket": 2
+    }
+   ],
+   "panel": {
+    "ports": 16,
+    "connector": "sfp"
+   }
+  },
+  {
+   "id": 103,
+   "name": "pp-a1",
+   "kind": "patch panel",
+   "x": 40,
+   "y": 240,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 109,
+     "name": "",
+     "side": "top",
+     "t": 0.5,
+     "socket": 1
+    },
+    {
+     "id": 111,
+     "name": "R1",
+     "side": "bottom",
+     "t": 0.12,
+     "socket": 1,
+     "rear": true
+    },
+    {
+     "id": 115,
+     "name": "",
+     "side": "top",
+     "t": 0.5,
+     "socket": 2
+    },
+    {
+     "id": 117,
+     "name": "R2",
+     "side": "bottom",
+     "t": 0.22,
+     "socket": 2,
+     "rear": true
+    },
+    {
+     "id": 121,
+     "name": "",
+     "side": "top",
+     "t": 0.5,
+     "socket": 3
+    },
+    {
+     "id": 123,
+     "name": "R3",
+     "side": "bottom",
+     "t": 0.32,
+     "socket": 3,
+     "rear": true
+    }
+   ],
+   "panel": {
+    "ports": 24,
+    "connector": "rj45"
+   }
+  },
+  {
+   "id": 104,
+   "name": "pp-f1",
+   "kind": "patch panel",
+   "x": 760,
+   "y": 240,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 127,
+     "name": "",
+     "side": "top",
+     "t": 0.5,
+     "socket": 1
+    },
+    {
+     "id": 130,
+     "name": "",
+     "side": "top",
+     "t": 0.5,
+     "socket": 2
+    }
+   ],
+   "panel": {
+    "ports": 12,
+    "connector": "lc"
+   }
+  },
+  {
+   "id": 105,
+   "name": "esx-01",
+   "kind": "server",
+   "x": 40,
+   "y": 440,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 112,
+     "name": "eth0",
+     "side": "top",
+     "t": 0.5
+    }
+   ]
+  },
+  {
+   "id": 106,
+   "name": "esx-02",
+   "kind": "server",
+   "x": 210,
+   "y": 440,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 118,
+     "name": "eth0",
+     "side": "top",
+     "t": 0.5
+    }
+   ]
+  },
+  {
+   "id": 107,
+   "name": "esx-03",
+   "kind": "server",
+   "x": 380,
+   "y": 440,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 124,
+     "name": "eth0",
+     "side": "top",
+     "t": 0.5
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "id": 110,
+   "routing": "orthogonal",
+   "from": {
+    "device": 101,
+    "port": 108
+   },
+   "to": {
+    "device": 103,
+    "port": 109
+   },
+   "layer": 1
+  },
+  {
+   "id": 113,
+   "routing": "orthogonal",
+   "from": {
+    "device": 103,
+    "port": 111
+   },
+   "to": {
+    "device": 105,
+    "port": 112
+   },
+   "layer": 1
+  },
+  {
+   "id": 116,
+   "routing": "orthogonal",
+   "from": {
+    "device": 101,
+    "port": 114
+   },
+   "to": {
+    "device": 103,
+    "port": 115
+   },
+   "layer": 1
+  },
+  {
+   "id": 119,
+   "routing": "orthogonal",
+   "from": {
+    "device": 103,
+    "port": 117
+   },
+   "to": {
+    "device": 106,
+    "port": 118
+   },
+   "layer": 1
+  },
+  {
+   "id": 122,
+   "routing": "orthogonal",
+   "from": {
+    "device": 101,
+    "port": 120
+   },
+   "to": {
+    "device": 103,
+    "port": 121
+   },
+   "layer": 1
+  },
+  {
+   "id": 125,
+   "routing": "orthogonal",
+   "from": {
+    "device": 103,
+    "port": 123
+   },
+   "to": {
+    "device": 107,
+    "port": 124
+   },
+   "layer": 1
+  },
+  {
+   "id": 128,
+   "routing": "orthogonal",
+   "from": {
+    "device": 101,
+    "port": 126
+   },
+   "to": {
+    "device": 104,
+    "port": 127
+   },
+   "layer": 1,
+   "kind": "trunk"
+  },
+  {
+   "id": 131,
+   "routing": "orthogonal",
+   "from": {
+    "device": 102,
+    "port": 129
+   },
+   "to": {
+    "device": 104,
+    "port": 130
+   },
+   "layer": 1,
+   "kind": "trunk"
+  }
+ ]
+}

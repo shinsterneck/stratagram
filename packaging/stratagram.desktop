@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Stratagram
+GenericName=Network Diagram Editor
+Comment=Draw network diagrams and export them to SVG and draw.io
+Exec=stratagram %f
+TryExec=stratagram
+Icon=stratagram
+Terminal=false
+StartupNotify=true
+StartupWMClass=stratagram
+Categories=Graphics;2DGraphics;VectorGraphics;Qt;
+Keywords=network;diagram;topology;drawio;svg;

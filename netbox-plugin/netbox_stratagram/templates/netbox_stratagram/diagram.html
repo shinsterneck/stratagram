@@ -1,0 +1,40 @@
+{# This file is part of Stratagram: https://github.com/shinsterneck/stratagram #}
+{# Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE). #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+
+{# The Diagram tab of a site or a location (base_template: its page). #}
+{% extends base_template %}
+{% load static %}
+
+{% block head %}
+  {{ block.super }}
+  {% if editor_css %}<link rel="stylesheet" href="{{ editor_css }}">{% endif %}
+  <style>
+    /* The editor fills the page below the tabs. */
+    #stratagram-editor { height: 640px; min-height: 480px; border: 1px solid var(--tblr-border-color, #e2e8f0); border-radius: 4px; overflow: hidden; }
+    #stratagram-saved { color: var(--tblr-secondary, #64748b); }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="row mb-2">
+    <div class="col">
+      <span id="stratagram-saved"></span>
+    </div>
+  </div>
+  {% if denied %}
+    <div class="alert alert-warning">{{ denied }}</div>
+  {% elif editor_version %}
+    <div id="stratagram-editor"></div>
+  {% else %}
+    <div class="alert alert-warning">The diagram editor was not built into this plugin (see build.sh).</div>
+  {% endif %}
+  {{ stratagram|json_script:"stratagram-config" }}
+{% endblock %}
+
+{% block javascript %}
+  {{ block.super }}
+  {% if editor_version and not denied %}
+    <script type="module" src="{% static 'netbox_stratagram/netbox.js' %}?v={{ editor_version }}"></script>
+  {% endif %}
+{% endblock %}

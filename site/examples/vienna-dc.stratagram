@@ -1,0 +1,2118 @@
+{
+  "format": "stratagram",
+  "version": 1,
+  "name": "Vienna DC",
+  "source": "dcim.site:3",
+  "devices": [
+    {
+      "id": 2,
+      "name": "fw-01",
+      "kind": "firewall",
+      "x": 90.0,
+      "y": 150.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#fecaca",
+      "ports": [
+        {
+          "id": 26,
+          "name": "wan1",
+          "side": "top",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1002"
+        },
+        {
+          "id": 37,
+          "name": "ha",
+          "side": "right",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1007"
+        },
+        {
+          "id": 40,
+          "name": "port3",
+          "side": "bottom",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1010"
+        }
+      ],
+      "layer": 4,
+      "z": 0,
+      "source": "dcim.device:1"
+    },
+    {
+      "id": 5,
+      "name": "fw-02",
+      "kind": "firewall",
+      "x": 540.0,
+      "y": 150.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#fecaca",
+      "ports": [
+        {
+          "id": 32,
+          "name": "wan1",
+          "side": "top",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1005"
+        },
+        {
+          "id": 38,
+          "name": "ha",
+          "side": "left",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1008"
+        },
+        {
+          "id": 43,
+          "name": "port3",
+          "side": "bottom",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1013"
+        }
+      ],
+      "layer": 6,
+      "z": 1,
+      "source": "dcim.device:2"
+    },
+    {
+      "id": 7,
+      "name": "core-01",
+      "kind": "switch",
+      "x": 0.0,
+      "y": 300.0,
+      "w": 296.0,
+      "h": 78.0,
+      "color": "#bfdbfe",
+      "ports": [
+        {
+          "id": 41,
+          "name": "Te1/0/1",
+          "side": "top",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1011",
+          "socket": 1
+        },
+        {
+          "id": 46,
+          "name": "Te1/0/31",
+          "side": "right",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1016",
+          "socket": 31
+        },
+        {
+          "id": 49,
+          "name": "Te1/0/5",
+          "side": "bottom",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1019",
+          "socket": 5
+        }
+      ],
+      "layer": 9,
+      "z": 2,
+      "source": "dcim.device:3",
+      "panel": {
+        "ports": 32,
+        "connector": "sfp"
+      }
+    },
+    {
+      "id": 10,
+      "name": "core-02",
+      "kind": "switch",
+      "x": 450.0,
+      "y": 300.0,
+      "w": 296.0,
+      "h": 78.0,
+      "color": "#bfdbfe",
+      "ports": [
+        {
+          "id": 44,
+          "name": "Te1/0/1",
+          "side": "top",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1014",
+          "socket": 1
+        },
+        {
+          "id": 47,
+          "name": "Te1/0/31",
+          "side": "left",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1017",
+          "socket": 31
+        },
+        {
+          "id": 52,
+          "name": "Te1/0/5",
+          "side": "bottom",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1022",
+          "socket": 5
+        }
+      ],
+      "layer": 11,
+      "z": 3,
+      "source": "dcim.device:4",
+      "panel": {
+        "ports": 32,
+        "connector": "sfp"
+      }
+    },
+    {
+      "id": 12,
+      "name": "access-01",
+      "kind": "switch",
+      "x": 140.0,
+      "y": 470.0,
+      "w": 472.0,
+      "h": 78.0,
+      "color": "#bfdbfe",
+      "ports": [
+        {
+          "id": 50,
+          "name": "Te1/1/1",
+          "side": "top",
+          "t": 0.3333333333333333,
+          "layer": 1,
+          "source": "dcim.interface:1020",
+          "socket": 49
+        },
+        {
+          "id": 53,
+          "name": "Te1/1/2",
+          "side": "top",
+          "t": 0.6666666666666666,
+          "layer": 1,
+          "source": "dcim.interface:1023",
+          "socket": 50
+        },
+        {
+          "id": 55,
+          "name": "Gi1/0/1",
+          "side": "bottom",
+          "t": 0.2,
+          "layer": 1,
+          "source": "dcim.interface:1025",
+          "socket": 1
+        },
+        {
+          "id": 61,
+          "name": "Gi1/0/2",
+          "side": "bottom",
+          "t": 0.4,
+          "layer": 1,
+          "source": "dcim.interface:1031",
+          "socket": 2
+        },
+        {
+          "id": 67,
+          "name": "Gi1/0/3",
+          "side": "bottom",
+          "t": 0.6,
+          "layer": 1,
+          "source": "dcim.interface:1037",
+          "socket": 3
+        },
+        {
+          "id": 73,
+          "name": "Gi1/0/4",
+          "side": "bottom",
+          "t": 0.8,
+          "layer": 1,
+          "source": "dcim.interface:1043",
+          "socket": 4
+        }
+      ],
+      "layer": 13,
+      "z": 4,
+      "source": "dcim.device:5",
+      "panel": {
+        "ports": 48,
+        "connector": "rj45",
+        "uplinks": 4
+      }
+    },
+    {
+      "id": 14,
+      "name": "pp-r2-01",
+      "kind": "patch panel",
+      "x": 160.0,
+      "y": 640.0,
+      "w": 428.0,
+      "h": 60.0,
+      "color": "#e2e8f0",
+      "ports": [
+        {
+          "id": 56,
+          "name": "1",
+          "side": "top",
+          "t": 0.2,
+          "layer": 1,
+          "source": "dcim.frontport:1026",
+          "socket": 1
+        },
+        {
+          "id": 58,
+          "name": "R1",
+          "side": "bottom",
+          "t": 0.2,
+          "layer": 1,
+          "source": "dcim.rearport:1028"
+        },
+        {
+          "id": 62,
+          "name": "2",
+          "side": "top",
+          "t": 0.4,
+          "layer": 1,
+          "source": "dcim.frontport:1032",
+          "socket": 2
+        },
+        {
+          "id": 64,
+          "name": "R2",
+          "side": "bottom",
+          "t": 0.4,
+          "layer": 1,
+          "source": "dcim.rearport:1034"
+        },
+        {
+          "id": 68,
+          "name": "3",
+          "side": "top",
+          "t": 0.6,
+          "layer": 1,
+          "source": "dcim.frontport:1038",
+          "socket": 3
+        },
+        {
+          "id": 70,
+          "name": "R3",
+          "side": "bottom",
+          "t": 0.6,
+          "layer": 1,
+          "source": "dcim.rearport:1040"
+        },
+        {
+          "id": 74,
+          "name": "4",
+          "side": "top",
+          "t": 0.8,
+          "layer": 1,
+          "source": "dcim.frontport:1044",
+          "socket": 4
+        },
+        {
+          "id": 76,
+          "name": "R4",
+          "side": "bottom",
+          "t": 0.8,
+          "layer": 1,
+          "source": "dcim.rearport:1046"
+        }
+      ],
+      "layer": 16,
+      "z": 5,
+      "source": "dcim.device:6",
+      "panel": {
+        "ports": 24,
+        "connector": "rj45"
+      }
+    },
+    {
+      "id": 17,
+      "name": "srv-01",
+      "kind": "server",
+      "x": 40.0,
+      "y": 790.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 59,
+          "name": "eth0",
+          "side": "top",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1029"
+        }
+      ],
+      "layer": 19,
+      "z": 6,
+      "source": "dcim.device:20"
+    },
+    {
+      "id": 20,
+      "name": "srv-02",
+      "kind": "server",
+      "x": 220.0,
+      "y": 790.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 65,
+          "name": "eth0",
+          "side": "top",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1035"
+        }
+      ],
+      "layer": 21,
+      "z": 7,
+      "source": "dcim.device:21"
+    },
+    {
+      "id": 22,
+      "name": "srv-03",
+      "kind": "server",
+      "x": 400.0,
+      "y": 790.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 71,
+          "name": "eth0",
+          "side": "top",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1041"
+        }
+      ],
+      "layer": 23,
+      "z": 8,
+      "source": "dcim.device:22"
+    },
+    {
+      "id": 24,
+      "name": "srv-04",
+      "kind": "server",
+      "x": 580.0,
+      "y": 790.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 77,
+          "name": "eth0",
+          "side": "top",
+          "t": 0.5,
+          "layer": 1,
+          "source": "dcim.interface:1047"
+        }
+      ],
+      "layer": 25,
+      "z": 9,
+      "source": "dcim.device:23"
+    },
+    {
+      "id": 27,
+      "name": "A1 VIE-INET-1",
+      "kind": "internet",
+      "x": 90.0,
+      "y": 0.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#e5e7eb",
+      "ports": [
+        {
+          "id": 30,
+          "name": "",
+          "side": "bottom",
+          "t": 0.5,
+          "layer": 1
+        }
+      ],
+      "layer": 29,
+      "z": 10,
+      "source": "circuits.circuit:77"
+    },
+    {
+      "id": 33,
+      "name": "Magenta VIE-INET-2",
+      "kind": "internet",
+      "x": 540.0,
+      "y": 0.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#e5e7eb",
+      "ports": [
+        {
+          "id": 35,
+          "name": "",
+          "side": "bottom",
+          "t": 0.5,
+          "layer": 1
+        }
+      ],
+      "layer": 34,
+      "z": 12,
+      "source": "circuits.circuit:78"
+    }
+  ],
+  "links": [
+    {
+      "id": 31,
+      "from": {
+        "device": 2,
+        "port": 26
+      },
+      "to": {
+        "device": 27,
+        "port": 30
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l3",
+      "label": "",
+      "layer": 1,
+      "z": 11,
+      "source": "dcim.cable:1001"
+    },
+    {
+      "id": 36,
+      "from": {
+        "device": 5,
+        "port": 32
+      },
+      "to": {
+        "device": 33,
+        "port": 35
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l3",
+      "label": "",
+      "layer": 1,
+      "z": 13,
+      "source": "dcim.cable:1004"
+    },
+    {
+      "id": 39,
+      "from": {
+        "device": 2,
+        "port": 37
+      },
+      "to": {
+        "device": 5,
+        "port": 38
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "label": "HA",
+      "layer": 1,
+      "z": 14,
+      "source": "dcim.cable:1009"
+    },
+    {
+      "id": 42,
+      "from": {
+        "device": 2,
+        "port": 40
+      },
+      "to": {
+        "device": 7,
+        "port": 41
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l3",
+      "label": "",
+      "layer": 1,
+      "z": 15,
+      "source": "dcim.cable:1012"
+    },
+    {
+      "id": 45,
+      "from": {
+        "device": 5,
+        "port": 43
+      },
+      "to": {
+        "device": 10,
+        "port": 44
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l3",
+      "label": "",
+      "layer": 1,
+      "z": 16,
+      "source": "dcim.cable:1015"
+    },
+    {
+      "id": 48,
+      "from": {
+        "device": 7,
+        "port": 46
+      },
+      "to": {
+        "device": 10,
+        "port": 47
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "trunk",
+      "label": "vPC peer",
+      "layer": 1,
+      "z": 17,
+      "source": "dcim.cable:1018"
+    },
+    {
+      "id": 51,
+      "from": {
+        "device": 7,
+        "port": 49
+      },
+      "to": {
+        "device": 12,
+        "port": 50
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "trunk",
+      "label": "Uplink",
+      "layer": 1,
+      "z": 18,
+      "source": "dcim.cable:1021"
+    },
+    {
+      "id": 54,
+      "from": {
+        "device": 10,
+        "port": 52
+      },
+      "to": {
+        "device": 12,
+        "port": 53
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "trunk",
+      "label": "",
+      "layer": 1,
+      "z": 19,
+      "source": "dcim.cable:1024"
+    },
+    {
+      "id": 57,
+      "from": {
+        "device": 12,
+        "port": 55
+      },
+      "to": {
+        "device": 14,
+        "port": 56
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 1,
+      "z": 20,
+      "source": "dcim.cable:1027"
+    },
+    {
+      "id": 60,
+      "from": {
+        "device": 14,
+        "port": 58
+      },
+      "to": {
+        "device": 17,
+        "port": 59
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 1,
+      "z": 21,
+      "source": "dcim.cable:1030"
+    },
+    {
+      "id": 63,
+      "from": {
+        "device": 12,
+        "port": 61
+      },
+      "to": {
+        "device": 14,
+        "port": 62
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 1,
+      "z": 22,
+      "source": "dcim.cable:1033"
+    },
+    {
+      "id": 66,
+      "from": {
+        "device": 14,
+        "port": 64
+      },
+      "to": {
+        "device": 20,
+        "port": 65
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 1,
+      "z": 23,
+      "source": "dcim.cable:1036"
+    },
+    {
+      "id": 69,
+      "from": {
+        "device": 12,
+        "port": 67
+      },
+      "to": {
+        "device": 14,
+        "port": 68
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 1,
+      "z": 24,
+      "source": "dcim.cable:1039"
+    },
+    {
+      "id": 72,
+      "from": {
+        "device": 14,
+        "port": 70
+      },
+      "to": {
+        "device": 22,
+        "port": 71
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 1,
+      "z": 25,
+      "source": "dcim.cable:1042"
+    },
+    {
+      "id": 75,
+      "from": {
+        "device": 12,
+        "port": 73
+      },
+      "to": {
+        "device": 14,
+        "port": 74
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 1,
+      "z": 26,
+      "source": "dcim.cable:1045"
+    },
+    {
+      "id": 78,
+      "from": {
+        "device": 14,
+        "port": 76
+      },
+      "to": {
+        "device": 24,
+        "port": 77
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 1,
+      "z": 27,
+      "source": "dcim.cable:1048"
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "Cables",
+      "visible": true
+    },
+    {
+      "id": 28,
+      "name": "Internet",
+      "visible": true
+    },
+    {
+      "id": 29,
+      "name": "A1 VIE-INET-1",
+      "visible": true,
+      "parent": 28,
+      "source": "circuits.circuit:77"
+    },
+    {
+      "id": 34,
+      "name": "Magenta VIE-INET-2",
+      "visible": true,
+      "parent": 28,
+      "source": "circuits.circuit:78"
+    },
+    {
+      "id": 3,
+      "name": "Firewalls",
+      "visible": true
+    },
+    {
+      "id": 4,
+      "name": "fw-01",
+      "visible": true,
+      "parent": 3,
+      "source": "dcim.device:1"
+    },
+    {
+      "id": 6,
+      "name": "fw-02",
+      "visible": true,
+      "parent": 3,
+      "source": "dcim.device:2"
+    },
+    {
+      "id": 8,
+      "name": "Switches",
+      "visible": true,
+      "expanded": true
+    },
+    {
+      "id": 9,
+      "name": "core-01",
+      "visible": true,
+      "parent": 8,
+      "source": "dcim.device:3"
+    },
+    {
+      "id": 11,
+      "name": "core-02",
+      "visible": true,
+      "parent": 8,
+      "source": "dcim.device:4"
+    },
+    {
+      "id": 13,
+      "name": "access-01",
+      "visible": true,
+      "parent": 8,
+      "source": "dcim.device:5"
+    },
+    {
+      "id": 15,
+      "name": "Patch panels",
+      "visible": true
+    },
+    {
+      "id": 16,
+      "name": "pp-r2-01",
+      "visible": true,
+      "parent": 15,
+      "source": "dcim.device:6"
+    },
+    {
+      "id": 18,
+      "name": "Servers",
+      "visible": true,
+      "expanded": true
+    },
+    {
+      "id": 19,
+      "name": "srv-01",
+      "visible": true,
+      "parent": 18,
+      "source": "dcim.device:20"
+    },
+    {
+      "id": 21,
+      "name": "srv-02",
+      "visible": true,
+      "parent": 18,
+      "source": "dcim.device:21"
+    },
+    {
+      "id": 23,
+      "name": "srv-03",
+      "visible": true,
+      "parent": 18,
+      "source": "dcim.device:22"
+    },
+    {
+      "id": 25,
+      "name": "srv-04",
+      "visible": true,
+      "parent": 18,
+      "source": "dcim.device:23"
+    }
+  ],
+  "active_layer": 1,
+  "changed": "2026-11-06 19:15",
+  "traces": [
+    {
+      "links": [
+        57,
+        60
+      ]
+    },
+    {
+      "links": [
+        63,
+        66
+      ]
+    },
+    {
+      "links": [
+        69,
+        72
+      ]
+    },
+    {
+      "links": [
+        75,
+        78
+      ]
+    }
+  ],
+  "sheets": [
+    {
+      "name": "Room 1 (core)",
+      "source": "dcim.location:10",
+      "devices": [
+        {
+          "id": 2,
+          "name": "fw-01",
+          "kind": "firewall",
+          "x": 130.0,
+          "y": 310.0,
+          "w": 120.0,
+          "h": 60.0,
+          "color": "#fecaca",
+          "ports": [
+            {
+              "id": 14,
+              "name": "wan1",
+              "side": "bottom",
+              "t": 0.6666666666666666,
+              "layer": 1,
+              "source": "dcim.interface:1002"
+            },
+            {
+              "id": 25,
+              "name": "ha",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1007"
+            },
+            {
+              "id": 28,
+              "name": "port3",
+              "side": "bottom",
+              "t": 0.3333333333333333,
+              "layer": 1,
+              "source": "dcim.interface:1010"
+            }
+          ],
+          "layer": 4,
+          "z": 0,
+          "source": "dcim.device:1"
+        },
+        {
+          "id": 5,
+          "name": "fw-02",
+          "kind": "firewall",
+          "x": 280.0,
+          "y": 150.0,
+          "w": 120.0,
+          "h": 60.0,
+          "color": "#fecaca",
+          "ports": [
+            {
+              "id": 20,
+              "name": "wan1",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1005"
+            },
+            {
+              "id": 26,
+              "name": "ha",
+              "side": "bottom",
+              "t": 0.3333333333333333,
+              "layer": 1,
+              "source": "dcim.interface:1008"
+            },
+            {
+              "id": 31,
+              "name": "port3",
+              "side": "bottom",
+              "t": 0.6666666666666666,
+              "layer": 1,
+              "source": "dcim.interface:1013"
+            }
+          ],
+          "layer": 6,
+          "z": 1,
+          "source": "dcim.device:2"
+        },
+        {
+          "id": 7,
+          "name": "core-01",
+          "kind": "switch",
+          "x": 0.0,
+          "y": 470.0,
+          "w": 296.0,
+          "h": 78.0,
+          "color": "#bfdbfe",
+          "ports": [
+            {
+              "id": 29,
+              "name": "Te1/0/1",
+              "side": "top",
+              "t": 0.3333333333333333,
+              "layer": 1,
+              "source": "dcim.interface:1011",
+              "socket": 1
+            },
+            {
+              "id": 34,
+              "name": "Te1/0/31",
+              "side": "top",
+              "t": 0.6666666666666666,
+              "layer": 1,
+              "source": "dcim.interface:1016",
+              "socket": 31
+            },
+            {
+              "id": 37,
+              "name": "Te1/0/5",
+              "side": "right",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1019",
+              "socket": 5
+            }
+          ],
+          "layer": 9,
+          "z": 2,
+          "source": "dcim.device:3",
+          "panel": {
+            "ports": 32,
+            "connector": "sfp"
+          }
+        },
+        {
+          "id": 10,
+          "name": "core-02",
+          "kind": "switch",
+          "x": 310.0,
+          "y": 300.0,
+          "w": 296.0,
+          "h": 78.0,
+          "color": "#bfdbfe",
+          "ports": [
+            {
+              "id": 32,
+              "name": "Te1/0/1",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1014",
+              "socket": 1
+            },
+            {
+              "id": 35,
+              "name": "Te1/0/31",
+              "side": "bottom",
+              "t": 0.3333333333333333,
+              "layer": 1,
+              "source": "dcim.interface:1017",
+              "socket": 31
+            },
+            {
+              "id": 40,
+              "name": "Te1/0/5",
+              "side": "bottom",
+              "t": 0.6666666666666666,
+              "layer": 1,
+              "source": "dcim.interface:1022",
+              "socket": 5
+            }
+          ],
+          "layer": 11,
+          "z": 3,
+          "source": "dcim.device:4",
+          "panel": {
+            "ports": 32,
+            "connector": "sfp"
+          }
+        },
+        {
+          "id": 12,
+          "name": "access-01",
+          "kind": "switch",
+          "x": 440.0,
+          "y": 470.0,
+          "w": 472.0,
+          "h": 78.0,
+          "color": "#bfdbfe",
+          "ports": [
+            {
+              "id": 38,
+              "name": "Te1/1/1",
+              "side": "left",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1020",
+              "socket": 49
+            },
+            {
+              "id": 41,
+              "name": "Te1/1/2",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1023",
+              "socket": 50
+            }
+          ],
+          "layer": 13,
+          "z": 4,
+          "source": "dcim.device:5",
+          "panel": {
+            "ports": 48,
+            "connector": "rj45",
+            "uplinks": 4
+          }
+        },
+        {
+          "id": 15,
+          "name": "A1 VIE-INET-1",
+          "kind": "internet",
+          "x": 640.0,
+          "y": 470.0,
+          "w": 120.0,
+          "h": 60.0,
+          "color": "#e5e7eb",
+          "ports": [
+            {
+              "id": 18,
+              "name": "",
+              "side": "bottom",
+              "t": 0.5,
+              "layer": 1
+            }
+          ],
+          "layer": 17,
+          "z": 5,
+          "source": "circuits.circuit:77"
+        },
+        {
+          "id": 21,
+          "name": "Magenta VIE-INET-2",
+          "kind": "internet",
+          "x": 280.0,
+          "y": 0.0,
+          "w": 120.0,
+          "h": 60.0,
+          "color": "#e5e7eb",
+          "ports": [
+            {
+              "id": 23,
+              "name": "",
+              "side": "bottom",
+              "t": 0.5,
+              "layer": 1
+            }
+          ],
+          "layer": 22,
+          "z": 7,
+          "source": "circuits.circuit:78"
+        }
+      ],
+      "links": [
+        {
+          "id": 19,
+          "from": {
+            "device": 2,
+            "port": 14
+          },
+          "to": {
+            "device": 15,
+            "port": 18
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "around",
+          "kind": "l3",
+          "label": "",
+          "layer": 1,
+          "z": 6,
+          "source": "dcim.cable:1001"
+        },
+        {
+          "id": 24,
+          "from": {
+            "device": 5,
+            "port": 20
+          },
+          "to": {
+            "device": 21,
+            "port": 23
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l3",
+          "label": "",
+          "layer": 1,
+          "z": 8,
+          "source": "dcim.cable:1004"
+        },
+        {
+          "id": 27,
+          "from": {
+            "device": 2,
+            "port": 25
+          },
+          "to": {
+            "device": 5,
+            "port": 26
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "label": "HA",
+          "layer": 1,
+          "z": 9,
+          "source": "dcim.cable:1009"
+        },
+        {
+          "id": 30,
+          "from": {
+            "device": 2,
+            "port": 28
+          },
+          "to": {
+            "device": 7,
+            "port": 29
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l3",
+          "label": "",
+          "layer": 1,
+          "z": 10,
+          "source": "dcim.cable:1012"
+        },
+        {
+          "id": 33,
+          "from": {
+            "device": 5,
+            "port": 31
+          },
+          "to": {
+            "device": 10,
+            "port": 32
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l3",
+          "label": "",
+          "layer": 1,
+          "z": 11,
+          "source": "dcim.cable:1015"
+        },
+        {
+          "id": 36,
+          "from": {
+            "device": 7,
+            "port": 34
+          },
+          "to": {
+            "device": 10,
+            "port": 35
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "trunk",
+          "label": "vPC peer",
+          "layer": 1,
+          "z": 12,
+          "source": "dcim.cable:1018"
+        },
+        {
+          "id": 39,
+          "from": {
+            "device": 7,
+            "port": 37
+          },
+          "to": {
+            "device": 12,
+            "port": 38
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "trunk",
+          "label": "Uplink",
+          "layer": 1,
+          "z": 13,
+          "source": "dcim.cable:1021"
+        },
+        {
+          "id": 42,
+          "from": {
+            "device": 10,
+            "port": 40
+          },
+          "to": {
+            "device": 12,
+            "port": 41
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "trunk",
+          "label": "",
+          "layer": 1,
+          "z": 14,
+          "source": "dcim.cable:1024"
+        }
+      ],
+      "layers": [
+        {
+          "id": 1,
+          "name": "Cables",
+          "visible": true
+        },
+        {
+          "id": 16,
+          "name": "Internet",
+          "visible": true
+        },
+        {
+          "id": 17,
+          "name": "A1 VIE-INET-1",
+          "visible": true,
+          "parent": 16,
+          "source": "circuits.circuit:77"
+        },
+        {
+          "id": 22,
+          "name": "Magenta VIE-INET-2",
+          "visible": true,
+          "parent": 16,
+          "source": "circuits.circuit:78"
+        },
+        {
+          "id": 3,
+          "name": "Firewalls",
+          "visible": true
+        },
+        {
+          "id": 4,
+          "name": "fw-01",
+          "visible": true,
+          "parent": 3,
+          "source": "dcim.device:1"
+        },
+        {
+          "id": 6,
+          "name": "fw-02",
+          "visible": true,
+          "parent": 3,
+          "source": "dcim.device:2"
+        },
+        {
+          "id": 8,
+          "name": "Switches",
+          "visible": true
+        },
+        {
+          "id": 9,
+          "name": "core-01",
+          "visible": true,
+          "parent": 8,
+          "source": "dcim.device:3"
+        },
+        {
+          "id": 11,
+          "name": "core-02",
+          "visible": true,
+          "parent": 8,
+          "source": "dcim.device:4"
+        },
+        {
+          "id": 13,
+          "name": "Other locations",
+          "visible": true,
+          "show_name": true
+        }
+      ],
+      "active_layer": 1,
+      "changed": "2026-11-06 19:15"
+    },
+    {
+      "name": "Room 2 (servers)",
+      "source": "dcim.location:11",
+      "devices": [
+        {
+          "id": 2,
+          "name": "core-01",
+          "kind": "switch",
+          "x": 0.0,
+          "y": 170.0,
+          "w": 296.0,
+          "h": 78.0,
+          "color": "#bfdbfe",
+          "ports": [
+            {
+              "id": 20,
+              "name": "Te1/0/5",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1019",
+              "socket": 5
+            }
+          ],
+          "layer": 3,
+          "z": 0,
+          "source": "dcim.device:3",
+          "panel": {
+            "ports": 32,
+            "connector": "sfp"
+          }
+        },
+        {
+          "id": 4,
+          "name": "core-02",
+          "kind": "switch",
+          "x": 360.0,
+          "y": 170.0,
+          "w": 296.0,
+          "h": 78.0,
+          "color": "#bfdbfe",
+          "ports": [
+            {
+              "id": 23,
+              "name": "Te1/0/5",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1022",
+              "socket": 5
+            }
+          ],
+          "layer": 3,
+          "z": 1,
+          "source": "dcim.device:4",
+          "panel": {
+            "ports": 32,
+            "connector": "sfp"
+          }
+        },
+        {
+          "id": 5,
+          "name": "access-01",
+          "kind": "switch",
+          "x": 290.0,
+          "y": 0.0,
+          "w": 472.0,
+          "h": 78.0,
+          "color": "#bfdbfe",
+          "ports": [
+            {
+              "id": 21,
+              "name": "Te1/1/1",
+              "side": "bottom",
+              "t": 0.14285714285714285,
+              "layer": 1,
+              "source": "dcim.interface:1020",
+              "socket": 49
+            },
+            {
+              "id": 24,
+              "name": "Te1/1/2",
+              "side": "bottom",
+              "t": 0.2857142857142857,
+              "layer": 1,
+              "source": "dcim.interface:1023",
+              "socket": 50
+            },
+            {
+              "id": 26,
+              "name": "Gi1/0/1",
+              "side": "bottom",
+              "t": 0.42857142857142855,
+              "layer": 1,
+              "source": "dcim.interface:1025",
+              "socket": 1
+            },
+            {
+              "id": 32,
+              "name": "Gi1/0/2",
+              "side": "bottom",
+              "t": 0.5714285714285714,
+              "layer": 1,
+              "source": "dcim.interface:1031",
+              "socket": 2
+            },
+            {
+              "id": 38,
+              "name": "Gi1/0/3",
+              "side": "bottom",
+              "t": 0.7142857142857143,
+              "layer": 1,
+              "source": "dcim.interface:1037",
+              "socket": 3
+            },
+            {
+              "id": 44,
+              "name": "Gi1/0/4",
+              "side": "bottom",
+              "t": 0.8571428571428571,
+              "layer": 1,
+              "source": "dcim.interface:1043",
+              "socket": 4
+            }
+          ],
+          "layer": 7,
+          "z": 2,
+          "source": "dcim.device:5",
+          "panel": {
+            "ports": 48,
+            "connector": "rj45",
+            "uplinks": 4
+          }
+        },
+        {
+          "id": 8,
+          "name": "pp-r2-01",
+          "kind": "patch panel",
+          "x": 710.0,
+          "y": 180.0,
+          "w": 428.0,
+          "h": 60.0,
+          "color": "#e2e8f0",
+          "ports": [
+            {
+              "id": 27,
+              "name": "1",
+              "side": "top",
+              "t": 0.2,
+              "layer": 1,
+              "source": "dcim.frontport:1026",
+              "socket": 1
+            },
+            {
+              "id": 29,
+              "name": "R1",
+              "side": "right",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.rearport:1028"
+            },
+            {
+              "id": 33,
+              "name": "2",
+              "side": "top",
+              "t": 0.4,
+              "layer": 1,
+              "source": "dcim.frontport:1032",
+              "socket": 2
+            },
+            {
+              "id": 35,
+              "name": "R2",
+              "side": "bottom",
+              "t": 0.25,
+              "layer": 1,
+              "source": "dcim.rearport:1034"
+            },
+            {
+              "id": 39,
+              "name": "3",
+              "side": "top",
+              "t": 0.6,
+              "layer": 1,
+              "source": "dcim.frontport:1038",
+              "socket": 3
+            },
+            {
+              "id": 41,
+              "name": "R3",
+              "side": "bottom",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.rearport:1040"
+            },
+            {
+              "id": 45,
+              "name": "4",
+              "side": "top",
+              "t": 0.8,
+              "layer": 1,
+              "source": "dcim.frontport:1044",
+              "socket": 4
+            },
+            {
+              "id": 47,
+              "name": "R4",
+              "side": "bottom",
+              "t": 0.75,
+              "layer": 1,
+              "source": "dcim.rearport:1046"
+            }
+          ],
+          "layer": 10,
+          "z": 3,
+          "source": "dcim.device:6",
+          "panel": {
+            "ports": 24,
+            "connector": "rj45"
+          }
+        },
+        {
+          "id": 11,
+          "name": "srv-01",
+          "kind": "server",
+          "x": 910.0,
+          "y": 180.0,
+          "w": 120.0,
+          "h": 60.0,
+          "color": "#bbf7d0",
+          "ports": [
+            {
+              "id": 30,
+              "name": "eth0",
+              "side": "right",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1029"
+            }
+          ],
+          "layer": 13,
+          "z": 4,
+          "source": "dcim.device:20"
+        },
+        {
+          "id": 14,
+          "name": "srv-02",
+          "kind": "server",
+          "x": 660.0,
+          "y": 340.0,
+          "w": 120.0,
+          "h": 60.0,
+          "color": "#bbf7d0",
+          "ports": [
+            {
+              "id": 36,
+              "name": "eth0",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1035"
+            }
+          ],
+          "layer": 15,
+          "z": 5,
+          "source": "dcim.device:21"
+        },
+        {
+          "id": 16,
+          "name": "srv-03",
+          "kind": "server",
+          "x": 840.0,
+          "y": 340.0,
+          "w": 120.0,
+          "h": 60.0,
+          "color": "#bbf7d0",
+          "ports": [
+            {
+              "id": 42,
+              "name": "eth0",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1041"
+            }
+          ],
+          "layer": 17,
+          "z": 6,
+          "source": "dcim.device:22"
+        },
+        {
+          "id": 18,
+          "name": "srv-04",
+          "kind": "server",
+          "x": 1020.0,
+          "y": 340.0,
+          "w": 120.0,
+          "h": 60.0,
+          "color": "#bbf7d0",
+          "ports": [
+            {
+              "id": 48,
+              "name": "eth0",
+              "side": "top",
+              "t": 0.5,
+              "layer": 1,
+              "source": "dcim.interface:1047"
+            }
+          ],
+          "layer": 19,
+          "z": 7,
+          "source": "dcim.device:23"
+        }
+      ],
+      "links": [
+        {
+          "id": 22,
+          "from": {
+            "device": 2,
+            "port": 20
+          },
+          "to": {
+            "device": 5,
+            "port": 21
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "trunk",
+          "label": "Uplink",
+          "layer": 1,
+          "z": 8,
+          "source": "dcim.cable:1021"
+        },
+        {
+          "id": 25,
+          "from": {
+            "device": 4,
+            "port": 23
+          },
+          "to": {
+            "device": 5,
+            "port": 24
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "trunk",
+          "label": "",
+          "layer": 1,
+          "z": 9,
+          "source": "dcim.cable:1024"
+        },
+        {
+          "id": 28,
+          "from": {
+            "device": 5,
+            "port": 26
+          },
+          "to": {
+            "device": 8,
+            "port": 27
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l2",
+          "label": "",
+          "layer": 1,
+          "z": 10,
+          "source": "dcim.cable:1027"
+        },
+        {
+          "id": 31,
+          "from": {
+            "device": 8,
+            "port": 29
+          },
+          "to": {
+            "device": 11,
+            "port": 30
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l2",
+          "label": "",
+          "layer": 1,
+          "z": 11,
+          "source": "dcim.cable:1030"
+        },
+        {
+          "id": 34,
+          "from": {
+            "device": 5,
+            "port": 32
+          },
+          "to": {
+            "device": 8,
+            "port": 33
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l2",
+          "label": "",
+          "layer": 1,
+          "z": 12,
+          "source": "dcim.cable:1033"
+        },
+        {
+          "id": 37,
+          "from": {
+            "device": 8,
+            "port": 35
+          },
+          "to": {
+            "device": 14,
+            "port": 36
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l2",
+          "label": "",
+          "layer": 1,
+          "z": 13,
+          "source": "dcim.cable:1036"
+        },
+        {
+          "id": 40,
+          "from": {
+            "device": 5,
+            "port": 38
+          },
+          "to": {
+            "device": 8,
+            "port": 39
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l2",
+          "label": "",
+          "layer": 1,
+          "z": 14,
+          "source": "dcim.cable:1039"
+        },
+        {
+          "id": 43,
+          "from": {
+            "device": 8,
+            "port": 41
+          },
+          "to": {
+            "device": 16,
+            "port": 42
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l2",
+          "label": "",
+          "layer": 1,
+          "z": 15,
+          "source": "dcim.cable:1042"
+        },
+        {
+          "id": 46,
+          "from": {
+            "device": 5,
+            "port": 44
+          },
+          "to": {
+            "device": 8,
+            "port": 45
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l2",
+          "label": "",
+          "layer": 1,
+          "z": 16,
+          "source": "dcim.cable:1045"
+        },
+        {
+          "id": 49,
+          "from": {
+            "device": 8,
+            "port": 47
+          },
+          "to": {
+            "device": 18,
+            "port": 48
+          },
+          "color": "#334155",
+          "width": 2.0,
+          "style": "solid",
+          "head_start": "none",
+          "head_end": "none",
+          "routing": "orthogonal",
+          "kind": "l2",
+          "label": "",
+          "layer": 1,
+          "z": 17,
+          "source": "dcim.cable:1048"
+        }
+      ],
+      "layers": [
+        {
+          "id": 1,
+          "name": "Cables",
+          "visible": true
+        },
+        {
+          "id": 6,
+          "name": "Switches",
+          "visible": true
+        },
+        {
+          "id": 7,
+          "name": "access-01",
+          "visible": true,
+          "parent": 6,
+          "source": "dcim.device:5"
+        },
+        {
+          "id": 9,
+          "name": "Patch panels",
+          "visible": true
+        },
+        {
+          "id": 10,
+          "name": "pp-r2-01",
+          "visible": true,
+          "parent": 9,
+          "source": "dcim.device:6"
+        },
+        {
+          "id": 12,
+          "name": "Servers",
+          "visible": true
+        },
+        {
+          "id": 13,
+          "name": "srv-01",
+          "visible": true,
+          "parent": 12,
+          "source": "dcim.device:20"
+        },
+        {
+          "id": 15,
+          "name": "srv-02",
+          "visible": true,
+          "parent": 12,
+          "source": "dcim.device:21"
+        },
+        {
+          "id": 17,
+          "name": "srv-03",
+          "visible": true,
+          "parent": 12,
+          "source": "dcim.device:22"
+        },
+        {
+          "id": 19,
+          "name": "srv-04",
+          "visible": true,
+          "parent": 12,
+          "source": "dcim.device:23"
+        },
+        {
+          "id": 3,
+          "name": "Other locations",
+          "visible": true,
+          "show_name": true
+        }
+      ],
+      "active_layer": 1,
+      "changed": "2026-11-06 19:15",
+      "traces": [
+        {
+          "links": [
+            28,
+            31
+          ]
+        },
+        {
+          "links": [
+            34,
+            37
+          ]
+        },
+        {
+          "links": [
+            40,
+            43
+          ]
+        },
+        {
+          "links": [
+            46,
+            49
+          ]
+        }
+      ]
+    }
+  ]
+}

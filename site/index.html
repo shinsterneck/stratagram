@@ -1,0 +1,496 @@
+<!doctype html>
+<!-- This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+     Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
+     SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stratagram — network diagrams, fast and consistent</title>
+<meta name="description" content="Stratagram is a focused network diagram editor: standardized stencils and line types, quick add and auto layout, so ideas are drawn in minutes and every diagram reads the same across a team. With a NetBox plugin that draws sites from NetBox.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script>document.documentElement.classList.add("js")</script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="logo.svg" alt=""><span>Stratagram</span></a>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#app" data-page="app">Stratagram</a>
+      <a href="#netbox" data-page="netbox">NetBox plugin</a>
+    </nav>
+    <div class="spacer"></div>
+    <nav class="links">
+      <a href="#app-features" data-page="app">Features</a>
+      <a href="#app-start" data-page="app">Get started</a>
+      <a href="https://github.com/shinsterneck/stratagram">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- the editor -->
+<div class="page" id="app">
+
+  <div class="hero wrap">
+    <span class="eyebrow"><span class="dot"></span>Network diagram editor · v1.0</span>
+    <h1>Draw the idea, <span class="grad">not the details.</span></h1>
+    <p class="lead">Stratagram is a specialized tool for getting a network onto the screen in minutes.
+      Standardized stencils and line types do the styling for you, so you think about the topology,
+      and everyone on your team reads the result the same way.</p>
+    <div class="cta">
+      <a class="btn primary" href="#app-start">Get started</a>
+      <a class="btn" href="#netbox" data-page="netbox">NetBox plugin →</a>
+      <a class="btn" href="https://github.com/shinsterneck/stratagram">Source on GitHub</a>
+    </div>
+    <div class="facts"><span>Rust + Qt desktop app</span><span>Same editor in the browser</span><span>SVG · PNG · draw.io · CML</span><span>Plain JSON files</span></div>
+
+    <div class="window">
+      <div class="bar"><i></i><i></i><i></i><span>berlin-hq.stratagram — Stratagram</span></div>
+      <a href="shots/desktop-app.png"><img src="shots/desktop-app.png" width="1280" height="800" alt="The Stratagram desktop app: a site diagram with firewalls, core switches, servers and access points in a title frame, the properties panel of a selected firewall on the right"></a>
+    </div>
+    <p class="caption">The desktop app with a site overview in a frame; the panel edits the selected firewall.</p>
+  </div>
+
+  <section class="wrap" id="app-why">
+    <div class="center">
+      <div class="kicker">Why Stratagram</div>
+      <h2>A diagram is a conversation, not artwork.</h2>
+      <p class="section-lead">General-purpose drawing tools give you a thousand shapes and a blank page, and every
+        diagram ends up looking different. Stratagram gives you a small, fixed visual language for networks, and it
+        does the layout. You spend the time on the idea.</p>
+    </div>
+    <div class="pillars">
+      <div class="card">
+        <div class="icon">⚡</div>
+        <h3>Ideas first</h3>
+        <p>Type <code>Firewall, Router, switch|core-01</code> and press Enter. Drag from a border to connect.
+          Pick a layout and the diagram arranges itself. A sketch for a meeting takes minutes, not an afternoon.</p>
+      </div>
+      <div class="card">
+        <div class="icon">◆</div>
+        <h3>One visual language</h3>
+        <p>Every device type has its shape, symbol and color. Every line type says what it carries: a trunk is a double
+          line, a tunnel a band, routed links show their interfaces. There are no styles to invent.</p>
+      </div>
+      <div class="card">
+        <div class="icon">⇄</div>
+        <h3>Made to be shared</h3>
+        <p>Because everybody draws with the same stencils, a diagram from a colleague reads at a glance.
+          Frames carry title, site, revision and a legend. Files are plain JSON, exports are SVG, PNG and draw.io.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider wrap"></div>
+
+  <section class="wrap" id="app-features">
+
+    <div class="feature">
+      <div class="text">
+        <div class="kicker">Standardized stencils</div>
+        <h2>28 device types, one look.</h2>
+        <p class="section-lead">Routers, switches, firewalls, load balancers, wireless, servers and clients, virtual and
+          distributed virtual switches, the internet, and cloud providers with their own tiles. The type sets outline, symbol and color, the same in every diagram,
+          on screen and in every export.</p>
+        <ul>
+          <li><b>Grouped by category</b> in the type list; quick add knows short forms like <code>fw</code>, <code>rtr</code>, <code>sw</code>, <code>lb</code>, <code>dvs</code>.</li>
+          <li><b>Ten line types</b>: 802.1Q trunk, L2 switched, L3 routed, L3 subinterface, IPsec, VXLAN, CAPWAP, SD-WAN, MPLS, plain.</li>
+          <li><b>Legends</b> in the frame list the line types a diagram uses.</li>
+        </ul>
+      </div>
+      <div class="shot"><a href="shots/stencils.png"><img src="shots/stencils.png" width="1780" height="1388" loading="lazy" alt="A sheet of all built-in device stencils: router, OSPF router, BGP reflector, switch, load balancer, firewall, cloud proxy, WLAN controller, access points, server, client, internet, clouds and cloud providers, virtual switch and distributed virtual switch"></a></div>
+    </div>
+
+    <div class="feature flip">
+      <div class="text">
+        <div class="kicker">Fast</div>
+        <h2>From empty page to topology in one line.</h2>
+        <p class="section-lead">Quick add, connect by dragging, auto layout. The editor fills in what a whiteboard sketch
+          leaves out: ports where lines meet, straight lines, room for labels.</p>
+        <ul>
+          <li><b>Auto layout</b>: hierarchy (top down or left to right, from the internet down to the clients), radial, circle, grid, force, or just tidy.</li>
+          <li><b>Lines that do not cross</b>: auto layout lets a line leave its socket the other way, picks another route, or swaps neighbors, so as few lines cross as the ports allow; right-angled lines side by side each keep a lane of their own.</li>
+          <li><b>Smart guides</b>: hold <kbd>Ctrl</kbd> while dragging and items line up, ports snap level so lines run straight.</li>
+          <li><b>Drop a device on a line</b> to put it in between; bend lines through points; lines to nowhere for "out there".</li>
+          <li><b>Edit in place</b>: double-click and type; undo for everything.</li>
+        </ul>
+      </div>
+      <div class="term">
+        <div class="bar">quick add · Ctrl+K</div>
+<pre><span class="c"># comma separated, type then | and the name</span>
+<span class="p">›</span> <span class="s">Internet, fw|fw-01, fw|fw-02, sw|core-01, sw|core-02, server|esx-01</span>
+
+<span class="c"># or from a script: files without positions are laid out</span>
+<span class="p">$</span> stratagram --layout hierarchy site.stratagram site.stratagram
+<span class="p">$</span> stratagram --export-png site.stratagram site.png
+<span class="p">$</span> stratagram --export-drawio site.stratagram site.drawio
+<span class="p">$</span> stratagram --export-cml site.stratagram lab.yaml   <span class="c"># Cisco Modeling Labs</span></pre>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="text">
+        <div class="kicker">Down to the port</div>
+        <h2>Switches and patch panels, front side up.</h2>
+        <p class="section-lead">When it matters which socket a cable is in, switches, routers, firewalls, servers and
+          patch panels show their front:
+          numbered ports, odd on top and even below, RJ45, SFP, LC duplex or SC. Each socket is a connection point.</p>
+        <ul>
+          <li><b>Any port count</b>; the panel grows with it, SFP uplinks in a group of their own.</li>
+          <li><b>Cables plug in</b>: a line ends in the middle of its socket (between the halves of a duplex LC).</li>
+          <li><b>Front and back</b>: a rear port comes out right under its socket, so the way through the panel can be followed.</li>
+          <li><b>Cable the back by drag</b>: draw a line to the panel's edge under a socket and, before you let go, the socket lights up and its tie shows, so you see which front port the cable ends up behind.</li>
+          <li><b>Opt-in</b>: a switch, router, firewall or server stays a simple box until you give it ports.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="shot"><a href="shots/front-panels.png"><img src="shots/front-panels.png" width="2128" height="1080" loading="lazy" alt="A 48-port access switch with four SFP uplinks, an SFP core switch, a copper and a fiber patch panel, cables plugged into numbered sockets, servers below"></a></div>
+        <figure class="shot" style="margin:14px 0 0"><a href="shots/rear-drag.png"><img src="shots/rear-drag.png" width="1140" height="790" loading="lazy" alt="A line being drawn from a server to the bottom edge of a patch panel: socket 7, cabled to the switch at the front, lights up with its tie to the edge before the line is dropped"></a></figure>
+        <p class="caption" style="margin:8px 0 0;text-align:center">Dragging to the back of socket 7: it lights up before the drop</p>
+      </div>
+    </div>
+
+    <div class="feature flip">
+      <div class="text">
+        <div class="kicker">Layers</div>
+        <h2>Show what the audience needs, keep the rest.</h2>
+        <p class="section-lead">Layers and sub-layers, as deep as you like, shown, hidden or locked together. Drag a layer
+          to reorder it or onto another to put it underneath; the new parent lights up.</p>
+        <ul>
+          <li><b>Cabling stays end to end</b>: hide the patch panels and each device's line goes straight to the switch port it is patched to.</li>
+          <li><b>Backgrounds</b> group a layer's items; layer names can show on their devices.</li>
+          <li><b>Sheets</b> hold several pages in one file.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="pair">
+          <figure class="shot"><a href="shots/e2e-shown.png"><img src="shots/e2e-shown.png" width="1016" height="1360" loading="lazy" alt="A switch cabled through two patch panels to a PC and a printer"></a></figure>
+          <figure class="shot"><a href="shots/e2e-hidden.png"><img src="shots/e2e-hidden.png" width="1016" height="1360" loading="lazy" alt="The same diagram with the patch panel layer hidden: the lines go straight from the switch ports to the devices"></a></figure>
+        </div>
+        <div class="pair" style="margin-top:8px">
+          <p class="caption" style="margin:0">Patch panels shown</p>
+          <p class="caption" style="margin:0">"Patch panels" layer hidden</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="text">
+        <div class="kicker">Deep zoom</div>
+        <h2>Zoom into a device, keep drawing.</h2>
+        <p class="section-lead">Turn on <b>Zoom into</b> (Ctrl+I) and the view zooms in without limit. Zoom into a
+          server until it fills the screen and draw its VMs, its vSwitch and their lines inside it, at normal size.
+          Zoom back out and the diagram looks exactly as before: the overview stays clean, and the details are there
+          for whoever goes looking.</p>
+        <ul>
+          <li><b>Any depth</b>: each level is 8x smaller than the one around it, a rack in a site, a server in the rack, the VMs in the server.</li>
+          <li><b>Fades in and out</b>: the inside shows from 400 % on, fully from 600 %; the grid and snapping follow the level.</li>
+          <li><b>Stays with its device</b>: move the server and everything inside goes along; lines may run from inside out.</li>
+          <li><b>In every export</b>, each item at its own scale.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="pair lean">
+          <figure class="shot"><a href="shots/deep-zoom-out.png"><img src="shots/deep-zoom-out.png" width="600" height="740" loading="lazy" alt="The overview: internet, firewall, core switch, a NAS and the ESX host esx-01 as a plain server box"></a></figure>
+          <figure class="shot"><a href="shots/deep-zoom-in.png"><img src="shots/deep-zoom-in.png" width="1300" height="640" loading="lazy" alt="Zoomed into esx-01 at 577 %: its uplink vmnic0 runs to vSwitch0 inside it, cabled to the VMs web-01, app-01 and db-01"></a></figure>
+        </div>
+        <div class="pair lean" style="margin-top:8px">
+          <p class="caption" style="margin:0">The site at 137 %</p>
+          <p class="caption" style="margin:0">Zoomed into esx-01: its VMs</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature flip">
+      <div class="text">
+        <div class="kicker">Ready to hand over</div>
+        <h2>Frames, legends, exports.</h2>
+        <p class="section-lead">23 frame templates, from a plain outline to ISO title blocks, revision tables, change
+          and incident sheets, each with title, author, site, classification and the date of the last change.
+          Set your company's defaults once.</p>
+        <ul>
+          <li><b>SVG and PNG</b> for documents, wikis, tickets and slides.</li>
+          <li><b>draw.io</b>, editable, with ports and connections; paste back and forth with draw.io too.</li>
+          <li><b>Cisco Modeling Labs</b>: turn the drawing into a lab topology to run.</li>
+        </ul>
+      </div>
+      <div class="shot"><a href="shots/hero-diagram.png"><img src="shots/hero-diagram.png" width="2720" height="1816" loading="lazy" alt="An exported PNG: the Berlin HQ network in a site frame with title, site code, legend of line types and the date of the last change"></a></div>
+    </div>
+
+    <div class="feature">
+      <div class="text">
+        <div class="kicker">Themes</div>
+        <h2>Light, dark, neon.</h2>
+        <p class="section-lead">Pick a theme in the toolbar and the whole editor follows: the canvas, the panels and
+          the drawing itself. Fills turn deep, lines and outlines bright, text light, so a diagram reads as well at
+          night as on paper.</p>
+        <ul>
+          <li><b>Your colors carry over</b>: a light blue switch turns deep blue, custom colors keep their hue, cloud providers keep their brand colors.</li>
+          <li><b>The file stays the same</b>: a theme changes how it is drawn, not what is saved, so everyone opens it in their own.</li>
+          <li><b>Exports follow</b>: SVG and PNG come out in the theme you work in, also from the command line with <code>--theme</code>; draw.io keeps the file's colors.</li>
+          <li><b>Neon</b> adds a soft glow to lines and outlines, on screen and in SVG.</li>
+        </ul>
+      </div>
+      <div class="themes">
+        <div class="switch" role="group" aria-label="Theme">
+          <button type="button" data-shot="light">Light</button>
+          <button type="button" data-shot="dark" class="on">Dark</button>
+          <button type="button" data-shot="neon">Neon</button>
+        </div>
+        <div class="shot"><a href="shots/theme-dark.png"><img src="shots/theme-dark.png" width="1000" height="672" loading="lazy" alt="The Berlin HQ diagram in the Dark theme: deep fills with bright outlines and lines on a dark page"></a></div>
+      </div>
+    </div>
+
+    <div class="feature flip">
+      <div class="text">
+        <div class="kicker">Follow the cable</div>
+        <h2>Which port, which cable?</h2>
+        <p class="section-lead">On a switch with 48 sockets, finding where a line ends takes a moment. Stratagram
+          shows it: select a line and its ports light up, point at it and it tells you what it connects.</p>
+        <ul>
+          <li><b>Select a line</b>: the ports at both of its ends light up and show their names.</li>
+          <li><b>Point at a line</b>: a note names its two ends (device and port, or socket), the run end to end when it goes on through patch panels, and its type and label.</li>
+          <li><b>Through hidden layers too</b>: with the patch panels hidden, the line straight from switch to server can still be selected and tells what is behind it.</li>
+        </ul>
+      </div>
+      <div class="shot"><a href="shots/follow-cable.png"><img src="shots/follow-cable.png" width="845" height="480" loading="lazy" alt="The uplink from core-01 to access-01 selected, its ports Te1/0/5 and Te1/1/1 lit up; the pointer on the line to srv-04 with a note: pp-r2-01 R4 to srv-04 eth0, end to end (2 cables) access-01 Gi1/0/4 to srv-04 eth0, L2 switched"></a></div>
+    </div>
+
+  </section>
+
+  <div class="divider wrap"></div>
+
+  <section class="wrap">
+    <div class="center">
+      <div class="kicker">One editor, three places</div>
+      <h2>Where you need it.</h2>
+      <p class="section-lead">The same editor and the same look everywhere: pick the place that fits the moment.</p>
+    </div>
+    <div class="runs">
+      <div class="card">
+        <div class="label">Desktop</div>
+        <h3>Your own workbench</h3>
+        <p>Works offline, wherever you are, and your diagrams are plain files next to your other documents. From
+          the command line, a script lays out and exports a whole folder of diagrams without opening a window.</p>
+      </div>
+      <div class="card">
+        <div class="label">Browser</div>
+        <h3>Nothing to install</h3>
+        <p>Open a link and start drawing, on any computer, even one where you may not install software. The same editor
+          and the same files as on the desktop, and it can live inside your own portal or wiki.</p>
+      </div>
+      <div class="card">
+        <div class="label">NetBox</div>
+        <h3>Right next to the data</h3>
+        <p>Every site and location already has its diagram, drawn from what NetBox knows and brought up to date with
+          a click. The team finds it where they already look, and each person sees only what they may see.
+          <a href="#netbox" data-page="netbox">More about the plugin →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap" id="app-start">
+    <div class="kicker">Get started</div>
+    <h2>Build it</h2>
+    <p class="section-lead">Stratagram builds from source with Rust 1.85 or newer and Qt 6.5 or newer.</p>
+    <div class="steps">
+      <div class="step"><div>
+        <h3>Install Qt 6</h3>
+        <p>For example on Debian or Ubuntu; Fedora and Arch have the same as <code>qt6-qtdeclarative-devel</code> and <code>qt6-declarative</code>.</p>
+        <div class="term"><pre><span class="p">$</span> sudo apt install qt6-base-dev qt6-declarative-dev qml6-module-qtquick \
+    qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtquick-dialogs</pre></div>
+      </div></div>
+      <div class="step"><div>
+        <h3>Build and run</h3>
+        <div class="term"><pre><span class="p">$</span> git clone https://github.com/shinsterneck/stratagram.git &amp;&amp; cd stratagram
+<span class="p">$</span> cargo build --release
+<span class="p">$</span> ./target/release/stratagram examples/demo.stratagram</pre></div>
+      </div></div>
+      <div class="step"><div>
+        <h3>Or in the browser</h3>
+        <div class="term"><pre><span class="p">$</span> rustup target add wasm32-unknown-unknown
+<span class="p">$</span> web/build.sh &amp;&amp; python3 -m http.server -d web/www 8000</pre></div>
+      </div></div>
+    </div>
+  </section>
+</div>
+
+<!-- NetBox -->
+<div class="page" id="netbox">
+
+  <div class="hero wrap">
+    <span class="eyebrow"><span class="dot"></span>NetBox plugin · NetBox 4.5 and 4.6</span>
+    <h1>Your NetBox, <span class="grad">drawn.</span></h1>
+    <p class="lead">The plugin adds a Diagram tab to every site and location. It draws the site from what NetBox
+      knows (devices, cables, circuits, patch panels) with Stratagram's stencils, and keeps your arrangement when NetBox
+      changes.</p>
+    <div class="cta">
+      <a class="btn primary" href="#netbox-start">Install the plugin</a>
+      <a class="btn" href="#app" data-page="app">← The editor</a>
+    </div>
+    <div class="facts"><span>Site and location tabs</span><span>Refresh without moving things</span><span>Saved in NetBox</span><span>Object permissions</span><span>Light and dark, like NetBox</span></div>
+
+    <div class="window">
+      <div class="bar"><i></i><i></i><i></i><span>Vienna DC | NetBox</span></div>
+      <a href="shots/netbox-editor.png"><img src="shots/netbox-editor.png" width="1920" height="1200" alt="NetBox 4.6 with the Diagram tab of the site Vienna DC: two internet circuits, a firewall pair, core switches with SFP ports, an access switch cabled through a patch panel to four servers, sheets for the site's two rooms, the selected firewall in the panel and the layers by device type"></a>
+    </div>
+    <p class="caption">The Diagram tab of a site in NetBox 4.6, drawn from its devices, cables and circuits. Each
+      location is a sheet (tabs at the bottom); the layer tree has a layer per device type and per device.</p>
+  </div>
+
+  <section class="wrap">
+    <div class="feature">
+      <div class="text">
+        <div class="kicker">From NetBox</div>
+        <h2>Drawn from your source of truth.</h2>
+        <p class="section-lead">No more redrawing a site by hand after every change. The site comes in with its devices
+          and cables, laid out from the internet down to the servers.</p>
+        <ul>
+          <li><b>Device types from roles</b>: firewall, router, core and access switches, servers, with your own mapping where roles say something else.</li>
+          <li><b>Line types from interfaces</b>: tagged ports make trunks, routed ends make L3 links, access ports L2.</li>
+          <li><b>Right-angled lines</b> by default, each in a lane of its own and laid out with as few crossings as the ports allow (or straight, as you set it up).</li>
+          <li><b>Circuits</b> become internet clouds named after provider and circuit; <b>patch panels</b> get one socket per front port, rear ports behind the sockets they map to; <b>switches</b> their physical ports, copper first and SFP as uplinks, each cable in its port.</li>
+          <li><b>Locations</b> get sheets of their own; a location's Diagram tab opens its sheet.</li>
+        </ul>
+      </div>
+      <div class="shot" style="margin:0 auto;width:min(100%,420px)"><img src="shots/netbox-layers.png" width="330" height="300" loading="lazy" alt="The layer tree in NetBox: Cables, Internet, Firewalls, Switches opened to a layer per switch (access-01, core-01), each with its count of items" style="width:100%"></div>
+    </div>
+
+    <div class="feature flip">
+      <div class="text">
+        <div class="kicker">Stays yours</div>
+        <h2>Refresh, don't redraw.</h2>
+        <p class="section-lead">Arrange the diagram, add notes, a frame, layers, and save it in NetBox. When NetBox
+          changes, <b>Refresh from NetBox</b> brings it up to date without moving anything you placed.</p>
+        <ul>
+          <li><b>New devices and cables</b> are added beside what they connect to; renamed ones are renamed.</li>
+          <li><b>What is gone</b> is set aside on a layer "Gone from NetBox", not silently deleted.</li>
+          <li><b>Layers by type and per device</b>: show or hide all patch panels, or one server; cabling stays end to end along NetBox's cable paths, and a line through hidden panels can still be selected and tells what it connects.</li>
+          <li><b>One undo step</b>; saved diagrams are in NetBox's change log.</li>
+        </ul>
+      </div>
+      <div class="stack">
+        <figure class="shot"><a href="shots/netbox-e2e-shown.png"><img src="shots/netbox-e2e-shown.png" width="700" height="380" loading="lazy" alt="In NetBox: access-01 cabled to the front of patch panel pp-r2-01, its rear ports cabled to four servers"></a><figcaption>Patch panels shown</figcaption></figure>
+        <figure class="shot"><a href="shots/netbox-follow.png"><img src="shots/netbox-follow.png" width="700" height="380" loading="lazy" alt="The same with the layer Patch panels hidden: each server's line goes straight to its port on access-01; the line to srv-03 is selected, its ports lit, and a note says access-01 Gi1/0/3 to srv-03 eth0, through hidden devices (2 cables), L2 switched"></a><figcaption>"Patch panels" hidden: end to end along NetBox's cable paths, the line to srv-03 selected and pointed at</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="center">
+      <div class="kicker">Themes</div>
+      <h2>Light or dark, like your NetBox.</h2>
+      <p class="section-lead">The editor starts in NetBox's own light or dark mode and switches along with it. Pick
+        Dark or Neon in its toolbar to keep one; the browser remembers it. The saved diagram keeps its colors, so
+        everyone sees it in their own theme; SVG and PNG exports come out in the one in view.</p>
+    </div>
+    <div class="pair" style="margin-top:36px">
+      <figure class="shot"><a href="shots/netbox-dark.png"><img src="shots/netbox-dark.png" width="1920" height="1200" loading="lazy" alt="NetBox in dark mode with the site diagram in the Dark theme: deep fills, bright outlines and lines"></a><figcaption>Dark, with NetBox's dark mode</figcaption></figure>
+      <figure class="shot"><a href="shots/netbox-neon.png"><img src="shots/netbox-neon.png" width="1920" height="1200" loading="lazy" alt="The same site diagram in the Neon theme: near-black fills with glowing outlines and lines"></a><figcaption>Neon</figcaption></figure>
+    </div>
+  </section>
+
+  <div class="divider wrap"></div>
+
+  <section class="wrap">
+    <div class="center">
+      <div class="kicker">Access</div>
+      <h2>Everyone sees what they may see.</h2>
+      <p class="section-lead">The data comes from NetBox's own models, filtered by each user's object permissions,
+        with no API tokens. Viewing, adding and changing site diagrams are NetBox permissions of their own, constraints included.</p>
+    </div>
+  </section>
+
+  <section class="wrap" id="netbox-start">
+    <div class="kicker">Install</div>
+    <h2>Add it to NetBox</h2>
+    <div class="steps">
+      <div class="step"><div>
+        <h3>Build the package</h3>
+        <p>Needs Rust with the WebAssembly target, <code>wasm-bindgen-cli</code> 0.2.129, <code>cargo-about</code>, and Python's <code>build</code> module.</p>
+        <div class="term"><pre><span class="p">$</span> netbox-plugin/build.sh      <span class="c"># → netbox-plugin/dist/netbox_stratagram-*.whl</span></pre></div>
+      </div></div>
+      <div class="step"><div>
+        <h3>Install it into NetBox's environment</h3>
+        <div class="term"><pre><span class="p">$</span> sudo /opt/netbox/venv/bin/pip install netbox_stratagram-1.0.0-py3-none-any.whl</pre></div>
+      </div></div>
+      <div class="step"><div>
+        <h3>Enable it in <code>configuration.py</code></h3>
+        <div class="term"><pre>PLUGINS = [<span class="s">"netbox_stratagram"</span>]
+PLUGINS_CONFIG = {
+    <span class="s">"netbox_stratagram"</span>: {
+        <span class="s">"kinds"</span>: {<span class="s">"dmz-host"</span>: <span class="s">"server"</span>},   <span class="c"># device type by role, before the built-in guesses</span>
+        <span class="s">"all_devices"</span>: False,             <span class="c"># also devices without cables</span>
+        <span class="s">"type_layers"</span>: True,              <span class="c"># a layer per device type and per device</span>
+        <span class="s">"routing"</span>: <span class="s">"orthogonal"</span>,         <span class="c"># or "straight", "around"</span>
+        <span class="s">"fronts"</span>: [<span class="s">"switch"</span>],            <span class="c"># drawn with their ports; also "router", "firewall", "server"</span>
+    },
+}</pre></div>
+      </div></div>
+      <div class="step"><div>
+        <h3>Migrate, collect, restart</h3>
+        <div class="term"><pre><span class="p">$</span> cd /opt/netbox/netbox
+<span class="p">$</span> sudo ../venv/bin/python manage.py migrate
+<span class="p">$</span> sudo ../venv/bin/python manage.py collectstatic --no-input
+<span class="p">$</span> sudo systemctl restart netbox netbox-rq</pre></div>
+        <p>Then grant the object type <code>NetBox Stratagram › Site Diagram</code> (view, and add and change to save) to the users who should see the Diagram tab.</p>
+      </div></div>
+    </div>
+  </section>
+</div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#"><img src="logo.svg" alt=""><span>Stratagram</span></a>
+    <span class="grow">Version 1.0.0 · © 2026 Shin Sterneck · Apache License 2.0</span>
+    <a href="https://github.com/shinsterneck/stratagram">GitHub</a>
+    <a href="#app" data-page="app">Editor</a>
+    <a href="#netbox" data-page="netbox">NetBox plugin</a>
+  </div>
+</footer>
+
+<script>
+// Tabs: the page named in the address (#netbox, or a section in it) is shown.
+const pages = [...document.querySelectorAll(".page")]
+const pageOf = (hash) => {
+    const el = hash && document.getElementById(hash.slice(1))
+    const page = el && (el.classList.contains("page") ? el : el.closest(".page"))
+    return page ? page.id : "app"
+}
+function show(hash) {
+    const id = pageOf(hash)
+    for (const p of pages) p.classList.toggle("on", p.id === id)
+    for (const a of document.querySelectorAll(".tabs a")) a.classList.toggle("on", a.dataset.page === id)
+    const el = hash && document.getElementById(hash.slice(1))
+    if (el && !el.classList.contains("page")) el.scrollIntoView()
+    else window.scrollTo(0, 0)
+}
+window.addEventListener("hashchange", () => show(location.hash))
+show(location.hash)
+
+// The theme picture: one of shots/theme-*.png.
+for (const box of document.querySelectorAll(".themes")) {
+    const img = box.querySelector("img"), link = box.querySelector("a")
+    const alts = {
+        light: "The Berlin HQ diagram in the Light theme: light fills, dark lines on white",
+        dark: "The Berlin HQ diagram in the Dark theme: deep fills with bright outlines and lines on a dark page",
+        neon: "The Berlin HQ diagram in the Neon theme: near-black fills, glowing outlines and lines",
+    }
+    for (const b of box.querySelectorAll("button")) {
+        b.addEventListener("click", () => {
+            const src = `shots/theme-${b.dataset.shot}.png`
+            img.src = link.href = src
+            img.alt = alts[b.dataset.shot]
+            for (const o of box.querySelectorAll("button")) o.classList.toggle("on", o === b)
+        })
+    }
+}
+</script>
+</body>
+</html>

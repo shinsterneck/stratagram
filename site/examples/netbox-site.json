@@ -1,0 +1,1008 @@
+{
+ "site": {
+  "id": 3,
+  "name": "Vienna DC",
+  "slug": "vienna-dc"
+ },
+ "devices": [
+  {
+   "id": 1,
+   "name": "fw-01",
+   "display": "fw-01",
+   "role": {
+    "id": 1,
+    "slug": "firewall",
+    "name": "Firewall"
+   },
+   "location": {
+    "id": 10
+   }
+  },
+  {
+   "id": 2,
+   "name": "fw-02",
+   "display": "fw-02",
+   "role": {
+    "id": 2,
+    "slug": "firewall",
+    "name": "Firewall"
+   },
+   "location": {
+    "id": 10
+   }
+  },
+  {
+   "id": 3,
+   "name": "core-01",
+   "display": "core-01",
+   "role": {
+    "id": 3,
+    "slug": "core-switch",
+    "name": "Core Switch"
+   },
+   "location": {
+    "id": 10
+   },
+   "switch_ports": {
+    "count": 32,
+    "type": "sfp",
+    "uplinks": 0
+   }
+  },
+  {
+   "id": 4,
+   "name": "core-02",
+   "display": "core-02",
+   "role": {
+    "id": 4,
+    "slug": "core-switch",
+    "name": "Core Switch"
+   },
+   "location": {
+    "id": 10
+   },
+   "switch_ports": {
+    "count": 32,
+    "type": "sfp",
+    "uplinks": 0
+   }
+  },
+  {
+   "id": 5,
+   "name": "access-01",
+   "display": "access-01",
+   "role": {
+    "id": 5,
+    "slug": "access-switch",
+    "name": "Access Switch"
+   },
+   "location": {
+    "id": 11
+   },
+   "switch_ports": {
+    "count": 48,
+    "type": "rj45",
+    "uplinks": 4
+   }
+  },
+  {
+   "id": 6,
+   "name": "pp-r2-01",
+   "display": "pp-r2-01",
+   "role": {
+    "id": 6,
+    "slug": "patch-panel",
+    "name": "Patch Panel"
+   },
+   "location": {
+    "id": 11
+   },
+   "front_ports": {
+    "count": 24,
+    "type": "8p8c"
+   }
+  },
+  {
+   "id": 20,
+   "name": "srv-01",
+   "display": "srv-01",
+   "role": {
+    "id": 20,
+    "slug": "server",
+    "name": "Server"
+   },
+   "location": {
+    "id": 11
+   }
+  },
+  {
+   "id": 21,
+   "name": "srv-02",
+   "display": "srv-02",
+   "role": {
+    "id": 21,
+    "slug": "server",
+    "name": "Server"
+   },
+   "location": {
+    "id": 11
+   }
+  },
+  {
+   "id": 22,
+   "name": "srv-03",
+   "display": "srv-03",
+   "role": {
+    "id": 22,
+    "slug": "server",
+    "name": "Server"
+   },
+   "location": {
+    "id": 11
+   }
+  },
+  {
+   "id": 23,
+   "name": "srv-04",
+   "display": "srv-04",
+   "role": {
+    "id": 23,
+    "slug": "server",
+    "name": "Server"
+   },
+   "location": {
+    "id": 11
+   }
+  }
+ ],
+ "locations": [
+  {
+   "id": 10,
+   "name": "Room 1 (core)",
+   "slug": "room-1",
+   "parent": null
+  },
+  {
+   "id": 11,
+   "name": "Room 2 (servers)",
+   "slug": "room-2",
+   "parent": null
+  }
+ ],
+ "interfaces": [
+  {
+   "id": 1002,
+   "name": "wan1",
+   "device": {
+    "id": 1,
+    "name": "fw-01"
+   },
+   "mode": null,
+   "count_ipaddresses": 1
+  },
+  {
+   "id": 1005,
+   "name": "wan1",
+   "device": {
+    "id": 2,
+    "name": "fw-02"
+   },
+   "mode": null,
+   "count_ipaddresses": 1
+  },
+  {
+   "id": 1007,
+   "name": "ha",
+   "device": {
+    "id": 1,
+    "name": "fw-01"
+   },
+   "mode": null,
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1008,
+   "name": "ha",
+   "device": {
+    "id": 2,
+    "name": "fw-02"
+   },
+   "mode": null,
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1010,
+   "name": "port3",
+   "device": {
+    "id": 1,
+    "name": "fw-01"
+   },
+   "mode": null,
+   "count_ipaddresses": 1
+  },
+  {
+   "id": 1011,
+   "name": "Te1/0/1",
+   "device": {
+    "id": 3,
+    "name": "core-01"
+   },
+   "mode": null,
+   "count_ipaddresses": 1
+  },
+  {
+   "id": 1013,
+   "name": "port3",
+   "device": {
+    "id": 2,
+    "name": "fw-02"
+   },
+   "mode": null,
+   "count_ipaddresses": 1
+  },
+  {
+   "id": 1014,
+   "name": "Te1/0/1",
+   "device": {
+    "id": 4,
+    "name": "core-02"
+   },
+   "mode": null,
+   "count_ipaddresses": 1
+  },
+  {
+   "id": 1016,
+   "name": "Te1/0/31",
+   "device": {
+    "id": 3,
+    "name": "core-01"
+   },
+   "mode": {
+    "value": "tagged",
+    "label": "tagged"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1017,
+   "name": "Te1/0/31",
+   "device": {
+    "id": 4,
+    "name": "core-02"
+   },
+   "mode": {
+    "value": "tagged",
+    "label": "tagged"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1019,
+   "name": "Te1/0/5",
+   "device": {
+    "id": 3,
+    "name": "core-01"
+   },
+   "mode": {
+    "value": "tagged",
+    "label": "tagged"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1020,
+   "name": "Te1/1/1",
+   "device": {
+    "id": 5,
+    "name": "access-01"
+   },
+   "mode": {
+    "value": "tagged",
+    "label": "tagged"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1022,
+   "name": "Te1/0/5",
+   "device": {
+    "id": 4,
+    "name": "core-02"
+   },
+   "mode": {
+    "value": "tagged",
+    "label": "tagged"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1023,
+   "name": "Te1/1/2",
+   "device": {
+    "id": 5,
+    "name": "access-01"
+   },
+   "mode": {
+    "value": "tagged",
+    "label": "tagged"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1025,
+   "name": "Gi1/0/1",
+   "device": {
+    "id": 5,
+    "name": "access-01"
+   },
+   "mode": {
+    "value": "access",
+    "label": "access"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1029,
+   "name": "eth0",
+   "device": {
+    "id": 20,
+    "name": "srv-01"
+   },
+   "mode": {
+    "value": "access",
+    "label": "access"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1031,
+   "name": "Gi1/0/2",
+   "device": {
+    "id": 5,
+    "name": "access-01"
+   },
+   "mode": {
+    "value": "access",
+    "label": "access"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1035,
+   "name": "eth0",
+   "device": {
+    "id": 21,
+    "name": "srv-02"
+   },
+   "mode": {
+    "value": "access",
+    "label": "access"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1037,
+   "name": "Gi1/0/3",
+   "device": {
+    "id": 5,
+    "name": "access-01"
+   },
+   "mode": {
+    "value": "access",
+    "label": "access"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1041,
+   "name": "eth0",
+   "device": {
+    "id": 22,
+    "name": "srv-03"
+   },
+   "mode": {
+    "value": "access",
+    "label": "access"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1043,
+   "name": "Gi1/0/4",
+   "device": {
+    "id": 5,
+    "name": "access-01"
+   },
+   "mode": {
+    "value": "access",
+    "label": "access"
+   },
+   "count_ipaddresses": 0
+  },
+  {
+   "id": 1047,
+   "name": "eth0",
+   "device": {
+    "id": 23,
+    "name": "srv-04"
+   },
+   "mode": {
+    "value": "access",
+    "label": "access"
+   },
+   "count_ipaddresses": 0
+  }
+ ],
+ "cables": [
+  {
+   "id": 1001,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1002,
+     "object": {
+      "id": 1002,
+      "name": "wan1",
+      "device": {
+       "id": 1,
+       "name": "fw-01"
+      }
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "circuits.circuittermination",
+     "object_id": 1003,
+     "object": {
+      "id": 1003,
+      "circuit": {
+       "id": 77,
+       "cid": "VIE-INET-1",
+       "provider": {
+        "name": "A1"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 1004,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1005,
+     "object": {
+      "id": 1005,
+      "name": "wan1",
+      "device": {
+       "id": 2,
+       "name": "fw-02"
+      }
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "circuits.circuittermination",
+     "object_id": 1006,
+     "object": {
+      "id": 1006,
+      "circuit": {
+       "id": 78,
+       "cid": "VIE-INET-2",
+       "provider": {
+        "name": "Magenta"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 1009,
+   "label": "HA",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1007,
+     "object": {
+      "id": 1007,
+      "name": "ha",
+      "device": {
+       "id": 1,
+       "name": "fw-01"
+      }
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1008,
+     "object": {
+      "id": 1008,
+      "name": "ha",
+      "device": {
+       "id": 2,
+       "name": "fw-02"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 1012,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1010,
+     "object": {
+      "id": 1010,
+      "name": "port3",
+      "device": {
+       "id": 1,
+       "name": "fw-01"
+      }
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1011,
+     "object": {
+      "id": 1011,
+      "name": "Te1/0/1",
+      "device": {
+       "id": 3,
+       "name": "core-01"
+      },
+      "position": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": 1015,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1013,
+     "object": {
+      "id": 1013,
+      "name": "port3",
+      "device": {
+       "id": 2,
+       "name": "fw-02"
+      }
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1014,
+     "object": {
+      "id": 1014,
+      "name": "Te1/0/1",
+      "device": {
+       "id": 4,
+       "name": "core-02"
+      },
+      "position": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": 1018,
+   "label": "vPC peer",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1016,
+     "object": {
+      "id": 1016,
+      "name": "Te1/0/31",
+      "device": {
+       "id": 3,
+       "name": "core-01"
+      },
+      "position": 31
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1017,
+     "object": {
+      "id": 1017,
+      "name": "Te1/0/31",
+      "device": {
+       "id": 4,
+       "name": "core-02"
+      },
+      "position": 31
+     }
+    }
+   ]
+  },
+  {
+   "id": 1021,
+   "label": "Uplink",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1019,
+     "object": {
+      "id": 1019,
+      "name": "Te1/0/5",
+      "device": {
+       "id": 3,
+       "name": "core-01"
+      },
+      "position": 5
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1020,
+     "object": {
+      "id": 1020,
+      "name": "Te1/1/1",
+      "device": {
+       "id": 5,
+       "name": "access-01"
+      },
+      "position": 49
+     }
+    }
+   ]
+  },
+  {
+   "id": 1024,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1022,
+     "object": {
+      "id": 1022,
+      "name": "Te1/0/5",
+      "device": {
+       "id": 4,
+       "name": "core-02"
+      },
+      "position": 5
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1023,
+     "object": {
+      "id": 1023,
+      "name": "Te1/1/2",
+      "device": {
+       "id": 5,
+       "name": "access-01"
+      },
+      "position": 50
+     }
+    }
+   ]
+  },
+  {
+   "id": 1027,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1025,
+     "object": {
+      "id": 1025,
+      "name": "Gi1/0/1",
+      "device": {
+       "id": 5,
+       "name": "access-01"
+      },
+      "position": 1
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.frontport",
+     "object_id": 1026,
+     "object": {
+      "id": 1026,
+      "name": "1",
+      "device": {
+       "id": 6,
+       "name": "pp-r2-01"
+      },
+      "position": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": 1030,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.rearport",
+     "object_id": 1028,
+     "object": {
+      "id": 1028,
+      "name": "R1",
+      "device": {
+       "id": 6,
+       "name": "pp-r2-01"
+      },
+      "position": 1
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1029,
+     "object": {
+      "id": 1029,
+      "name": "eth0",
+      "device": {
+       "id": 20,
+       "name": "srv-01"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 1033,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1031,
+     "object": {
+      "id": 1031,
+      "name": "Gi1/0/2",
+      "device": {
+       "id": 5,
+       "name": "access-01"
+      },
+      "position": 2
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.frontport",
+     "object_id": 1032,
+     "object": {
+      "id": 1032,
+      "name": "2",
+      "device": {
+       "id": 6,
+       "name": "pp-r2-01"
+      },
+      "position": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": 1036,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.rearport",
+     "object_id": 1034,
+     "object": {
+      "id": 1034,
+      "name": "R2",
+      "device": {
+       "id": 6,
+       "name": "pp-r2-01"
+      },
+      "position": 2
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1035,
+     "object": {
+      "id": 1035,
+      "name": "eth0",
+      "device": {
+       "id": 21,
+       "name": "srv-02"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 1039,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1037,
+     "object": {
+      "id": 1037,
+      "name": "Gi1/0/3",
+      "device": {
+       "id": 5,
+       "name": "access-01"
+      },
+      "position": 3
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.frontport",
+     "object_id": 1038,
+     "object": {
+      "id": 1038,
+      "name": "3",
+      "device": {
+       "id": 6,
+       "name": "pp-r2-01"
+      },
+      "position": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": 1042,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.rearport",
+     "object_id": 1040,
+     "object": {
+      "id": 1040,
+      "name": "R3",
+      "device": {
+       "id": 6,
+       "name": "pp-r2-01"
+      },
+      "position": 3
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1041,
+     "object": {
+      "id": 1041,
+      "name": "eth0",
+      "device": {
+       "id": 22,
+       "name": "srv-03"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 1045,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1043,
+     "object": {
+      "id": 1043,
+      "name": "Gi1/0/4",
+      "device": {
+       "id": 5,
+       "name": "access-01"
+      },
+      "position": 4
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.frontport",
+     "object_id": 1044,
+     "object": {
+      "id": 1044,
+      "name": "4",
+      "device": {
+       "id": 6,
+       "name": "pp-r2-01"
+      },
+      "position": 4
+     }
+    }
+   ]
+  },
+  {
+   "id": 1048,
+   "label": "",
+   "a_terminations": [
+    {
+     "object_type": "dcim.rearport",
+     "object_id": 1046,
+     "object": {
+      "id": 1046,
+      "name": "R4",
+      "device": {
+       "id": 6,
+       "name": "pp-r2-01"
+      },
+      "position": 4
+     }
+    }
+   ],
+   "b_terminations": [
+    {
+     "object_type": "dcim.interface",
+     "object_id": 1047,
+     "object": {
+      "id": 1047,
+      "name": "eth0",
+      "device": {
+       "id": 23,
+       "name": "srv-04"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "paths": [
+  [
+   1027,
+   1030
+  ],
+  [
+   1030,
+   1027
+  ],
+  [
+   1033,
+   1036
+  ],
+  [
+   1036,
+   1033
+  ],
+  [
+   1039,
+   1042
+  ],
+  [
+   1042,
+   1039
+  ],
+  [
+   1045,
+   1048
+  ],
+  [
+   1048,
+   1045
+  ]
+ ]
+}

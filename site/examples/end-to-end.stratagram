@@ -1,0 +1,255 @@
+{
+ "format": "stratagram",
+ "version": 1,
+ "layers": [
+  {
+   "id": 1,
+   "name": "Cables"
+  },
+  {
+   "id": 2,
+   "name": "Switches"
+  },
+  {
+   "id": 3,
+   "name": "Patch panels"
+  },
+  {
+   "id": 4,
+   "name": "Servers"
+  }
+ ],
+ "active_layer": 1,
+ "devices": [
+  {
+   "id": 10,
+   "name": "access-sw-01",
+   "kind": "switch",
+   "x": 40,
+   "y": 40,
+   "w": 160,
+   "h": 60,
+   "layer": 2,
+   "ports": [
+    {
+     "id": 11,
+     "name": "Gi1/0/5",
+     "side": "bottom",
+     "t": 0.3
+    },
+    {
+     "id": 12,
+     "name": "Gi1/0/6",
+     "side": "bottom",
+     "t": 0.7
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "name": "pp-a1  (floor 2)",
+   "kind": "patch panel",
+   "x": -60,
+   "y": 200,
+   "layer": 3,
+   "panel": {
+    "ports": 24
+   },
+   "ports": [
+    {
+     "id": 21,
+     "socket": 5,
+     "side": "top"
+    },
+    {
+     "id": 22,
+     "name": "R1",
+     "side": "bottom",
+     "t": 0.45,
+     "socket": 5,
+     "rear": true
+    },
+    {
+     "id": 23,
+     "socket": 6,
+     "side": "top"
+    },
+    {
+     "id": 24,
+     "name": "R2",
+     "side": "bottom",
+     "t": 0.6,
+     "socket": 6,
+     "rear": true
+    }
+   ]
+  },
+  {
+   "id": 30,
+   "name": "pp-b1  (office 2.14)",
+   "kind": "patch panel",
+   "x": -60,
+   "y": 380,
+   "layer": 3,
+   "panel": {
+    "ports": 24
+   },
+   "ports": [
+    {
+     "id": 31,
+     "name": "R1",
+     "side": "top",
+     "t": 0.45,
+     "socket": 1,
+     "rear": true
+    },
+    {
+     "id": 32,
+     "socket": 1,
+     "side": "bottom"
+    },
+    {
+     "id": 33,
+     "name": "R2",
+     "side": "top",
+     "t": 0.6,
+     "socket": 2,
+     "rear": true
+    },
+    {
+     "id": 34,
+     "socket": 2,
+     "side": "bottom"
+    }
+   ]
+  },
+  {
+   "id": 40,
+   "name": "pc-2.14-a",
+   "kind": "client",
+   "x": -40,
+   "y": 580,
+   "layer": 4,
+   "ports": [
+    {
+     "id": 41,
+     "name": "eth0",
+     "side": "top"
+    }
+   ]
+  },
+  {
+   "id": 50,
+   "name": "printer-2.14",
+   "kind": "client",
+   "x": 200,
+   "y": 580,
+   "layer": 4,
+   "ports": [
+    {
+     "id": 51,
+     "name": "eth0",
+     "side": "top"
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "id": 100,
+   "routing": "orthogonal",
+   "from": {
+    "device": 10,
+    "port": 11
+   },
+   "to": {
+    "device": 20,
+    "port": 21
+   },
+   "layer": 1,
+   "kind": "l2"
+  },
+  {
+   "id": 101,
+   "routing": "orthogonal",
+   "from": {
+    "device": 20,
+    "port": 22
+   },
+   "to": {
+    "device": 30,
+    "port": 31
+   },
+   "layer": 1
+  },
+  {
+   "id": 102,
+   "routing": "orthogonal",
+   "from": {
+    "device": 30,
+    "port": 32
+   },
+   "to": {
+    "device": 40,
+    "port": 41
+   },
+   "layer": 1
+  },
+  {
+   "id": 103,
+   "routing": "orthogonal",
+   "from": {
+    "device": 10,
+    "port": 12
+   },
+   "to": {
+    "device": 20,
+    "port": 23
+   },
+   "layer": 1,
+   "kind": "l2"
+  },
+  {
+   "id": 104,
+   "routing": "orthogonal",
+   "from": {
+    "device": 20,
+    "port": 24
+   },
+   "to": {
+    "device": 30,
+    "port": 33
+   },
+   "layer": 1
+  },
+  {
+   "id": 105,
+   "routing": "orthogonal",
+   "from": {
+    "device": 30,
+    "port": 34
+   },
+   "to": {
+    "device": 50,
+    "port": 51
+   },
+   "layer": 1
+  }
+ ],
+ "traces": [
+  {
+   "links": [
+    100,
+    101,
+    102
+   ]
+  },
+  {
+   "links": [
+    103,
+    104,
+    105
+   ]
+  }
+ ]
+}

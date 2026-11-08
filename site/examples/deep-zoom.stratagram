@@ -1,0 +1,326 @@
+{
+ "format": "stratagram",
+ "version": 1,
+ "layers": [
+  {
+   "id": 1,
+   "name": "Network"
+  }
+ ],
+ "active_layer": 1,
+ "devices": [
+  {
+   "id": 1,
+   "name": "internet",
+   "kind": "internet",
+   "x": 220,
+   "y": -160,
+   "w": 200,
+   "h": 80,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 101,
+     "side": "bottom",
+     "t": 0.5
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "fw-01",
+   "kind": "firewall",
+   "x": 260,
+   "y": -20,
+   "w": 120,
+   "h": 60,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 201,
+     "side": "top",
+     "t": 0.5
+    },
+    {
+     "id": 202,
+     "side": "bottom",
+     "t": 0.5
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "core-sw-01",
+   "kind": "switch",
+   "x": 220,
+   "y": 120,
+   "w": 200,
+   "h": 60,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 301,
+     "name": "Te1/1",
+     "side": "top",
+     "t": 0.5
+    },
+    {
+     "id": 302,
+     "name": "Te1/2",
+     "side": "bottom",
+     "t": 0.5
+    },
+    {
+     "id": 303,
+     "name": "Gi1/3",
+     "side": "right",
+     "t": 0.5
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "esx-01",
+   "kind": "server",
+   "x": 200,
+   "y": 300,
+   "w": 240,
+   "h": 120,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 401,
+     "name": "vmnic0",
+     "side": "top",
+     "t": 0.5
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "name": "nas-01",
+   "kind": "server",
+   "x": 520,
+   "y": 120,
+   "w": 120,
+   "h": 60,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 501,
+     "side": "left",
+     "t": 0.5
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "name": "vSwitch0",
+   "kind": "switch",
+   "x": 237.5,
+   "y": 337.5,
+   "w": 165.0,
+   "h": 7.5,
+   "scale": 0.125,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 1001,
+     "side": "top",
+     "t": 0.5
+    },
+    {
+     "id": 1002,
+     "side": "bottom",
+     "t": 0.045454545454545456
+    },
+    {
+     "id": 1003,
+     "side": "bottom",
+     "t": 0.5
+    },
+    {
+     "id": 1004,
+     "side": "bottom",
+     "t": 0.9545454545454546
+    }
+   ],
+   "z": 3
+  },
+  {
+   "id": 11,
+   "name": "web-01",
+   "kind": "server",
+   "x": 238.25,
+   "y": 370.0,
+   "w": 15.0,
+   "h": 7.5,
+   "scale": 0.125,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 1101,
+     "side": "top",
+     "t": 0.5
+    }
+   ],
+   "z": 3,
+   "color": "#e0e7ff"
+  },
+  {
+   "id": 12,
+   "name": "app-01",
+   "kind": "server",
+   "x": 312.5,
+   "y": 370.0,
+   "w": 15.0,
+   "h": 7.5,
+   "scale": 0.125,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 1201,
+     "side": "top",
+     "t": 0.5
+    }
+   ],
+   "z": 3,
+   "color": "#e0e7ff"
+  },
+  {
+   "id": 13,
+   "name": "db-01",
+   "kind": "server",
+   "x": 386.75,
+   "y": 370.0,
+   "w": 15.0,
+   "h": 7.5,
+   "scale": 0.125,
+   "layer": 1,
+   "ports": [
+    {
+     "id": 1301,
+     "side": "top",
+     "t": 0.5
+    }
+   ],
+   "z": 3,
+   "color": "#e0e7ff"
+  }
+ ],
+ "links": [
+  {
+   "id": 900,
+   "routing": "orthogonal",
+   "from": {
+    "device": 1,
+    "port": 101
+   },
+   "to": {
+    "device": 2,
+    "port": 201
+   },
+   "layer": 1
+  },
+  {
+   "id": 901,
+   "routing": "orthogonal",
+   "from": {
+    "device": 2,
+    "port": 202
+   },
+   "to": {
+    "device": 3,
+    "port": 301
+   },
+   "layer": 1
+  },
+  {
+   "id": 902,
+   "routing": "orthogonal",
+   "from": {
+    "device": 3,
+    "port": 302
+   },
+   "to": {
+    "device": 4,
+    "port": 401
+   },
+   "layer": 1,
+   "kind": "l2"
+  },
+  {
+   "id": 903,
+   "routing": "orthogonal",
+   "from": {
+    "device": 3,
+    "port": 303
+   },
+   "to": {
+    "device": 5,
+    "port": 501
+   },
+   "layer": 1
+  },
+  {
+   "id": 904,
+   "routing": "orthogonal",
+   "from": {
+    "device": 4,
+    "port": 401
+   },
+   "to": {
+    "device": 10,
+    "port": 1001
+   },
+   "layer": 1,
+   "scale": 0.125,
+   "z": 2
+  },
+  {
+   "id": 905,
+   "routing": "orthogonal",
+   "from": {
+    "device": 10,
+    "port": 1002
+   },
+   "to": {
+    "device": 11,
+    "port": 1101
+   },
+   "layer": 1,
+   "scale": 0.125,
+   "z": 2
+  },
+  {
+   "id": 906,
+   "routing": "orthogonal",
+   "from": {
+    "device": 10,
+    "port": 1003
+   },
+   "to": {
+    "device": 12,
+    "port": 1201
+   },
+   "layer": 1,
+   "scale": 0.125,
+   "z": 2
+  },
+  {
+   "id": 907,
+   "routing": "orthogonal",
+   "from": {
+    "device": 10,
+    "port": 1004
+   },
+   "to": {
+    "device": 13,
+    "port": 1301
+   },
+   "layer": 1,
+   "scale": 0.125,
+   "z": 2
+  }
+ ]
+}

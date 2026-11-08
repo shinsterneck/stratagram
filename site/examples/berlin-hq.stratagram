@@ -1,0 +1,864 @@
+{
+  "format": "stratagram",
+  "version": 1,
+  "devices": [
+    {
+      "id": 2,
+      "name": "Telekom BER-INET-1",
+      "kind": "internet",
+      "x": 60.0,
+      "y": 0.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#e5e7eb",
+      "ports": [
+        {
+          "id": 20,
+          "name": "",
+          "side": "bottom",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 18
+    },
+    {
+      "id": 3,
+      "name": "Vodafone BER-INET-2",
+      "kind": "internet",
+      "x": 820.0,
+      "y": 0.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#e5e7eb",
+      "ports": [
+        {
+          "id": 23,
+          "name": "",
+          "side": "bottom",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 19
+    },
+    {
+      "id": 4,
+      "name": "AWS eu-central-1",
+      "kind": "aws",
+      "x": 300.0,
+      "y": 0.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#ffedd5",
+      "ports": [
+        {
+          "id": 27,
+          "name": "",
+          "side": "bottom",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 20
+    },
+    {
+      "id": 5,
+      "name": "Zscaler ZIA",
+      "kind": "zscaler",
+      "x": 1060.0,
+      "y": 0.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#dbeafe",
+      "ports": [
+        {
+          "id": 30,
+          "name": "",
+          "side": "bottom",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 21
+    },
+    {
+      "id": 6,
+      "name": "fw-01",
+      "kind": "firewall",
+      "x": 180.0,
+      "y": 160.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#fecaca",
+      "ports": [
+        {
+          "id": 21,
+          "name": "wan1",
+          "side": "top",
+          "t": 0.3333333333333333
+        },
+        {
+          "id": 26,
+          "name": "wan2",
+          "side": "top",
+          "t": 0.6666666666666666
+        },
+        {
+          "id": 32,
+          "name": "ha",
+          "side": "right",
+          "t": 0.5
+        },
+        {
+          "id": 35,
+          "name": "port3",
+          "side": "bottom",
+          "t": 0.875
+        }
+      ],
+      "layer": 100,
+      "z": 22
+    },
+    {
+      "id": 7,
+      "name": "fw-02",
+      "kind": "firewall",
+      "x": 940.0,
+      "y": 160.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#fecaca",
+      "ports": [
+        {
+          "id": 24,
+          "name": "wan1",
+          "side": "top",
+          "t": 0.3333333333333333
+        },
+        {
+          "id": 29,
+          "name": "wan2",
+          "side": "top",
+          "t": 0.6666666666666666
+        },
+        {
+          "id": 33,
+          "name": "ha",
+          "side": "left",
+          "t": 0.5
+        },
+        {
+          "id": 38,
+          "name": "port3",
+          "side": "bottom",
+          "t": 0.6666666666666666
+        }
+      ],
+      "layer": 100,
+      "z": 23
+    },
+    {
+      "id": 8,
+      "name": "core-sw-01",
+      "kind": "switch",
+      "x": 270.0,
+      "y": 320.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bfdbfe",
+      "ports": [
+        {
+          "id": 36,
+          "name": "Te1/1/1",
+          "side": "top",
+          "t": 0.125
+        },
+        {
+          "id": 41,
+          "name": "Po1",
+          "side": "right",
+          "t": 0.5
+        },
+        {
+          "id": 44,
+          "name": "Te1/1/3",
+          "side": "bottom",
+          "t": 0.25
+        },
+        {
+          "id": 59,
+          "name": "Te1/1/2",
+          "side": "bottom",
+          "t": 0.5
+        },
+        {
+          "id": 56,
+          "name": "Te1/1/4",
+          "side": "bottom",
+          "t": 0.75
+        }
+      ],
+      "layer": 100,
+      "z": 24
+    },
+    {
+      "id": 9,
+      "name": "core-sw-02",
+      "kind": "switch",
+      "x": 980.0,
+      "y": 320.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bfdbfe",
+      "ports": [
+        {
+          "id": 39,
+          "name": "Te1/1/1",
+          "side": "top",
+          "t": 0.3333333333333333
+        },
+        {
+          "id": 42,
+          "name": "Po1",
+          "side": "left",
+          "t": 0.5
+        },
+        {
+          "id": 50,
+          "name": "Te1/1/3",
+          "side": "bottom",
+          "t": 0.5
+        },
+        {
+          "id": 53,
+          "name": "Te1/1/4",
+          "side": "bottom",
+          "t": 0.75
+        },
+        {
+          "id": 47,
+          "name": "Te1/1/5",
+          "side": "bottom",
+          "t": 0.25
+        }
+      ],
+      "layer": 100,
+      "z": 25
+    },
+    {
+      "id": 10,
+      "name": "lb-01",
+      "kind": "load balancer",
+      "x": 0.0,
+      "y": 500.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#ddd6fe",
+      "ports": [
+        {
+          "id": 45,
+          "name": "eth0",
+          "side": "top",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 26
+    },
+    {
+      "id": 11,
+      "name": "esx-01",
+      "kind": "server",
+      "x": 820.0,
+      "y": 500.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 48,
+          "name": "vmnic0",
+          "side": "top",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 27
+    },
+    {
+      "id": 12,
+      "name": "esx-02",
+      "kind": "server",
+      "x": 980.0,
+      "y": 500.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 51,
+          "name": "vmnic0",
+          "side": "top",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 28
+    },
+    {
+      "id": 13,
+      "name": "esx-03",
+      "kind": "server",
+      "x": 1140.0,
+      "y": 500.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bbf7d0",
+      "ports": [
+        {
+          "id": 54,
+          "name": "vmnic0",
+          "side": "top",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 29
+    },
+    {
+      "id": 14,
+      "name": "wlc-01",
+      "kind": "wlan controller",
+      "x": 510.0,
+      "y": 500.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#c7d2fe",
+      "ports": [
+        {
+          "id": 57,
+          "name": "port1",
+          "side": "top",
+          "t": 0.5
+        },
+        {
+          "id": 72,
+          "name": "",
+          "side": "bottom",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 30
+    },
+    {
+      "id": 15,
+      "name": "access-sw-01",
+      "kind": "switch",
+      "x": 290.0,
+      "y": 500.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#bfdbfe",
+      "ports": [
+        {
+          "id": 60,
+          "name": "Te1/1/1",
+          "side": "top",
+          "t": 0.5
+        },
+        {
+          "id": 62,
+          "name": "Gi1/0/1",
+          "side": "bottom",
+          "t": 0.75
+        },
+        {
+          "id": 65,
+          "name": "Gi1/0/2",
+          "side": "bottom",
+          "t": 0.5
+        },
+        {
+          "id": 68,
+          "name": "Gi1/0/20",
+          "side": "bottom",
+          "t": 0.25
+        }
+      ],
+      "layer": 100,
+      "z": 31
+    },
+    {
+      "id": 16,
+      "name": "ap-01",
+      "kind": "access point",
+      "x": 510.0,
+      "y": 660.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#ccfbf1",
+      "ports": [
+        {
+          "id": 63,
+          "name": "eth0",
+          "side": "top",
+          "t": 0.3333333333333333
+        },
+        {
+          "id": 71,
+          "name": "",
+          "side": "top",
+          "t": 0.6666666666666666
+        }
+      ],
+      "layer": 100,
+      "z": 32
+    },
+    {
+      "id": 17,
+      "name": "ap-02",
+      "kind": "access point",
+      "x": 290.0,
+      "y": 660.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#ccfbf1",
+      "ports": [
+        {
+          "id": 66,
+          "name": "eth0",
+          "side": "top",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 33
+    },
+    {
+      "id": 18,
+      "name": "Office clients",
+      "kind": "client",
+      "x": 140.0,
+      "y": 660.0,
+      "w": 120.0,
+      "h": 60.0,
+      "color": "#fef3c7",
+      "ports": [
+        {
+          "id": 69,
+          "name": "",
+          "side": "top",
+          "t": 0.5
+        }
+      ],
+      "layer": 100,
+      "z": 34
+    }
+  ],
+  "links": [
+    {
+      "id": 19,
+      "from": {
+        "device": 2,
+        "port": 20
+      },
+      "to": {
+        "device": 6,
+        "port": 21
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "label": "1 Gbit/s",
+      "layer": 100,
+      "z": 0
+    },
+    {
+      "id": 22,
+      "from": {
+        "device": 3,
+        "port": 23
+      },
+      "to": {
+        "device": 7,
+        "port": 24
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "label": "500 Mbit/s",
+      "layer": 100,
+      "z": 1
+    },
+    {
+      "id": 25,
+      "from": {
+        "device": 6,
+        "port": 26
+      },
+      "to": {
+        "device": 4,
+        "port": 27
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "ipsec",
+      "label": "IPsec VPN",
+      "layer": 100,
+      "z": 2
+    },
+    {
+      "id": 28,
+      "from": {
+        "device": 7,
+        "port": 29
+      },
+      "to": {
+        "device": 5,
+        "port": 30
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "ipsec",
+      "label": "GRE to ZIA",
+      "layer": 100,
+      "z": 3
+    },
+    {
+      "id": 31,
+      "from": {
+        "device": 6,
+        "port": 32
+      },
+      "to": {
+        "device": 7,
+        "port": 33
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "label": "HA",
+      "layer": 100,
+      "z": 4
+    },
+    {
+      "id": 34,
+      "from": {
+        "device": 6,
+        "port": 35
+      },
+      "to": {
+        "device": 8,
+        "port": 36
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l3",
+      "label": "",
+      "layer": 100,
+      "z": 5
+    },
+    {
+      "id": 37,
+      "from": {
+        "device": 7,
+        "port": 38
+      },
+      "to": {
+        "device": 9,
+        "port": 39
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l3",
+      "label": "",
+      "layer": 100,
+      "z": 6
+    },
+    {
+      "id": 40,
+      "from": {
+        "device": 8,
+        "port": 41
+      },
+      "to": {
+        "device": 9,
+        "port": 42
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "trunk",
+      "label": "vPC peer",
+      "layer": 100,
+      "z": 7
+    },
+    {
+      "id": 43,
+      "from": {
+        "device": 8,
+        "port": 44
+      },
+      "to": {
+        "device": 10,
+        "port": 45
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "trunk",
+      "label": "",
+      "layer": 100,
+      "z": 8
+    },
+    {
+      "id": 46,
+      "from": {
+        "device": 9,
+        "port": 47
+      },
+      "to": {
+        "device": 11,
+        "port": 48
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "around",
+      "kind": "trunk",
+      "label": "",
+      "layer": 100,
+      "z": 9
+    },
+    {
+      "id": 49,
+      "from": {
+        "device": 9,
+        "port": 50
+      },
+      "to": {
+        "device": 12,
+        "port": 51
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "trunk",
+      "label": "",
+      "layer": 100,
+      "z": 10
+    },
+    {
+      "id": 52,
+      "from": {
+        "device": 9,
+        "port": 53
+      },
+      "to": {
+        "device": 13,
+        "port": 54
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "trunk",
+      "label": "",
+      "layer": 100,
+      "z": 11
+    },
+    {
+      "id": 55,
+      "from": {
+        "device": 8,
+        "port": 56
+      },
+      "to": {
+        "device": 14,
+        "port": 57
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "trunk",
+      "label": "",
+      "layer": 100,
+      "z": 12
+    },
+    {
+      "id": 58,
+      "from": {
+        "device": 8,
+        "port": 59
+      },
+      "to": {
+        "device": 15,
+        "port": 60
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "around",
+      "kind": "trunk",
+      "label": "Uplink",
+      "layer": 100,
+      "z": 13
+    },
+    {
+      "id": 61,
+      "from": {
+        "device": 15,
+        "port": 62
+      },
+      "to": {
+        "device": 16,
+        "port": 63
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 100,
+      "z": 14
+    },
+    {
+      "id": 64,
+      "from": {
+        "device": 15,
+        "port": 65
+      },
+      "to": {
+        "device": 17,
+        "port": 66
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 100,
+      "z": 15
+    },
+    {
+      "id": 67,
+      "from": {
+        "device": 15,
+        "port": 68
+      },
+      "to": {
+        "device": 18,
+        "port": 69
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "orthogonal",
+      "kind": "l2",
+      "label": "",
+      "layer": 100,
+      "z": 16
+    },
+    {
+      "id": 70,
+      "from": {
+        "device": 16,
+        "port": 71
+      },
+      "to": {
+        "device": 14,
+        "port": 72
+      },
+      "color": "#334155",
+      "width": 2.0,
+      "style": "solid",
+      "head_start": "none",
+      "head_end": "none",
+      "routing": "around",
+      "kind": "capwap",
+      "label": "CAPWAP",
+      "layer": 100,
+      "z": 17
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "Frame",
+      "visible": true,
+      "frame": {
+        "template": "site",
+        "title": "Berlin HQ",
+        "subtitle": "Network overview",
+        "author": "Network team",
+        "show_date": true,
+        "margin": 40.0,
+        "color": "#0f766e",
+        "company": "ACME Networks",
+        "doc_id": "BER-01",
+        "revision": "B",
+        "address": "Hauptstr. 1, Berlin"
+      }
+    },
+    {
+      "id": 100,
+      "name": "Network",
+      "visible": true
+    }
+  ],
+  "active_layer": 100,
+  "changed": "2026-11-06 19:14"
+}

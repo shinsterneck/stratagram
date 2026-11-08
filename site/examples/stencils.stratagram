@@ -1,0 +1,284 @@
+{
+ "format": "stratagram",
+ "version": 1,
+ "layers": [
+  {
+   "id": 1,
+   "name": "Stencils"
+  }
+ ],
+ "active_layer": 1,
+ "devices": [
+  {
+   "id": 10,
+   "name": "Router",
+   "kind": "router",
+   "x": 0,
+   "y": 0,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 11,
+   "name": "OSPF router",
+   "kind": "ospf router",
+   "x": 170,
+   "y": 0,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 12,
+   "name": "BGP RR",
+   "kind": "bgp reflector",
+   "x": 340,
+   "y": 0,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 13,
+   "name": "Switch",
+   "kind": "switch",
+   "x": 510,
+   "y": 0,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 14,
+   "name": "Load balancer",
+   "kind": "load balancer",
+   "x": 680,
+   "y": 0,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 15,
+   "name": "ACI L3Out",
+   "kind": "aci l3out",
+   "x": 0,
+   "y": 110,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 16,
+   "name": "Firewall",
+   "kind": "firewall",
+   "x": 170,
+   "y": 110,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 17,
+   "name": "Cloud proxy",
+   "kind": "cloud proxy",
+   "x": 340,
+   "y": 110,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 18,
+   "name": "Zscaler",
+   "kind": "zscaler",
+   "x": 510,
+   "y": 110,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 19,
+   "name": "WLC",
+   "kind": "wlan controller",
+   "x": 680,
+   "y": 110,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 20,
+   "name": "Access point",
+   "kind": "access point",
+   "x": 0,
+   "y": 220,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 21,
+   "name": "Standalone AP",
+   "kind": "standalone ap",
+   "x": 170,
+   "y": 220,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 22,
+   "name": "Managed AP",
+   "kind": "managed ap",
+   "x": 340,
+   "y": 220,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 23,
+   "name": "Server",
+   "kind": "server",
+   "x": 510,
+   "y": 220,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 24,
+   "name": "Client",
+   "kind": "client",
+   "x": 680,
+   "y": 220,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 25,
+   "name": "Internet",
+   "kind": "internet",
+   "x": 0,
+   "y": 330,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 26,
+   "name": "Cloud",
+   "kind": "cloud",
+   "x": 170,
+   "y": 330,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 27,
+   "name": "AWS",
+   "kind": "aws",
+   "x": 340,
+   "y": 330,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 28,
+   "name": "AWS TGW",
+   "kind": "aws transit gateway",
+   "x": 510,
+   "y": 330,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 29,
+   "name": "AWS DX gateway",
+   "kind": "aws direct connect gateway",
+   "x": 680,
+   "y": 330,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 30,
+   "name": "Azure",
+   "kind": "azure",
+   "x": 0,
+   "y": 440,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 31,
+   "name": "Google Cloud",
+   "kind": "google cloud",
+   "x": 170,
+   "y": 440,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 32,
+   "name": "Alibaba Cloud",
+   "kind": "alibaba cloud",
+   "x": 340,
+   "y": 440,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 33,
+   "name": "Telekom Cloud",
+   "kind": "telekom cloud",
+   "x": 510,
+   "y": 440,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 34,
+   "name": "Stackit",
+   "kind": "stackit",
+   "x": 680,
+   "y": 440,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 35,
+   "name": "vSwitch",
+   "kind": "virtual switch",
+   "x": 255,
+   "y": 550,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  },
+  {
+   "id": 36,
+   "name": "DVS",
+   "kind": "distributed virtual switch",
+   "x": 425,
+   "y": 550,
+   "w": 130,
+   "h": 64,
+   "layer": 1
+  }
+ ],
+ "links": []
+}

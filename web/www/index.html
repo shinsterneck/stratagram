@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+     Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
+     SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stratagram</title>
+<link rel="icon" href="pkg/stratagram.svg" type="image/svg+xml">
+<link rel="stylesheet" href="stratagram.css">
+<style>
+  html, body { height: 100%; margin: 0; }
+  #editor { height: 100%; }
+</style>
+</head>
+<body>
+<div id="editor"></div>
+<script type="module">
+  import { mount, fileHost } from "./app.js"
+  // A file given in the address (index.html#file=demo.stratagram) opens at start.
+  const file = new URLSearchParams(location.hash.slice(1)).get("file")
+  const initial = file ? { json: await (await fetch(file)).text(), name: file.split("/").pop() } : null
+  window.stratagram = await mount(document.getElementById("editor"), { host: Object.assign(fileHost(), { initial }) })
+</script>
+</body>
+</html>

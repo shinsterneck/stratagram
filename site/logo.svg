@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- stratagram: a firewall above two devices, linked like in the editor -->
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="#eff6ff" stroke="#1e3a8a" stroke-width="2"/>
+  <g stroke="#334155" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M32 24 V34 M32 34 H18 V40 M32 34 H46 V40"/>
+  </g>
+  <g stroke="#334155" stroke-width="2">
+    <rect x="19" y="10" width="26" height="14" rx="3" fill="#fecaca"/>
+    <rect x="7" y="40" width="22" height="13" rx="3" fill="#bfdbfe"/>
+    <rect x="35" y="40" width="22" height="13" rx="3" fill="#bbf7d0"/>
+  </g>
+  <g fill="#334155">
+    <rect x="29.5" y="21.5" width="5" height="5"/>
+    <rect x="15.5" y="37.5" width="5" height="5"/>
+    <rect x="43.5" y="37.5" width="5" height="5"/>
+  </g>
+</svg>

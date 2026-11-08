@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netbox-stratagram"
+version = "1.0.0"
+requires-python = ">=3.12.0"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD-PARTY-LICENSES.txt"]
+authors = [{ name = "Shin Sterneck" }]
+description = "NetBox plugin: network diagrams of sites, drawn and edited in NetBox with Stratagram"
+readme = { file = "README.md", content-type = "text/markdown" }
+keywords = ["netbox", "netbox-plugin", "diagram", "topology"]
+classifiers = [
+    "Framework :: Django",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["netbox_stratagram*"]
+
+[tool.setuptools.package-data]
+netbox_stratagram = ["templates/**", "static/**"]

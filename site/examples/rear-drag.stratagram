@@ -1,0 +1,21 @@
+{"format": "stratagram", "version": 1,
+ "layers": [{"id": 1, "name": "Cables"}, {"id": 2, "name": "Switches"}, {"id": 3, "name": "Patch panels"}, {"id": 4, "name": "Servers"}],
+ "active_layer": 1,
+ "devices": [
+  {"id": 10, "name": "access-sw-01", "kind": "switch", "x": 60, "y": 40, "w": 200, "h": 60, "layer": 2,
+   "ports": [{"id": 11, "name": "Gi1/0/5", "side": "bottom", "t": 0.25}, {"id": 12, "name": "Gi1/0/6", "side": "bottom", "t": 0.5}, {"id": 13, "name": "Gi1/0/7", "side": "bottom", "t": 0.75}]},
+  {"id": 20, "name": "pp-a1  (rack 2)", "kind": "patch panel", "x": -60, "y": 200, "layer": 3, "panel": {"ports": 24},
+   "ports": [{"id": 21, "socket": 5, "side": "top"}, {"id": 22, "name": "R5", "side": "bottom", "t": 0.45, "socket": 5, "rear": true},
+             {"id": 23, "socket": 6, "side": "top"}, {"id": 24, "name": "R6", "side": "bottom", "t": 0.5, "socket": 6, "rear": true},
+             {"id": 25, "socket": 7, "side": "top"}]},
+  {"id": 40, "name": "srv-01", "kind": "server", "x": -60, "y": 330, "layer": 4, "ports": [{"id": 41, "name": "eth0", "side": "top"}]},
+  {"id": 50, "name": "srv-02", "kind": "server", "x": 80, "y": 330, "layer": 4, "ports": [{"id": 51, "name": "eth0", "side": "top"}]},
+  {"id": 60, "name": "srv-03", "kind": "server", "x": 220, "y": 330, "layer": 4, "ports": [{"id": 61, "name": "eth0", "side": "top"}]}
+ ],
+ "links": [
+  {"id": 100, "from": {"device": 10, "port": 11}, "to": {"device": 20, "port": 21}, "layer": 1, "kind": "l2", "routing": "orthogonal"},
+  {"id": 101, "from": {"device": 20, "port": 22}, "to": {"device": 40, "port": 41}, "layer": 1, "routing": "orthogonal"},
+  {"id": 102, "from": {"device": 10, "port": 12}, "to": {"device": 20, "port": 23}, "layer": 1, "kind": "l2", "routing": "orthogonal"},
+  {"id": 103, "from": {"device": 20, "port": 24}, "to": {"device": 50, "port": 51}, "layer": 1, "routing": "orthogonal"},
+  {"id": 104, "from": {"device": 10, "port": 13}, "to": {"device": 20, "port": 25}, "layer": 1, "kind": "l2", "routing": "orthogonal"}
+ ]}

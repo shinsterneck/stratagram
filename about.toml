@@ -1,0 +1,12 @@
+# This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+# Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
+# SPDX-License-Identifier: Apache-2.0
+
+# cargo-about: the licenses of the Rust libraries built into Stratagram,
+# for THIRD-PARTY-LICENSES.txt (netbox-plugin/build.sh). Where a library
+# offers a choice, the first of these it allows is used.
+accepted = ["MIT", "Apache-2.0", "Zlib", "Unicode-3.0", "BSD-3-Clause", "0BSD", "Unlicense"]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+# Stratagram's own crates (not published): under its own LICENSE.
+private = { ignore = true }
