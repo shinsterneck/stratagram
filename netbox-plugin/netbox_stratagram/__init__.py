@@ -7,7 +7,7 @@ and cables and edited in the browser on the site's Diagram tab."""
 
 from netbox.plugins import PluginConfig
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 
 class StratagramConfig(PluginConfig):

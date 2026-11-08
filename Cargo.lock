@@ -667,7 +667,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "stratagram"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "cxx",
  "cxx-qt",
@@ -681,7 +681,7 @@ dependencies = [
 
 [[package]]
 name = "stratagram-core"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "chrono",
  "flate2",
@@ -693,7 +693,7 @@ dependencies = [
 
 [[package]]
 name = "stratagram-web"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "chrono",
  "stratagram-core",

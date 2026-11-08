@@ -11,9 +11,10 @@
 
 inline void setup_app()
 {
-    // Matches packaging/stratagram.desktop, so the desktop (and its file
-    // dialogs, through the portal) knows which app this is.
-    QGuiApplication::setDesktopFileName(QStringLiteral("stratagram"));
+    // The app's ID, as in packaging/app.stratagram.Stratagram.desktop (and
+    // Flatpak), so the desktop shows its icon for the window and knows, for
+    // its file dialogs through the portal, which app this is.
+    QGuiApplication::setDesktopFileName(QStringLiteral("app.stratagram.Stratagram"));
     // The interface is designed light (dark text on light panels); keep it
     // so when the desktop prefers dark.
     QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);

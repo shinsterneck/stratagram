@@ -92,24 +92,46 @@ and the NetBox plugin's package, with the tag's message as the release notes, an
 on [PyPI](https://pypi.org/project/netbox-stratagram/) (trusted publishing from the `pypi`
 environment, no token).
 
-### Desktop launcher (Linux)
+### Linux packages
 
-`packaging/` has a `.desktop` entry and an icon, so stratagram shows up in the application menu
-and launchers. It runs `stratagram` from `PATH`, so install the binary first:
+- **Flatpak** (Flathub): `flatpak install flathub app.stratagram.Stratagram`, built from
+  `packaging/flatpak/app.stratagram.Stratagram.yml`.
+- **Arch Linux and derivatives** (AUR): `yay -S stratagram` or any other AUR helper, built
+  from `packaging/aur/PKGBUILD`.
+
+Both install the menu entry, the icon, the `.stratagram` file type and the software center
+details below.
+
+The Flatpak opens and saves diagrams through the desktop's file dialogs and "Open with", so it
+needs no access to your files. The command line modes (`--export-svg`, `--layout`, ...) read and
+write paths directly; give them access where your diagrams are, e.g.
+`flatpak run --filesystem=home app.stratagram.Stratagram --export-svg in.stratagram out.svg`, or
+once with `flatpak override --user --filesystem=home app.stratagram.Stratagram`.
+
+### Desktop launcher (Linux, built yourself)
+
+`packaging/` has what a desktop needs, named after the app's ID `app.stratagram.Stratagram`:
+the `.desktop` entry (menu and launchers), the icon, the `.stratagram` file type and the
+AppStream metainfo (what GNOME Software and KDE Discover show). The entry runs `stratagram`
+from `PATH`, so install the binary first:
 
 ```sh
 sudo install -Dm755 target/release/stratagram /usr/local/bin/stratagram
 # for your user only:
-install -Dm644 packaging/stratagram.desktop ~/.local/share/applications/stratagram.desktop
-install -Dm644 packaging/stratagram.svg ~/.local/share/icons/hicolor/scalable/apps/stratagram.svg
-install -Dm644 packaging/stratagram-mime.xml ~/.local/share/mime/packages/stratagram.xml
+id=app.stratagram.Stratagram
+install -Dm644 packaging/$id.desktop ~/.local/share/applications/$id.desktop
+install -Dm644 packaging/stratagram.svg ~/.local/share/icons/hicolor/scalable/apps/$id.svg
+install -Dm644 packaging/$id.mime.xml ~/.local/share/mime/packages/$id.xml
 update-mime-database ~/.local/share/mime
 update-desktop-database ~/.local/share/applications
-# or system wide: the same under /usr/local/share (with sudo)
+# or system wide: the same under /usr/local/share (with sudo), plus
+# packaging/$id.metainfo.xml into share/metainfo/
 ```
 
 The file manager then shows `.stratagram` files as Stratagram diagrams, with its icon, and
-opens them with Stratagram on a double-click.
+opens them with Stratagram on a double-click. (An older install used the name `stratagram`
+for these files; remove `stratagram.desktop`, `stratagram.svg` and `stratagram.xml` from the
+same places.)
 
 ### In the browser
 

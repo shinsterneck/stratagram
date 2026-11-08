@@ -1,0 +1,46 @@
+# This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+# Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
+# SPDX-License-Identifier: Apache-2.0
+
+# The Flatpak (Flathub: app.stratagram.Stratagram): the desktop app on the
+# KDE runtime, which brings Qt, built without network access from a
+# release's source and the crates in cargo-sources.json. For a new release:
+# set the tag and its commit below, and regenerate cargo-sources.json if
+# Cargo.lock changed (cargo-sources.py).
+id: app.stratagram.Stratagram
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: stratagram
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Diagrams are opened and saved through the desktop's file dialogs (the
+  # portal), so no access to the home folder is needed.
+
+modules:
+  - name: stratagram
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/stratagram/cargo
+        CARGO_NET_OFFLINE: 'true'
+    build-commands:
+      - cargo build --offline --locked --release -p stratagram
+      - install -Dm755 target/release/stratagram /app/bin/stratagram
+      - install -Dm644 packaging/${FLATPAK_ID}.desktop /app/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 packaging/stratagram.svg /app/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
+      - install -Dm644 packaging/${FLATPAK_ID}.mime.xml /app/share/mime/packages/${FLATPAK_ID}.xml
+      - install -Dm644 packaging/${FLATPAK_ID}.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - install -Dm644 -t /app/share/licenses/${FLATPAK_ID} LICENSE NOTICE
+    sources:
+      - type: git
+        url: https://github.com/shinsterneck/stratagram.git
+        tag: v1.0.4
+        commit: COMMIT-OF-v1.0.4
+      - cargo-sources.json

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+     Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
+     SPDX-License-Identifier: Apache-2.0 -->
+<!-- What software centers (GNOME Software, KDE Discover, Flathub) show
+     about Stratagram; installed as share/metainfo/app.stratagram.Stratagram.metainfo.xml.
+     Each release adds itself under <releases>. -->
+<component type="desktop-application">
+  <id>app.stratagram.Stratagram</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+
+  <name>Stratagram</name>
+  <summary>Draw network diagrams that read the same for everyone</summary>
+  <developer id="app.stratagram">
+    <name>Shin Sterneck</name>
+  </developer>
+
+  <description>
+    <p>
+      Stratagram is a network diagram editor for getting a network onto the screen in minutes.
+      Standardized stencils and line types do the styling for you, so you think about the
+      topology, and everyone on your team reads the result the same way.
+    </p>
+    <ul>
+      <li>28 device types with their own shapes, and line types with a meaning: 802.1Q trunk, L2, L3, IPsec, VXLAN, CAPWAP, SD-WAN, MPLS</li>
+      <li>Quick add: type “firewall, router, switch” and they appear, connected by auto layout</li>
+      <li>Front panels of switches, routers, firewalls, servers and patch panels, with cabling followed end to end</li>
+      <li>Layers, sheets, frames with title blocks and legends, light, dark and neon themes</li>
+      <li>Export to SVG, PNG, draw.io and Cisco Modeling Labs; draw.io import</li>
+      <li>Plain JSON files, and a command line to lay out and export diagrams from scripts</li>
+    </ul>
+    <p>
+      The same editor runs in the browser and inside NetBox, as a plugin that draws every site
+      from NetBox's data.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">app.stratagram.Stratagram.desktop</launchable>
+  <provides>
+    <binary>stratagram</binary>
+    <mediatype>application/x-stratagram</mediatype>
+  </provides>
+
+  <url type="homepage">https://stratagram.app/</url>
+  <url type="bugtracker">https://github.com/shinsterneck/stratagram/issues</url>
+  <url type="vcs-browser">https://github.com/shinsterneck/stratagram</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>A site drawn with Stratagram's stencils and line types</caption>
+      <image>https://stratagram.app/shots/desktop-app.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The dark theme</caption>
+      <image>https://stratagram.app/shots/theme-dark.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Front panels with numbered ports, cabled through patch panels</caption>
+      <image>https://stratagram.app/shots/front-panels.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Device types, from switches and firewalls to clouds</caption>
+      <image>https://stratagram.app/shots/stencils.png</image>
+    </screenshot>
+  </screenshots>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#99f6e4</color>
+    <color type="primary" scheme_preference="dark">#115e59</color>
+  </branding>
+
+  <content_rating type="oars-1.1"/>
+
+  <recommends>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </recommends>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+
+  <categories>
+    <category>Graphics</category>
+  </categories>
+  <keywords>
+    <keyword>network</keyword>
+    <keyword>diagram</keyword>
+    <keyword>topology</keyword>
+    <keyword>draw.io</keyword>
+    <keyword>NetBox</keyword>
+  </keywords>
+
+  <releases>
+    <release version="1.0.4" date="2026-11-08">
+      <description>
+        <p>Packages for Linux: Flatpak and the Arch User Repository. The app now identifies itself as app.stratagram.Stratagram, so desktops show its icon for its window.</p>
+      </description>
+    </release>
+    <release version="1.0.3" date="2026-11-08">
+      <description>
+        <p>Security: frame logos only from inside the diagram file, so opening a diagram never contacts another server.</p>
+      </description>
+    </release>
+    <release version="1.0.2" date="2026-11-08"/>
+    <release version="1.0.1" date="2026-11-08">
+      <description>
+        <p>Windows installer; .stratagram files open with Stratagram on Windows and Linux.</p>
+      </description>
+    </release>
+    <release version="1.0.0" date="2026-11-08">
+      <description>
+        <p>The first public release.</p>
+      </description>
+    </release>
+  </releases>
+</component>
