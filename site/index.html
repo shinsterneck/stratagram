@@ -26,6 +26,7 @@
     <nav class="links">
       <a href="#app-features" data-page="app">Features</a>
       <a href="#app-start" data-page="app">Get started</a>
+      <a href="https://github.com/shinsterneck/stratagram/wiki">Docs</a>
       <a href="https://github.com/shinsterneck/stratagram">Source</a>
     </nav>
   </div>
@@ -43,7 +44,7 @@
       Standardized stencils and line types do the styling for you, so you think about the topology,
       and everyone on your team reads the result the same way.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.4-windows-x64-setup.exe">Download for Windows</a>
+      <a class="btn primary" href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-windows-x64-setup.exe">Download for Windows</a>
       <a class="btn" href="editor/#file=../examples/berlin-hq.stratagram">Try it in your browser</a>
       <a class="btn" href="#netbox" data-page="netbox">NetBox plugin →</a>
       <a class="btn" href="https://github.com/shinsterneck/stratagram">Source on GitHub</a>
@@ -307,18 +308,18 @@
         <div class="cta"><a class="btn primary" href="editor/#file=../examples/berlin-hq.stratagram">Open the editor</a></div>
       </div></div>
       <div class="step"><div>
-        <h3>Linux: install Qt 6</h3>
-        <p>For example on Debian or Ubuntu; Fedora and Arch have the same as <code>qt6-qtdeclarative-devel qt6-qtsvg-devel</code> and <code>qt6-declarative qt6-svg</code>. Then build it (step 4).</p>
+        <h3>Linux</h3>
+        <p>On Arch Linux and its derivatives, from the AUR: <code>yay -S stratagram-bin</code>. Elsewhere, the <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-linux-x86_64.tar.gz">Linux download</a> runs with Qt 6.12 or newer (unpack it into <code>~/.local</code>, see the <a href="https://github.com/shinsterneck/stratagram/wiki/Installation#linux">wiki</a>). With an older Qt, install Qt 6 and build it (step 4); for example on Debian or Ubuntu, and on Fedora as <code>qt6-qtdeclarative-devel qt6-qtsvg-devel</code>:</p>
         <div class="term"><pre><span class="p">$</span> sudo apt install qt6-base-dev qt6-declarative-dev qt6-svg-dev qml6-module-qtquick \
     qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtquick-dialogs</pre></div>
       </div></div>
       <div class="step"><div>
         <h3>Windows</h3>
-        <p>The <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.4-windows-x64-setup.exe">installer</a> adds Stratagram to the Start menu and opens <code>.stratagram</code> files with it. Or take the <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.4-windows-x64.zip">zip</a> and run it from any folder. Both are on the <a href="https://github.com/shinsterneck/stratagram/releases/latest">release page</a>.</p>
+        <p>The <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-windows-x64-setup.exe">installer</a> adds Stratagram to the Start menu and opens <code>.stratagram</code> files with it. Or take the <a href="https://github.com/shinsterneck/stratagram/releases/latest/download/stratagram-1.0.5-windows-x64.zip">zip</a> and run it from any folder. Both are on the <a href="https://github.com/shinsterneck/stratagram/releases/latest">release page</a>.</p>
       </div></div>
       <div class="step"><div>
         <h3>Build it</h3>
-        <p>The desktop app from source, with Rust 1.85 or newer (on Windows too, see the <a href="https://github.com/shinsterneck/stratagram#windows">README</a>):</p>
+        <p>The desktop app from source, with Rust 1.85 or newer (on Windows too, see the <a href="https://github.com/shinsterneck/stratagram/wiki/Building-from-source#windows">wiki</a>):</p>
         <div class="term"><pre><span class="p">$</span> git clone https://github.com/shinsterneck/stratagram.git &amp;&amp; cd stratagram
 <span class="p">$</span> cargo build --release
 <span class="p">$</span> ./target/release/stratagram examples/demo.stratagram</pre></div>
@@ -455,7 +456,7 @@ PLUGINS_CONFIG = {
 <footer>
   <div class="wrap">
     <a class="brand" href="#"><img src="logo.svg" alt=""><span>Stratagram</span></a>
-    <span class="grow">Version 1.0.4 · © 2026 Shin Sterneck · Apache License 2.0</span>
+    <span class="grow">Version 1.0.5 · © 2026 Shin Sterneck · Apache License 2.0</span>
     <a href="https://github.com/shinsterneck/stratagram">GitHub</a>
     <a href="#app" data-page="app">Editor</a>
     <a href="#netbox" data-page="netbox">NetBox plugin</a>

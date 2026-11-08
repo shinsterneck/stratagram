@@ -60,7 +60,8 @@ With [netbox-docker](https://github.com/netbox-community/netbox-docker), add
 netbox-docker's guide to plugins; `collectstatic` is part of it).
 
 To build the package yourself (needs Rust with the `wasm32-unknown-unknown`
-target and `wasm-bindgen-cli` 0.2.129, see the main README, `pip install
+target and `wasm-bindgen-cli` 0.2.129, see
+[Building from source](https://github.com/shinsterneck/stratagram/wiki/Building-from-source), `pip install
 build`, and `cargo install cargo-about` for the licenses of the libraries
 built into the editor, which go into the package as
 `THIRD-PARTY-LICENSES.txt`):
