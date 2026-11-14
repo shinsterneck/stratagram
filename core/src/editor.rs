@@ -3126,8 +3126,7 @@ impl Editor {
                 pos: Pt::new(d.x, d.y),
                 rank: crate::layout::kind_rank(&d.kind),
                 kind: d.kind.clone(),
-                // Sub-layers lay out with the layer they are under.
-                layer: self.doc.layers.iter().position(|l| l.id == self.doc.layer_root(d.layer)).unwrap_or(0),
+                layer: self.doc.layer_tree().iter().position(|(l, _)| l.id == self.doc.layer_group(d.layer)).unwrap_or(0),
             })
             .collect();
         let index = |id: Id| ids.iter().position(|x| *x == id);
@@ -6124,6 +6123,26 @@ mod tests {
         assert!(e.doc.layer_backgrounds().is_empty());
         let saved = Diagram::from_json(&e.doc.to_json()).unwrap();
         assert!(saved.layer(empty).unwrap().background.is_some(), "kept with the file");
+    }
+
+    #[test]
+    fn a_layers_background_holds_its_sub_layers_and_their_backgrounds() {
+        let (mut e, a, b) = two_devices();
+        let outer = e.doc.active_layer;
+        let inner = e.doc.add_sublayer(outer, "Floor 1");
+        let deeper = e.doc.add_sublayer(inner, "Switches");
+        e.doc.device_mut(a).unwrap().layer = deeper;
+        e.doc.device_mut(b).unwrap().layer = deeper;
+        for (layer, margin) in [(outer, "10"), (inner, "20")] {
+            e.set_layer_background(layer, "enabled", "true");
+            e.set_layer_background(layer, "margin", margin);
+        }
+        let bgs = e.doc.layer_backgrounds();
+        let of = |id: Id| bgs.iter().find(|(l, ..)| *l == id).map(|(_, r, _)| *r).unwrap();
+        assert_eq!(of(inner), Rect { x: 20.0, y: 50.0, w: 460.0, h: 100.0 });
+        assert_eq!(of(outer), Rect { x: 10.0, y: 40.0, w: 480.0, h: 120.0 });
+        e.set_layer_visible(deeper, false);
+        assert!(e.doc.layer_backgrounds().is_empty());
     }
 
     #[test]

@@ -41,7 +41,7 @@ r = get(f"/dcim/sites/{site.pk}/diagram/")
 check(r.status_code == 200, f"site tab: {r.status_code}")
 check(b"stratagram" in r.content, "site tab: no editor on the page")
 locations = list(Location.objects.filter(site=site))
-check(len(locations) == 2, f"expected 2 locations, got {len(locations)}")
+check(len(locations) == 3, f"expected 3 locations, got {len(locations)}")
 for loc in locations:
     r = get(f"/dcim/locations/{loc.pk}/diagram/")
     check(r.status_code == 200, f"location {loc.name} tab: {r.status_code}")
@@ -53,7 +53,7 @@ data = r.json()
 devices = data["devices"]["results"] if isinstance(data["devices"], dict) else data["devices"]
 check(len(devices) == 10, f"expected 10 devices, got {len(devices)}")
 check(len(data["cables"]) == 16, f"expected 16 cables, got {len(data['cables'])}")
-check(len(data["locations"]) == 2, "expected the 2 locations")
+check(len(data["locations"]) == 3, "expected the 3 locations")
 switch = next(d for d in devices if d["name"] == "access-01")
 check((switch.get("switch_ports") or {}).get("count") == 48, "access-01 should have 48 copper ports")
 

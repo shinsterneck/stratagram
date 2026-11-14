@@ -28,6 +28,7 @@ class StratagramConfig(PluginConfig):
         # Each type of device on a layer of its own (Switches, Patch
         # panels...) and the cables on one, to show or hide them by type.
         "type_layers": True,
+        "location_layers": True,
         # How the cables' lines run: "orthogonal", "straight" or "around"
         # (orthogonal, finding a way around devices in between).
         "routing": "orthogonal",

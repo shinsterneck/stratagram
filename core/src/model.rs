@@ -2056,6 +2056,13 @@ impl Diagram {
         self.layer_ancestors(id).last().copied().unwrap_or(id)
     }
 
+    pub fn layer_group(&self, id: Id) -> Id {
+        std::iter::once(id)
+            .chain(self.layer_ancestors(id))
+            .find(|l| self.layer(*l).is_some_and(|l| l.background.is_some()))
+            .unwrap_or_else(|| self.layer_root(id))
+    }
+
     /// The layers in the order of the layer list: each followed by its
     /// sub-layers (in their order), with how deep it is.
     pub fn layer_tree(&self) -> Vec<(&Layer, usize)> {
@@ -2086,17 +2093,28 @@ impl Diagram {
         let mut out = vec![];
         for l in self.layers.iter().filter(|l| self.layer_visible(l.id)) {
             let Some(bg) = &l.background else { continue };
-            let boxes = self
-                .devices
-                .iter()
-                .filter(|d| d.layer == l.id)
-                .map(|d| d.rect())
-                .chain(self.notes.iter().filter(|n| n.layer == l.id).map(|n| n.rect()));
-            if let Some(r) = boxes.reduce(|a, b| a.union(&b)) {
+            if let Some(r) = self.layer_contents_rect(l.id) {
                 out.push((l.id, r.inflate(bg.margin.max(0.0)), bg));
             }
         }
         out
+    }
+
+    fn layer_contents_rect(&self, id: Id) -> Option<Rect> {
+        let own = self
+            .devices
+            .iter()
+            .filter(|d| d.layer == id)
+            .map(|d| d.rect())
+            .chain(self.notes.iter().filter(|n| n.layer == id).map(|n| n.rect()));
+        let under = self.layers.iter().filter(|l| l.parent == id && l.id != id && self.layer_visible(l.id)).filter_map(|l| {
+            let r = self.layer_contents_rect(l.id)?;
+            Some(match &l.background {
+                Some(bg) => r.inflate(bg.margin.max(0.0)),
+                None => r,
+            })
+        });
+        own.chain(under).reduce(|a, b| a.union(&b))
     }
 
     /// The layer holding the frame, shown or not.

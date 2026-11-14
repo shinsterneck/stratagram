@@ -101,6 +101,7 @@ def _editor_context(request, site, base_template, sheet=None):
                 "kinds": get_plugin_config(PLUGIN, "kinds") or {},
                 "all_devices": bool(get_plugin_config(PLUGIN, "all_devices")),
                 "type_layers": bool(get_plugin_config(PLUGIN, "type_layers", True)),
+                "location_layers": bool(get_plugin_config(PLUGIN, "location_layers", True)),
                 "routing": get_plugin_config(PLUGIN, "routing") or "orthogonal",
                 "fronts": list(get_plugin_config(PLUGIN, "fronts") or ["switch"]),
             },

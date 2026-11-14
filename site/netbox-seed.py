@@ -27,6 +27,7 @@ site.save()
 
 r1 = Location.objects.create(site=site, name="Room 1 (core)", slug="room-1")
 r2 = Location.objects.create(site=site, name="Room 2 (servers)", slug="room-2")
+rack = Location.objects.create(site=site, name="Rack R2-A", slug="rack-r2-a", parent=r2)
 mf, _ = Manufacturer.objects.get_or_create(name="Generic", slug="generic")
 
 def role(name, color):
@@ -55,8 +56,8 @@ fw_r, sw_r, pp_r, srv_r = role("Firewall", "f44336"), role("Switch", "2196f3"), 
 fw = [device(f"fw-0{i}", fw_r, "FW-100", r1) for i in (1, 2)]
 core = [device(f"core-0{i}", sw_r, "Core-32", r1) for i in (1, 2)]
 acc = device("access-01", sw_r, "Access-48", r2)
-pp = device("pp-r2-01", pp_r, "PP-24", r2)
-srv = [device(f"srv-0{i}", srv_r, "Server-1U", r2) for i in (1, 2, 3, 4)]
+pp = device("pp-r2-01", pp_r, "PP-24", rack)
+srv = [device(f"srv-0{i}", srv_r, "Server-1U", rack) for i in (1, 2, 3, 4)]
 
 fwi = [ifs(f, ["wan1", "ha", "port3"], IT.TYPE_1GE_FIXED) for f in fw]
 cri = [ifs(c, [f"Te1/0/{n}" for n in range(1, 33)], IT.TYPE_10GE_SFP_PLUS) for c in core]

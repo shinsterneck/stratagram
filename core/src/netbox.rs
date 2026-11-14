@@ -32,7 +32,10 @@ use std::collections::{HashMap, HashSet};
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::model::{Connector, Diagram, Endpoint, Id, LinkKind, LinkStyle, MAX_UPLINKS, PANEL_MAX_PORTS, PatchPanel, Rect, Routing, Side, Trace};
+use crate::model::{
+    BorderStyle, Connector, Diagram, Endpoint, Id, Layer, LayerBackground, LinkKind, LinkStyle, MAX_UPLINKS, PANEL_MAX_PORTS, PatchPanel, Rect, Routing, Side,
+    Trace,
+};
 
 /// What NetBox has for a site.
 #[derive(Deserialize, Default, Debug)]
@@ -82,6 +85,7 @@ pub struct Options {
     /// panels"...), and the cables on [`CABLES_LAYER`], to show or hide
     /// them by type.
     pub type_layers: bool,
+    pub location_layers: bool,
     /// How the cables' lines run: "straight" (the default here),
     /// "orthogonal" or "around" (orthogonal, around what is in the way).
     pub routing: Routing,
@@ -380,29 +384,9 @@ pub fn site_diagram(data: &SiteData, opts: &Options) -> Diagram {
 /// and on the layer [`OUTSIDE_LAYER`] the devices elsewhere they are
 /// cabled to. Nothing is placed yet.
 pub fn location_diagrams(data: &SiteData, opts: &Options) -> Vec<Diagram> {
-    let parent = |v: &Value| id(at(v, &["parent"]));
-    let locations: Vec<(u64, String, Option<u64>)> =
-        data.locations.iter().filter_map(|v| Some((id(v)?, text(v, &["name"]), parent(v)))).collect();
-    let known: HashSet<u64> = locations.iter().map(|l| l.0).collect();
-    // Tree order: each location's children after it, by name.
-    let mut order: Vec<&(u64, String, Option<u64>)> = vec![];
-    fn add<'a>(
-        of: Option<u64>,
-        all: &'a [(u64, String, Option<u64>)],
-        known: &HashSet<u64>,
-        out: &mut Vec<&'a (u64, String, Option<u64>)>,
-    ) {
-        let mut kids: Vec<&(u64, String, Option<u64>)> =
-            all.iter().filter(|l| l.2.filter(|p| known.contains(p)) == of && !out.iter().any(|o| o.0 == l.0)).collect();
-        kids.sort_by_key(|a| a.1.to_lowercase());
-        for k in kids {
-            out.push(k);
-            add(Some(k.0), all, known, out);
-        }
-    }
-    add(None, &locations, &known, &mut order);
-    order
-        .into_iter()
+    let locations = location_tree(data);
+    locations
+        .iter()
         .map(|&(lid, ref name, _)| {
             // The location and everything inside it.
             let mut within: HashSet<u64> = [lid].into();
@@ -417,6 +401,95 @@ pub fn location_diagrams(data: &SiteData, opts: &Options) -> Vec<Diagram> {
         .collect()
 }
 
+fn location_tree(data: &SiteData) -> Vec<(u64, String, Option<u64>)> {
+    let parent = |v: &Value| id(at(v, &["parent"]));
+    let all: Vec<(u64, String, Option<u64>)> =
+        data.locations.iter().filter_map(|v| Some((id(v)?, text(v, &["name"]), parent(v)))).collect();
+    let known: HashSet<u64> = all.iter().map(|l| l.0).collect();
+    fn add(of: Option<u64>, all: &[(u64, String, Option<u64>)], known: &HashSet<u64>, out: &mut Vec<(u64, String, Option<u64>)>) {
+        let mut kids: Vec<&(u64, String, Option<u64>)> =
+            all.iter().filter(|l| l.2.filter(|p| known.contains(p)) == of && !out.iter().any(|o| o.0 == l.0)).collect();
+        kids.sort_by_key(|a| a.1.to_lowercase());
+        for k in kids {
+            out.push((k.0, k.1.clone(), k.2.filter(|p| known.contains(p))));
+            add(Some(k.0), all, known, out);
+        }
+    }
+    let mut out = vec![];
+    add(None, &all, &known, &mut out);
+    out
+}
+
+const LOCATION_COLORS: [(&str, &str); 8] = [
+    ("#eff6ff", "#60a5fa"),
+    ("#ecfdf5", "#34d399"),
+    ("#fffbeb", "#fbbf24"),
+    ("#f5f3ff", "#a78bfa"),
+    ("#fff1f2", "#fb7185"),
+    ("#ecfeff", "#22d3ee"),
+    ("#f7fee7", "#a3e635"),
+    ("#fff7ed", "#fb923c"),
+];
+
+pub fn location_background(n: usize) -> LayerBackground {
+    let (fill, border) = LOCATION_COLORS[n % LOCATION_COLORS.len()];
+    LayerBackground {
+        margin: 24.0,
+        fill: fill.into(),
+        opacity: 100.0,
+        border: BorderStyle::Dotted,
+        border_color: border.into(),
+        border_width: 2.0,
+        rounded: true,
+        radius: 12.0,
+    }
+}
+
+fn location_layer(doc: &mut Diagram, tree: &[(u64, String, Option<u64>)], made: &mut HashMap<u64, Id>, loc: u64) -> Option<Id> {
+    if let Some(l) = made.get(&loc) {
+        return Some(*l);
+    }
+    let n = tree.iter().position(|l| l.0 == loc)?;
+    let (_, name, parent) = &tree[n];
+    let under = match parent {
+        Some(p) => location_layer(doc, tree, made, *p)?,
+        None => 0,
+    };
+    let layer = if under == 0 {
+        let lines = doc.active_layer;
+        let layer = doc.add_layer(name);
+        doc.active_layer = lines;
+        layer
+    } else {
+        doc.add_sublayer(under, name)
+    };
+    if let Some(l) = doc.layer_mut(layer) {
+        l.source = format!("dcim.location:{loc}");
+        l.background = Some(location_background(n));
+    }
+    made.insert(loc, layer);
+    Some(layer)
+}
+
+fn order_layers(doc: &mut Diagram, key: impl Fn(&Layer, usize) -> (u8, usize)) {
+    let keyed: Vec<(Layer, (u8, usize))> = doc.layers.iter().enumerate().map(|(i, l)| (l.clone(), key(l, i))).collect();
+    let known: HashSet<Id> = keyed.iter().map(|(l, _)| l.id).collect();
+    fn add(parent: Id, all: &[(Layer, (u8, usize))], known: &HashSet<Id>, out: &mut Vec<Layer>) {
+        let mut kids: Vec<&(Layer, (u8, usize))> = all
+            .iter()
+            .filter(|(l, _)| (if known.contains(&l.parent) { l.parent } else { 0 }) == parent && !out.iter().any(|o| o.id == l.id))
+            .collect();
+        kids.sort_by_key(|(_, k)| *k);
+        for (l, _) in kids {
+            out.push(l.clone());
+            add(l.id, all, known, out);
+        }
+    }
+    let mut out = vec![];
+    add(0, &keyed, &known, &mut out);
+    doc.layers = out;
+}
+
 /// The devices of the locations `within` (all of the site's if none) and
 /// their cables; devices elsewhere cabled to them go on the layer
 /// [`OUTSIDE_LAYER`].
@@ -428,7 +501,12 @@ fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) ->
     {
         l.name = CABLES_LAYER.into();
     }
-    let mut type_layers: HashMap<String, Id> = HashMap::new();
+    let mut type_layers: HashMap<(Id, String), Id> = HashMap::new();
+    let tree: Vec<(u64, String, Option<u64>)> = location_tree(data)
+        .into_iter()
+        .map(|(l, name, parent)| (l, name, parent.filter(|p| within.is_none_or(|w| w.contains(p)))))
+        .collect();
+    let mut location_layers: HashMap<u64, Id> = HashMap::new();
     let interfaces: HashMap<u64, &Value> = data.interfaces.iter().filter_map(|v| Some((id(v)?, v))).collect();
     let location: HashMap<u64, Option<u64>> = data.devices.iter().filter_map(|v| Some((id(v)?, id(at(v, &["location"]))))).collect();
     let inside = |dev: u64| within.is_none_or(|w| location.get(&dev).copied().flatten().is_some_and(|l| w.contains(&l)));
@@ -456,24 +534,38 @@ fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) ->
     let mut slot = 0;
     // With layers by type, each device here is on a layer of its own
     // (named after it) under its type's.
-    let mut place = |doc: &mut Diagram, name: &str, kind: &str, source: String, here: bool| {
+    let mut place = |doc: &mut Diagram, name: &str, kind: &str, source: String, here: bool, loc: Option<u64>| {
         let r = Rect { x: (slot % 6) as f64 * 200.0, y: (slot / 6) as f64 * 140.0, w: 120.0, h: 60.0 };
         slot += 1;
         let color = crate::editor::kind_color(kind).unwrap_or("#dbeafe");
         let dev = doc.add_device(name, kind, r, color);
-        let layer = (opts.type_layers && here).then(|| {
-            let of_type = *type_layers.entry(kind.to_string()).or_insert_with(|| {
-                let lines = doc.active_layer;
-                let layer = doc.add_layer(&type_layer_name(kind));
-                doc.active_layer = lines;
-                layer
-            });
+        let at = loc.filter(|_| opts.location_layers && here).and_then(|l| location_layer(doc, &tree, &mut location_layers, l));
+        let layer = if opts.type_layers && here {
+            let key = (at.unwrap_or(0), kind.to_string());
+            let of_type = match type_layers.get(&key) {
+                Some(l) => *l,
+                None => {
+                    let layer = match at {
+                        Some(under) => doc.add_sublayer(under, &type_layer_name(kind)),
+                        None => {
+                            let lines = doc.active_layer;
+                            let layer = doc.add_layer(&type_layer_name(kind));
+                            doc.active_layer = lines;
+                            layer
+                        }
+                    };
+                    type_layers.insert(key, layer);
+                    layer
+                }
+            };
             let own = doc.add_sublayer(of_type, if name.is_empty() { &source } else { name });
             if let Some(l) = doc.layer_mut(own) {
                 l.source = source.clone();
             }
-            own
-        });
+            Some(own)
+        } else {
+            at
+        };
         if let Some(d) = doc.device_mut(dev) {
             d.source = source;
             d.layer = layer.unwrap_or(d.layer);
@@ -492,7 +584,8 @@ fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) ->
             n => n,
         };
         let (kind, panel) = kind_and_panel(v, opts);
-        let dev = place(&mut doc, &name, &kind, format!("dcim.device:{nid}"), here);
+        let loc = location.get(&nid).copied().flatten();
+        let dev = place(&mut doc, &name, &kind, format!("dcim.device:{nid}"), here, loc);
         if let Some(d) = doc.device_mut(dev)
             && panel.is_some()
         {
@@ -548,7 +641,7 @@ fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) ->
                     Some(ep)
                 }
                 End::Circuit(cid, name) => {
-                    let device = *circuits.entry(*cid).or_insert_with(|| place(doc, name, "internet", format!("circuits.circuit:{cid}"), true));
+                    let device = *circuits.entry(*cid).or_insert_with(|| place(doc, name, "internet", format!("circuits.circuit:{cid}"), true, None));
                     doc.add_port(device, Side::Bottom, 0.5)
                 }
             }
@@ -580,14 +673,22 @@ fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) ->
         row = row.max(d.h);
     }
     doc.traces = traces(&doc, &data.paths, &cable_links);
-    // Layers by type in the order of the network (internet at the bottom
-    // of the list, servers last), after the cables.
-    let rank: HashMap<Id, u8> = type_layers.iter().map(|(kind, l)| (*l, crate::layout::kind_rank(kind))).collect();
-    // (Each device's own layer with its type's, after it.)
-    doc.layers.sort_by_key(|l| match rank.get(&l.id).or_else(|| rank.get(&l.parent)) {
-        Some(r) => 1 + *r as usize,
-        None if l.name == OUTSIDE_LAYER => 1000,
-        None => 0,
+    let rank: HashMap<Id, u8> = type_layers.iter().map(|((_, kind), l)| (*l, crate::layout::kind_rank(kind))).collect();
+    let located: HashMap<Id, usize> = location_layers.values().map(|l| (*l, 0)).collect();
+    let tree_pos = |l: &Layer| tree.iter().position(|t| format!("dcim.location:{}", t.0) == l.source).unwrap_or(0);
+    let first = doc.layers.first().map(|l| l.id);
+    order_layers(&mut doc, |l, i| {
+        if Some(l.id) == first {
+            (0, 0)
+        } else if let Some(r) = rank.get(&l.id) {
+            (1, *r as usize)
+        } else if located.contains_key(&l.id) {
+            (2, tree_pos(l))
+        } else if l.name == OUTSIDE_LAYER && l.parent == 0 {
+            (3, 0)
+        } else {
+            (1, 1000 + i)
+        }
     });
     doc
 }
@@ -632,6 +733,7 @@ pub struct Refreshed {
     pub gone: usize,
     /// Patch panels and switches whose ports changed.
     pub panels: usize,
+    pub relocated: usize,
 }
 
 impl Refreshed {
@@ -649,6 +751,9 @@ impl Refreshed {
         }
         if self.panels > 0 {
             parts.push(n(self.panels, "panel with other ports", "panels with other ports"));
+        }
+        if self.relocated > 0 {
+            parts.push(n(self.relocated, "device in another location", "devices in another location"));
         }
         if self.gone > 0 {
             parts.push(format!("{} gone (on the layer \"{GONE_LAYER}\")", self.gone));
@@ -722,6 +827,14 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
                 // Its own layer is named after it.
                 if let Some(l) = doc.layers.iter_mut().find(|l| !l.source.is_empty() && l.source == f.source) {
                     l.name = f.name.clone();
+                }
+                if on_own
+                    && let Some(fl) = fl.filter(|l| l.parent != 0)
+                    && location_of(doc, layer) != location_of(fresh, f.layer)
+                    && let Some(under) = layer_like(doc, fresh, fl.parent)
+                {
+                    doc.move_layer(layer, under, "into");
+                    out.relocated += 1;
                 }
                 let d = doc.device_mut(id).expect("device by source");
                 d.layer = moved.unwrap_or(d.layer);
@@ -854,17 +967,25 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
         .collect();
     doc.traces = traces;
 
-    // Devices' own layers left empty by devices gone from NetBox go too.
     let fresh_sources: HashSet<&str> = fresh.layers.iter().filter(|l| !l.source.is_empty()).map(|l| l.source.as_str()).collect();
-    let empty_own: Vec<Id> = doc
-        .layers
-        .iter()
-        .filter(|l| !l.source.is_empty() && !fresh_sources.contains(l.source.as_str()))
-        .filter(|l| doc.layer_count(l.id) == 0 && !doc.layers.iter().any(|x| x.parent == l.id) && l.id != doc.active_layer)
-        .map(|l| l.id)
-        .collect();
-    for id in empty_own {
-        doc.remove_layer(id);
+    loop {
+        let empty: Vec<Id> = doc
+            .layers
+            .iter()
+            .filter(|l| {
+                let gone_own = !l.source.is_empty() && !fresh_sources.contains(l.source.as_str());
+                let emptied_type = l.source.is_empty() && l.name != CABLES_LAYER && managed.contains(&l.name) && Some(l.id) != home;
+                gone_own || emptied_type
+            })
+            .filter(|l| doc.layer_count(l.id) == 0 && !doc.layers.iter().any(|x| x.parent == l.id) && l.id != doc.active_layer)
+            .map(|l| l.id)
+            .collect();
+        if empty.is_empty() {
+            break;
+        }
+        for id in empty {
+            doc.remove_layer(id);
+        }
     }
 
     place_new(doc, &new_devices);
@@ -872,36 +993,49 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
     out
 }
 
+fn location_of(doc: &Diagram, layer: Id) -> Option<String> {
+    std::iter::once(layer)
+        .chain(doc.layer_ancestors(layer))
+        .filter_map(|l| doc.layer(l))
+        .find(|l| l.source.starts_with("dcim.location:"))
+        .map(|l| l.source.clone())
+}
+
+#[cfg(test)]
+pub(crate) fn tests_location_of(doc: &Diagram, layer: Id) -> Option<String> {
+    location_of(doc, layer)
+}
+
 /// The layer in `doc` like `fresh`'s layer `id` (with layers by type): a
 /// device's own (by what it stands for) under the layer of its type, or
 /// the top layer of its name; made when missing.
 fn layer_like(doc: &mut Diagram, fresh: &Diagram, id: Id) -> Option<Id> {
     let fl = fresh.layer(id)?;
-    if !fl.source.is_empty() {
-        if let Some(l) = doc.layers.iter().find(|l| l.source == fl.source) {
-            return Some(l.id);
-        }
-        let parent = if fl.parent == 0 { 0 } else { layer_like(doc, fresh, fl.parent)? };
-        let own = if parent == 0 {
-            let active = doc.active_layer;
-            let id = doc.add_layer(&fl.name);
-            doc.active_layer = active;
-            id
-        } else {
-            doc.add_sublayer(parent, &fl.name)
-        };
-        if let Some(l) = doc.layer_mut(own) {
-            l.source = fl.source.clone();
-        }
-        return Some(own);
-    }
-    if let Some(l) = doc.layers.iter().find(|l| l.frame.is_none() && l.parent == 0 && l.name == fl.name) {
+    if !fl.source.is_empty()
+        && let Some(l) = doc.layers.iter().find(|l| l.source == fl.source)
+    {
         return Some(l.id);
     }
-    let active = doc.active_layer;
-    let id = doc.add_layer(&fl.name);
-    doc.active_layer = active;
-    Some(id)
+    let parent = if fl.parent == 0 { 0 } else { layer_like(doc, fresh, fl.parent)? };
+    if fl.source.is_empty()
+        && let Some(l) = doc.layers.iter().find(|l| l.frame.is_none() && l.parent == parent && l.name == fl.name)
+    {
+        return Some(l.id);
+    }
+    let own = if parent == 0 {
+        let active = doc.active_layer;
+        let id = doc.add_layer(&fl.name);
+        doc.active_layer = active;
+        id
+    } else {
+        doc.add_sublayer(parent, &fl.name)
+    };
+    if let Some(l) = doc.layer_mut(own) {
+        l.source = fl.source.clone();
+        l.background = fl.background.clone();
+        l.show_name = fl.show_name;
+    }
+    Some(own)
 }
 
 /// New ports on the side facing the device at their link's other end, in
@@ -1547,7 +1681,7 @@ mod tests {
         let fresh = site_diagram(&serde_json::from_value(v).unwrap(), &Options::default());
 
         let r = refresh(&mut doc, &fresh);
-        assert_eq!(r, Refreshed { added_devices: 1, added_links: 1, renamed: 1, gone: 2, panels: 0 });
+        assert_eq!(r, Refreshed { added_devices: 1, added_links: 1, renamed: 1, gone: 2, panels: 0, relocated: 0 });
         assert!(r.summary().contains("1 new device"), "{}", r.summary());
         // Nothing that was there moved.
         for (source, x, y) in before {
@@ -1579,5 +1713,93 @@ mod tests {
         assert_eq!(by_name(&doc, "srv-02").port(link.to.port).unwrap().side, Side::Top);
         // Refreshing again changes nothing.
         assert_eq!(refresh(&mut doc, &fresh), Refreshed::default());
+    }
+
+    fn by_locations() -> Options {
+        Options { type_layers: true, location_layers: true, ..Default::default() }
+    }
+
+    #[test]
+    fn locations_are_layers_with_their_devices_under_them() {
+        let data: SiteData = serde_json::from_value(site_with_locations()).unwrap();
+        let doc = site_diagram(&data, &by_locations());
+        let path = |name: &str| doc.layer_path(by_name(&doc, name).layer);
+        assert_eq!(path("core-01"), "Building A / Switches / core-01");
+        assert_eq!(path("esx-01"), "Building A / Floor 1 / Servers / esx-01");
+        assert_eq!(path("fw-01"), "Building B / Firewalls / fw-01");
+        let circuit = doc.devices.iter().find(|d| d.source == "circuits.circuit:5").unwrap();
+        assert_eq!(doc.layer_root(circuit.layer), doc.layers.iter().find(|l| l.name == "Internet").unwrap().id, "the circuit is in no location");
+        let tree: Vec<String> = doc.layer_tree().iter().filter(|(_, d)| *d < 2).map(|(l, d)| format!("{}{}", "  ".repeat(*d), l.name)).collect();
+        assert_eq!(tree, ["Cables", "Internet", "  Telekom BER-INET-1", "Building A", "  Switches", "  Floor 1", "Building B", "  Firewalls"]);
+        let layer = |name: &str| doc.layers.iter().find(|l| l.name == name).unwrap();
+        assert_eq!(layer("Floor 1").source, "dcim.location:2");
+        let bgs: Vec<&LayerBackground> = ["Building A", "Floor 1", "Building B"].iter().map(|n| layer(n).background.as_ref().unwrap()).collect();
+        assert!(bgs.iter().all(|b| b.border == BorderStyle::Dotted && b.border_color != b.fill));
+        assert!(bgs[0].fill != bgs[1].fill && bgs[1].fill != bgs[2].fill);
+        assert!(layer("Switches").background.is_none(), "only locations get one");
+        let rect = |name: &str| doc.layer_backgrounds().into_iter().find(|(l, ..)| *l == layer(name).id).unwrap().1;
+        let (outer, inner) = (rect("Building A"), rect("Floor 1"));
+        assert!(outer.x < inner.x && outer.y < inner.y && outer.x + outer.w > inner.x + inner.w && outer.y + outer.h > inner.y + inner.h);
+        let plain = site_diagram(&data, &Options { location_layers: true, ..Default::default() });
+        assert_eq!(plain.layer_path(by_name(&plain, "esx-01").layer), "Building A / Floor 1");
+    }
+
+    #[test]
+    fn a_location_sheet_has_its_locations_as_layers_too() {
+        let data: SiteData = serde_json::from_value(site_with_locations()).unwrap();
+        let sheets = location_diagrams(&data, &by_locations());
+        let a = &sheets[0];
+        assert_eq!(a.name, "Building A");
+        assert_eq!(a.layer_path(by_name(a, "esx-01").layer), "Building A / Floor 1 / Servers / esx-01");
+        assert_eq!(a.layer_path(by_name(a, "fw-01").layer), OUTSIDE_LAYER, "cabled to from elsewhere");
+        assert_eq!(a.layers.last().unwrap().name, OUTSIDE_LAYER);
+        let floor = &sheets[1];
+        assert_eq!(floor.layer_path(by_name(floor, "esx-01").layer), "Floor 1 / Servers / esx-01");
+        assert!(!floor.layers.iter().any(|l| l.name == "Building A"));
+    }
+
+    #[test]
+    fn refreshing_brings_in_location_layers_and_follows_devices_moved() {
+        let data: SiteData = serde_json::from_value(site_with_locations()).unwrap();
+        let mut doc = site_diagram(&data, &Options { type_layers: true, ..Default::default() });
+        let r = refresh(&mut doc, &site_diagram(&data, &by_locations()));
+        assert_eq!(r.relocated, 3, "{}", r.summary());
+        assert!(r.summary().contains("3 devices in another location"));
+        assert_eq!(doc.layer_path(by_name(&doc, "esx-01").layer), "Building A / Floor 1 / Servers / esx-01");
+        assert!(doc.layer(doc.layers.iter().find(|l| l.name == "Floor 1").unwrap().id).unwrap().background.is_some());
+        let roots: Vec<&str> = doc.layers.iter().filter(|l| l.parent == 0).map(|l| l.name.as_str()).collect();
+        assert!(!roots.contains(&"Servers") && !roots.contains(&"Firewalls"), "emptied layers by type go: {roots:?}");
+        assert!(roots.contains(&"Internet"), "{roots:?}");
+        let mut v = site_with_locations();
+        v["devices"]["results"][2]["location"] = json!({"id": 3});
+        let r = refresh(&mut doc, &site_diagram(&serde_json::from_value(v).unwrap(), &by_locations()));
+        assert_eq!(r.relocated, 1);
+        assert_eq!(doc.layer_path(by_name(&doc, "esx-01").layer), "Building B / Servers / esx-01");
+        assert!(!doc.layers.iter().any(|l| l.name == "Floor 1"));
+        let again = doc.clone();
+        let v2 = { let mut v = site_with_locations(); v["devices"]["results"][2]["location"] = json!({"id": 3}); v };
+        let r = refresh(&mut doc, &site_diagram(&serde_json::from_value(v2).unwrap(), &by_locations()));
+        assert_eq!((r.relocated, doc.layers.len()), (0, again.layers.len()));
+    }
+
+    #[test]
+    fn laid_out_the_locations_backgrounds_keep_apart() {
+        let mut v = site_with_locations();
+        v["devices"]["results"][3]["location"] = json!({"id": 3});
+        let mut e = crate::editor::Editor::default();
+        e.import_netbox(&v.to_string(), r#"{"type_layers": true, "location_layers": true, "all_devices": true}"#).unwrap();
+        let bgs = e.doc.layer_backgrounds();
+        let of = |name: &str| bgs.iter().find(|(l, ..)| e.doc.layer(*l).unwrap().name == name).unwrap().1;
+        let (a, b, floor) = (of("Building A"), of("Building B"), of("Floor 1"));
+        let apart = |p: Rect, q: Rect| p.x + p.w <= q.x || q.x + q.w <= p.x || p.y + p.h <= q.y || q.y + q.h <= p.y;
+        assert!(apart(a, b), "{a:?} {b:?}");
+        assert!(a.x <= floor.x && a.y <= floor.y && a.x + a.w >= floor.x + floor.w && a.y + a.h >= floor.y + floor.h);
+        for d in &e.doc.devices {
+            let in_b = crate::netbox::tests_location_of(&e.doc, d.layer).as_deref() == Some("dcim.location:3");
+            let r = d.rect();
+            if !in_b && d.source.starts_with("dcim.device") {
+                assert!(apart(r, b), "{} inside Building B's background", d.name);
+            }
+        }
     }
 }

@@ -31,6 +31,12 @@ editor (the same as the desktop app, compiled to WebAssembly).
   their end-to-end lines with them. A diagram saved before this gets the
   layers at its next **Refresh from NetBox** (what you drew yourself stays
   where it is; a device you later move to another layer stays there).
+- Each location is a layer of its own too, with the locations inside it
+  and its devices' layers by type under it, and a background in a color of
+  its own with a dotted border: on the drawing, every location is a tinted
+  area holding its devices, the ones inside it nested in it. Auto layout
+  keeps each location's devices together. A device moved to another
+  location in NetBox moves to that location's layer at the next refresh.
 - Arrange it, add notes, a frame, layers..., then **Save**: the diagram is
   kept in NetBox (one per site, in the change log).
 - **Refresh from NetBox** adds new devices and cables, renames what was
@@ -82,6 +88,9 @@ PLUGINS_CONFIG = {
         "all_devices": False,
         # Each type of device on a layer of its own, the cables on one.
         "type_layers": True,
+        # Each location on a layer of its own (its locations and its
+        # devices' layers under it), with a background in its own color.
+        "location_layers": True,
         # How the cables run, and new lines drawn by hand: "orthogonal",
         # "straight" or "around" (orthogonal, around devices in between).
         "routing": "orthogonal",
