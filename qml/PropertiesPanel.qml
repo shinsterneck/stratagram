@@ -518,6 +518,7 @@ Pane {
                           "to right), radial, circle, grid or force-directed. It works on the selected devices, " +
                           "or on all of them; lines that would cross a device or text are rerouted. Ctrl+Z " +
                           "undoes.<br><br>" +
+                          "<b>Right-click</b> a device, text or line for a menu: its type, its layer, clone and delete.<br><br>" +
                           "<b>Pan</b> with middle/right drag or Space+drag, <b>zoom</b> with the wheel.<br><br>" +
                           "<b>Ctrl+C</b> copies the selection (or everything) for draw.io: paste it there with " +
                           "Ctrl+V. <b>Ctrl+V</b> here pastes stratagram copies, shapes copied in draw.io, or text " +

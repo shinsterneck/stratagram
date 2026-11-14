@@ -369,6 +369,50 @@ export class App {
         const close = () => this.closePopup()
     }
 
+    contextMenu(clientX, clientY, world) {
+        if (!this.ctl.contextSelect(world.x, world.y)) { this.changed(); return }
+        this.changed()
+        const sel = JSON.parse(this.ctl.selection())
+        const type = sel.type
+        const multi = type === "multi"
+        const devices = type === "device" || (multi && sel.devices > 0)
+        const kind = type === "device" ? sel.kind : (multi && sel.dev && !(sel.dev.kind === null || sel.dev.kind === undefined) ? sel.dev.kind : null)
+        const layers = JSON.parse(this.ctl.layers()).filter(l => !l.frame)
+        const at = { getBoundingClientRect: () => ({ left: clientX, right: clientX, top: clientY, bottom: clientY }),
+                     classList: { add() {}, remove() {} }, contains: () => false }
+        const m = h("div", { className: "sg-popup sg-menu sg-context" })
+        const act = (f) => () => { this.closePopup(); this.run(f); this.view.focus() }
+        const item = (label, key, f, on) => h("button", { onclick: f }, h("span", {}, (on ? "✓ " : "") + label), h("span", { className: "sg-key" }, key))
+        const fit = () => {
+            const app = this.el.getBoundingClientRect()
+            m.style.maxHeight = (app.height - 8) + "px"
+            const r = m.getBoundingClientRect()
+            let top = clientY - app.top + 2
+            if (top + r.height > app.height - 4) top = Math.max(4, app.height - r.height - 4)
+            m.style.top = top + "px"
+        }
+        const show = (items) => { m.replaceChildren(...items); m.scrollTop = 0; if (m.isConnected) fit() }
+        const back = () => item("‹ Back", "", () => show(main()))
+        const types = () => [back(), h("hr"),
+            item("plain device", "", act(() => this.ctl.setProp("device:kind", "")), kind === ""),
+            ...KIND_GROUPS.flatMap(([group, kinds]) => [h("div", { className: "sg-menu-head" }, group),
+                ...kinds.map(k => item(k, "", act(() => this.ctl.setProp("device:kind", k)), k === kind))])]
+        const moves = () => [back(), h("hr"),
+            ...layers.map(l => item("\u00a0\u00a0".repeat(l.depth) + l.name + (l.shown ? "" : " (hidden)") + (l.held ? " (locked)" : ""), "",
+                act(() => this.ctl.setProp("layer", String(l.id))), l.id === sel.layer))]
+        const main = () => [
+            devices ? item("Type" + (kind !== null ? ": " + (kind || "plain device") : ""), "▸", () => show(types())) : null,
+            item("Move to layer", "▸", () => show(moves())),
+            h("hr"),
+            (type === "device" || type === "note" || (multi && sel.devices + sel.notes > 0))
+                ? item("Clone", "Ctrl+D", act(() => this.ctl.duplicate())) : null,
+            item("Delete", "Del", act(() => this.ctl.deleteSelected())),
+        ].filter(Boolean)
+        show(main())
+        this.popup(at, m)
+        fit()
+    }
+
     popup(anchor, el) {
         this.closePopup()
         const a = anchor.getBoundingClientRect(), app = this.el.getBoundingClientRect()

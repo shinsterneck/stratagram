@@ -58,6 +58,8 @@ pub mod qobject {
         #[qinvokable]
         fn double_click(self: Pin<&mut DiagramController>, x: f64, y: f64);
         #[qinvokable]
+        fn context_select(self: Pin<&mut DiagramController>, x: f64, y: f64) -> bool;
+        #[qinvokable]
         fn begin_edit_selection(self: Pin<&mut DiagramController>) -> bool;
         #[qinvokable]
         fn commit_edit(self: Pin<&mut DiagramController>, text: &QString, w: f64, h: f64);
@@ -367,6 +369,10 @@ impl qobject::DiagramController {
 
     pub fn double_click(self: Pin<&mut Self>, x: f64, y: f64) {
         self.edit(|e| e.double_click(Pt::new(x, y)))
+    }
+
+    pub fn context_select(self: Pin<&mut Self>, x: f64, y: f64) -> bool {
+        self.edit(|e| e.context_select(Pt::new(x, y)))
     }
 
     pub fn begin_edit_selection(self: Pin<&mut Self>) -> bool {

@@ -2611,6 +2611,19 @@ impl Editor {
         }
     }
 
+    pub fn context_select(&mut self, p: Pt) -> bool {
+        let id = match self.hit_test(p) {
+            Hit::Device(id) | Hit::Note(id) | Hit::Point(id) | Hit::Link(id) | Hit::Label(id) | Hit::Through(id) | Hit::Resize(id) => id,
+            Hit::Port(ep) => ep.device,
+            Hit::Edge { device, .. } | Hit::Socket { device, .. } => device,
+            Hit::Empty => return false,
+        };
+        if !self.selected_ids().contains(&id) {
+            self.select_ids(vec![id]);
+        }
+        true
+    }
+
     /// Select `ids`; a lone link becomes a link selection.
     fn select_ids(&mut self, ids: Vec<Id>) {
         self.selection = match ids.as_slice() {
@@ -6123,6 +6136,26 @@ mod tests {
         assert!(e.doc.layer_backgrounds().is_empty());
         let saved = Diagram::from_json(&e.doc.to_json()).unwrap();
         assert!(saved.layer(empty).unwrap().background.is_some(), "kept with the file");
+    }
+
+    #[test]
+    fn a_context_menu_works_on_what_is_clicked_or_the_selection_it_is_in() {
+        let (mut e, a, b) = two_devices();
+        e.select_ids(vec![]);
+        assert!(!e.context_select(Pt::new(250.0, 400.0)));
+        assert_eq!(e.selection, Selection::None);
+        assert!(e.context_select(Pt::new(100.0, 100.0)));
+        assert_eq!(e.selected_ids(), vec![a]);
+        e.select_ids(vec![a, b]);
+        assert!(e.context_select(Pt::new(400.0, 100.0)));
+        assert_eq!(e.selected_ids(), vec![a, b]);
+        let layer = e.add_layer();
+        assert!(e.set_prop("device:kind", "router"));
+        assert!(e.set_prop("layer", &layer.to_string()));
+        assert!([a, b].iter().all(|id| e.doc.device(*id).is_some_and(|d| d.kind == "router" && d.layer == layer)));
+        e.select_ids(vec![b]);
+        assert!(e.context_select(Pt::new(100.0, 100.0)));
+        assert_eq!(e.selected_ids(), vec![a]);
     }
 
     #[test]

@@ -134,6 +134,10 @@ impl Stratagram {
     pub fn double_click(&mut self, x: f64, y: f64) {
         self.editor.double_click(Pt::new(x, y));
     }
+    #[wasm_bindgen(js_name = contextSelect)]
+    pub fn context_select(&mut self, x: f64, y: f64) -> bool {
+        self.editor.context_select(Pt::new(x, y))
+    }
     #[wasm_bindgen(js_name = beginEditSelection)]
     pub fn begin_edit_selection(&mut self) -> bool {
         self.editor.begin_edit_selection()

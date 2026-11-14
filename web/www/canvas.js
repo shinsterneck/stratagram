@@ -551,7 +551,7 @@ export class DiagramView {
                 this.app.changed()
             } else {
                 this.autoFit = false
-                this.panning = { x: m.x, y: m.y, panX: this.panX, panY: this.panY }
+                this.panning = { x: m.x, y: m.y, panX: this.panX, panY: this.panY, right: e.button === 2, cx: e.clientX, cy: e.clientY }
                 this.updateCursor()
             }
             e.preventDefault()
@@ -607,7 +607,11 @@ export class DiagramView {
                 this.cursor = this.ctl.release(w.x, w.y)
                 this.app.changed()
             } else if (this.panning) {
+                const p = this.panning
                 this.panning = null
+                if (p.right && e.button === 2 && Math.hypot(e.clientX - p.cx, e.clientY - p.cy) < 4) {
+                    this.app.contextMenu(e.clientX, e.clientY, this.toWorld(m.x, m.y))
+                }
             }
             this.updateCursor()
         })

@@ -68,6 +68,7 @@ padlock makes it read only; the tag shows its name on its devices.<br><br>
 <b>Arrange</b>: Home to front, Page Up forward, Page Down backward, End to back.<br><br>
 <b>Zoom into</b> (Ctrl+I): zoom into a device without limit and add things inside it.<br><br>
 <b>Layout ▾</b> (Ctrl+L) arranges devices automatically. Ctrl+Z undoes.<br><br>
+<b>Right-click</b> a device, text or line for a menu: its type, its layer, clone and delete.<br><br>
 <b>Pan</b> with middle/right drag or Space+drag, <b>zoom</b> with the wheel.<br><br>
 <b>Ctrl+C</b> copies the selection for draw.io and for pasting here; <b>Ctrl+V</b> pastes Stratagram copies, draw.io
 shapes or text; Ctrl+X cuts.<br><br>

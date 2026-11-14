@@ -24,6 +24,8 @@ Item {
     property real panStartY: 0
     property real panOrigX: 0
     property real panOrigY: 0
+    property bool rightPress: false
+    signal contextMenuRequested(real x, real y)
     // While true the view refits whenever the canvas is resized, so a fit
     // requested before the window has its final size still lands correctly.
     // Cleared as soon as the user pans or zooms.
@@ -960,6 +962,7 @@ Item {
             } else {
                 root.panning = true
                 root.autoFit = false
+                root.rightPress = m.button === Qt.RightButton
                 root.panStartX = m.x; root.panStartY = m.y
                 root.panOrigX = root.panX; root.panOrigY = root.panY
             }
@@ -992,6 +995,11 @@ Item {
                 root.ctl.release(w.x, w.y)
             } else if (root.panning) {
                 root.panning = false
+                if (root.rightPress && m.button === Qt.RightButton && Math.hypot(m.x - root.panStartX, m.y - root.panStartY) < 4) {
+                    const w = root.toWorld(m.x, m.y)
+                    if (root.ctl.contextSelect(w.x, w.y)) root.contextMenuRequested(m.x, m.y)
+                }
+                root.rightPress = false
             }
         }
         // Nothing pointed at any more (no line tip left behind).

@@ -202,6 +202,60 @@ ApplicationWindow {
     }
     Action { id: actDup; text: "Duplicate"; shortcut: "Ctrl+D"; onTriggered: ctl.duplicate() }
     Action { id: actDel; text: "Delete"; onTriggered: ctl.deleteSelected() }
+
+    Menu {
+        id: contextMenu
+        property var sel: ({})
+        property var layerList: []
+        readonly property bool hasDevices: sel.type === "device" || (sel.type === "multi" && sel.devices > 0)
+        readonly property var kind: sel.type === "device" ? sel.kind
+            : (sel.type === "multi" && sel.dev && sel.dev.kind !== null && sel.dev.kind !== undefined ? sel.dev.kind : null)
+        readonly property bool canClone: sel.type === "device" || sel.type === "note" || (sel.type === "multi" && sel.devices + sel.notes > 0)
+        onAboutToShow: {
+            sel = JSON.parse(ctl.selection)
+            layerList = JSON.parse(ctl.layers).filter(l => !l.frame)
+        }
+        onClosed: canvas.forceActiveFocus()
+
+        Menu {
+            id: typeMenu
+            title: "Type" + (contextMenu.kind !== null ? ": " + (contextMenu.kind || "plain device") : "")
+            enabled: contextMenu.hasDevices
+            Instantiator {
+                model: panel.kindItems
+                delegate: MenuItem {
+                    required property var modelData
+                    text: (modelData.header ? modelData.name : (modelData.key === "" ? "plain device" : modelData.key)).replace(/&/g, "&&")
+                    font.bold: modelData.header
+                    enabled: !modelData.header
+                    checkable: !modelData.header
+                    checked: !modelData.header && modelData.key === contextMenu.kind
+                    onTriggered: ctl.setProp("device:kind", modelData.key)
+                }
+                onObjectAdded: (i, o) => typeMenu.insertItem(i, o)
+                onObjectRemoved: (i, o) => typeMenu.removeItem(o)
+            }
+        }
+        Menu {
+            id: layerMenu
+            title: "Move to layer"
+            Instantiator {
+                model: contextMenu.layerList
+                delegate: MenuItem {
+                    required property var modelData
+                    text: ("\u2003".repeat(modelData.depth) + modelData.name + (modelData.shown ? "" : " (hidden)") + (modelData.held ? " (locked)" : "")).replace(/&/g, "&&")
+                    checkable: true
+                    checked: modelData.id === contextMenu.sel.layer
+                    onTriggered: ctl.setProp("layer", String(modelData.id))
+                }
+                onObjectAdded: (i, o) => layerMenu.insertItem(i, o)
+                onObjectRemoved: (i, o) => layerMenu.removeItem(o)
+            }
+        }
+        MenuSeparator {}
+        MenuItem { text: "Clone"; enabled: contextMenu.canClone; onTriggered: ctl.duplicate() }
+        MenuItem { text: "Delete"; onTriggered: ctl.deleteSelected() }
+    }
     Action {
         id: actObjectZoom; text: "Zoom into"; shortcut: "Ctrl+I"
         checkable: true; checked: canvas.deepZoom
@@ -409,6 +463,7 @@ ApplicationWindow {
                 showGrid: prefs.showGrid
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                onContextMenuRequested: (x, y) => contextMenu.popup(canvas, x, y)
             }
             SheetBar {
                 ctl: ctl
