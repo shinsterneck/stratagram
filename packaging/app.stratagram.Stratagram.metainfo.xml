@@ -92,6 +92,11 @@
   </keywords>
 
   <releases>
+    <release version="1.1.0" date="2026-11-15">
+      <description>
+        <p>NetBox locations become layers with tinted areas, nested like the locations themselves. A context menu on right-click changes a device's type, moves items to another layer, clones or deletes them.</p>
+      </description>
+    </release>
     <release version="1.0.5" date="2026-11-08">
       <description>
         <p>A prebuilt Linux download with each release, and the AUR package stratagram-bin, which installs it without compiling.</p>
