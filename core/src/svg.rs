@@ -522,18 +522,13 @@ fn note(s: &mut String, n: &Note) {
     } else {
         String::new()
     };
-    let _ = writeln!(
-        s,
-        r##"<text font-size="{:.1}"{weight} fill="{}" xml:space="preserve"{clip}>"##,
-        n.size,
-        esc(&n.color)
-    );
+    let _ = writeln!(s, r##"<g font-size="{:.1}"{weight} fill="{}"{clip}>"##, n.size, esc(&n.color));
     for (i, line) in n.shown_lines().iter().enumerate() {
         // Baseline of a line box of height `lh` with the text centered in it.
         let y = n.y + i as f64 * lh + (lh - n.size) / 2.0 + n.size * 0.8;
-        let _ = writeln!(s, r##"<tspan x="{:.1}" y="{y:.1}">{}</tspan>"##, n.x, esc(line));
+        let _ = writeln!(s, r##"<text x="{:.1}" y="{y:.1}" xml:space="preserve">{}</text>"##, n.x, esc(line));
     }
-    s.push_str("</text>\n");
+    s.push_str("</g>\n");
 }
 
 #[cfg(test)]
@@ -556,8 +551,9 @@ mod tests {
         assert!(svg.contains("<polygon"));
         d.add_note("DMZ\n<10.0.0.0/24>", Pt::new(0.0, 100.0));
         let svg = export(&d, "");
-        assert!(svg.contains(">DMZ</tspan>"));
-        assert!(svg.contains(">&lt;10.0.0.0/24&gt;</tspan>"));
+        assert!(svg.contains(r#"<text x="0.0" y="113.3" xml:space="preserve">DMZ</text>"#), "each line placed on its own: {svg}");
+        assert!(svg.contains(">&lt;10.0.0.0/24&gt;</text>"));
+        assert!(!svg.contains("<tspan"));
     }
 
     #[test]
