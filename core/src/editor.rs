@@ -2659,6 +2659,10 @@ impl Editor {
             let Some(port) = d.ports.iter_mut().find(|p| p.id == ep.port) else { return false };
             match key {
                 "name" => port.name = value.into(),
+                "color" => match item_color(value) {
+                    Some(c) => port.color = c,
+                    None => return false,
+                },
                 "side" => match Side::parse(value) {
                     Some(s) => port.side = s,
                     None => return false,
@@ -2795,7 +2799,7 @@ impl Editor {
                 }
                 let Some((at, _)) = shown.endpoint_pos(ep) else { continue };
                 let q = d.alloc_id();
-                d.points.push(Point { id: q, x: at.x, y: at.y, layer: d.links[i].layer, z: 0, scale: d.links[i].scale, label: String::new() });
+                d.points.push(Point { id: q, x: at.x, y: at.y, layer: d.links[i].layer, z: 0, scale: d.links[i].scale, label: String::new(), color: String::new() });
                 if end { d.links[i].to = Endpoint::point(q) } else { d.links[i].from = Endpoint::point(q) }
             }
         }
@@ -4566,6 +4570,8 @@ impl Editor {
                             "sel": sel, "hot": hot, "lit": lit,
                             "editing": self.editing == Some(EditTarget::PortName(ep)),
                             "linked": doc.links_at_port(p.id) > 0,
+                            "color": p.color,
+                            "stroke": if p.color.is_empty() { String::new() } else { geom::darken(&p.color, 0.3) },
                         })
                     })
                     .collect();
@@ -4627,7 +4633,7 @@ impl Editor {
                 json!({"id": q.id, "x": q.x, "y": q.y, "sel": sel_items.contains(&q.id), "s": q.scale, "a": alpha(q.scale),
                        "linked": doc.links.iter().any(|l| l.from.owner() == q.id || l.to.owner() == q.id),
                        "label": q.label, "ldx": (at.x - q.x) / q.scale, "ldy": (at.y - q.y) / q.scale,
-                       "align": align, "base": base,
+                       "align": align, "base": base, "color": q.color,
                        "editing": self.editing == Some(EditTarget::PointLabel(q.id))})
             })
             .collect();
@@ -4803,7 +4809,7 @@ impl Editor {
             Selection::Items(ids) if ids.len() == 1 && doc.point(ids[0]).is_some() => {
                 let q = doc.point(ids[0]).unwrap();
                 let links = doc.links.iter().filter(|l| l.from.owner() == q.id || l.to.owner() == q.id).count();
-                json!({"type": "point", "id": q.id, "x": q.x, "y": q.y, "links": links, "label": q.label})
+                json!({"type": "point", "id": q.id, "x": q.x, "y": q.y, "links": links, "label": q.label, "color": q.color})
             }
             Selection::Items(ids) if ids.len() == 1 => match (doc.device(ids[0]), doc.note(ids[0])) {
                 (Some(d), _) => json!({
@@ -4864,6 +4870,7 @@ impl Editor {
                 (Some(d), Some(p)) => json!({
                     "type": "port", "device": d.name, "name": p.name, "side": p.side.as_str(),
                     "pos": (p.t * 100.0).round(),
+                    "color": p.color,
                     "links": doc.links_at_port(p.id),
                     "port_layer": p.layer, "device_layer": d.layer,
                 }),
@@ -5159,9 +5166,14 @@ fn set_point_prop(q: &mut Point, key: &str, value: &str) -> Option<bool> {
         "x" => q.x = v()?,
         "y" => q.y = v()?,
         "label" => q.label = value.replace('\n', " "),
+        "color" => q.color = item_color(value)?,
         _ => return Some(false),
     }
     Some(true)
+}
+
+fn item_color(value: &str) -> Option<String> {
+    if value.trim().is_empty() { Some(String::new()) } else { geom::normalize_color(value) }
 }
 
 fn set_link_prop(l: &mut Link, key: &str, value: &str) -> Option<bool> {
@@ -6136,6 +6148,46 @@ mod tests {
         assert!(e.doc.layer_backgrounds().is_empty());
         let saved = Diagram::from_json(&e.doc.to_json()).unwrap();
         assert!(saved.layer(empty).unwrap().background.is_some(), "kept with the file");
+    }
+
+    #[test]
+    fn ports_and_points_take_a_color() {
+        let (mut e, a, b) = two_devices();
+        let pa = e.doc.add_port(a, Side::Right, 0.5).unwrap();
+        let pb = e.doc.add_port(b, Side::Left, 0.5).unwrap();
+        e.doc.add_link(pa, pb, LinkStyle::default());
+        let spare = e.doc.add_port(a, Side::Top, 0.5).unwrap();
+        e.selection = Selection::Port(pa);
+        assert!(e.set_prop("color", "#DC2626"));
+        assert!(!e.set_prop("color", "red-ish"));
+        e.selection = Selection::Port(spare);
+        assert!(e.set_prop("color", "#2563eb"));
+        let port = |ep: Endpoint| e.doc.device(ep.device).unwrap().port(ep.port).unwrap().color.clone();
+        assert_eq!((port(pa), port(spare)), ("#dc2626".to_string(), "#2563eb".to_string()));
+        let sel: Value = serde_json::from_str(&e.selection_json()).unwrap();
+        assert_eq!(sel["color"], "#2563eb");
+        let scene: Value = serde_json::from_str(&e.scene_json()).unwrap();
+        let ports = &scene["devices"].as_array().unwrap().iter().find(|d| d["id"] == a).unwrap()["ports"];
+        assert!(ports.as_array().unwrap().iter().any(|p| p["color"] == "#dc2626" && p["stroke"] != ""));
+        let svg = crate::svg::export(&e.doc, "");
+        assert!(svg.contains(r##"fill="#dc2626""##), "a linked port filled with its color");
+        assert!(svg.contains(r##"fill="#ffffff" stroke="#2563eb""##), "an unlinked one outlined");
+
+        let q = e.doc.add_point(Pt::new(250.0, 300.0));
+        e.select_ids(vec![q]);
+        assert!(!crate::svg::export(&e.doc, "").contains("<circle"), "a point without a color is not drawn");
+        assert!(e.set_prop("color", "#16a34a"));
+        assert!(e.set_prop("label", "Uplink"));
+        let svg = crate::svg::export(&e.doc, "");
+        assert!(svg.contains(r##"<circle cx="250.0" cy="300.0""##) && svg.contains(r##"fill="#16a34a">Uplink</text>"##));
+        let drawio = crate::drawio::export(&e.doc, "t", "");
+        assert!(drawio.contains("stratagramPoint=1") && drawio.contains("fontColor=#16a34a"));
+        let back = crate::drawio_import::import(&drawio).unwrap();
+        assert_eq!(back.devices.len(), 2, "the dot is not read back as a device");
+        let saved = Diagram::from_json(&e.doc.to_json()).unwrap();
+        assert_eq!(saved.point(q).unwrap().color, "#16a34a");
+        assert!(e.set_prop("color", ""));
+        assert_eq!(e.doc.point(q).unwrap().color, "");
     }
 
     #[test]

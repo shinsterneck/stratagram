@@ -342,13 +342,15 @@ export class Panel {
         // point
         if (type === "point") {
             out.push(h("p", { className: "sg-hint" },
-                "Lines end here as if attached to nothing; the point itself is not exported (its label is). " +
+                "Lines end here as if attached to nothing; the point itself is not exported (its label is), unless it has a color: then it is a dot. " +
                 plural(sel.links, "line", "lines") + " attached. Drag to move it; drop it on a device border to attach " +
                 "its lines there. Deleting a bend point joins its two lines back into one."))
             out.push(h("label", {}, "Label"), text(sel.label, v => this.set("label", v), { placeholder: "e.g. Internet, to branch office" }))
             out.push(h("div", { className: "sg-grid2" }, h("label", {}, "X"), h("label", {}, "Y"),
                 number(Math.round(sel.x), -100000, 100000, 10, v => this.set("x", v), 0),
                 number(Math.round(sel.y), -100000, 100000, 10, v => this.set("y", v), 0)))
+            out.push(h("label", {}, "Color"), colorPicker(sel.color, LINK_COLORS, c => this.set("color", c)))
+            if (sel.color) out.push(h("button", { className: "sg-wide", onclick: () => this.set("color", "") }, "Default color"))
         }
 
         // port
@@ -358,6 +360,8 @@ export class Panel {
             out.push(h("label", {}, "Side"), select(SIDES.map(s => [s, s]), sel.side, v => this.set("side", v)))
             out.push(h("label", {}, "Position along side (% from " + (sel.side === "left" || sel.side === "right" ? "top" : "left") + ")"),
                      number(sel.pos, 5, 95, 5, v => this.set("pos", v), 50))
+            out.push(h("label", {}, "Color"), colorPicker(sel.color, LINK_COLORS, c => this.set("color", c)))
+            if (sel.color) out.push(h("button", { className: "sg-wide", onclick: () => this.set("color", "") }, "Default color"))
             // A layer of its own, to show or hide it apart from its device.
             const itemLayers = (this.layers || []).filter(l => !l.frame)
             const own = itemLayers.find(l => l.id === sel.device_layer)

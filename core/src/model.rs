@@ -305,6 +305,8 @@ pub struct Port {
     /// side: top, else bottom).
     #[serde(default, skip_serializing_if = "is_false")]
     pub rear: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub color: String,
 }
 
 fn is_no_socket(n: &u32) -> bool {
@@ -973,6 +975,8 @@ pub struct Point {
     /// arrow points at).
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub label: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub color: String,
 }
 
 impl Point {
@@ -1565,7 +1569,7 @@ impl Diagram {
     pub fn add_point(&mut self, at: Pt) -> Id {
         let id = self.alloc_id();
         let (layer, z) = (self.target_layer(), self.top_z());
-        self.points.push(Point { id, x: at.x, y: at.y, layer, z, scale: 1.0, label: String::new() });
+        self.points.push(Point { id, x: at.x, y: at.y, layer, z, scale: 1.0, label: String::new(), color: String::new() });
         id
     }
 
@@ -1588,7 +1592,7 @@ impl Diagram {
         d.port(ep.port)?;
         let (layer, scale) = (d.layer, d.scale);
         let (id, z) = (self.alloc_id(), self.top_z());
-        self.points.push(Point { id, x: at.x, y: at.y, layer, z, scale, label: String::new() });
+        self.points.push(Point { id, x: at.x, y: at.y, layer, z, scale, label: String::new(), color: String::new() });
         self.reattach(ep, Endpoint::point(id));
         self.remove_port(ep.device, ep.port);
         Some(id)
@@ -1613,7 +1617,7 @@ impl Diagram {
     pub fn split_link(&mut self, id: Id, at: Pt) -> Option<Id> {
         let l = self.link(id)?.clone();
         let (point, z) = (self.alloc_id(), self.top_z());
-        self.points.push(Point { id: point, x: at.x, y: at.y, layer: l.layer, z, scale: l.scale, label: String::new() });
+        self.points.push(Point { id: point, x: at.x, y: at.y, layer: l.layer, z, scale: l.scale, label: String::new(), color: String::new() });
         let second = self.alloc_id();
         let style = LinkStyle { head_start: Head::None, ..l.style.clone() };
         let to = l.to;
@@ -1811,7 +1815,7 @@ impl Diagram {
         let own_layer = self.layer(active).is_some_and(|l| l.frame.is_none());
         let d = self.device_mut(device)?;
         let layer = if own_layer && active != d.layer { active } else { 0 };
-        d.ports.push(Port { id, name: String::new(), side, t: clamp_t(t), layer, source: String::new(), socket: 0, rear: false });
+        d.ports.push(Port { id, name: String::new(), side, t: clamp_t(t), layer, source: String::new(), socket: 0, rear: false, color: String::new() });
         Some(Endpoint { device, port: id })
     }
 

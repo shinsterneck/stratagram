@@ -108,6 +108,18 @@ pub fn export(doc: &Diagram, file: &str) -> String {
             // their labels show.
             Item::Point(i) => {
                 let q = &doc.points[i];
+                if !q.color.is_empty() {
+                    let _ = writeln!(
+                        s,
+                        r##"<circle cx="{:.1}" cy="{:.1}" r="{:.1}" fill="{}" stroke="{}" stroke-width="{:.1}"/>"##,
+                        q.x,
+                        q.y,
+                        4.5 * q.scale,
+                        esc(&q.color),
+                        esc(&geom::darken(&q.color, 0.3)),
+                        1.2 * q.scale
+                    );
+                }
                 if !q.label.is_empty() {
                     let (at, align, base) = geom::point_label_anchor(doc, q);
                     let size = 11.0 * q.scale;
@@ -123,8 +135,9 @@ pub fn export(doc: &Diagram, file: &str) -> String {
                     };
                     let _ = writeln!(
                         s,
-                        r##"<text x="{:.1}" y="{y:.1}" font-size="{size:.1}" text-anchor="{anchor}" fill="#334155">{}</text>"##,
+                        r##"<text x="{:.1}" y="{y:.1}" font-size="{size:.1}" text-anchor="{anchor}" fill="{}">{}</text>"##,
                         at.x,
+                        esc(if q.color.is_empty() { "#334155" } else { &q.color }),
                         esc(&q.label)
                     );
                 }
@@ -475,15 +488,22 @@ fn device(s: &mut String, doc: &Diagram, d: &Device, dirs: &HashMap<Id, Vec<Pt>>
         let socket = if p.rear { None } else { d.socket_pos(p.socket) };
         if !(socket.is_some() && linked) {
             let at = socket.unwrap_or(pos);
+            let (fill, edge) = match (p.color.is_empty(), linked) {
+                (true, true) => (stroke.clone(), stroke.clone()),
+                (true, false) => ("#ffffff".to_string(), stroke.clone()),
+                (false, true) => (p.color.clone(), geom::darken(&p.color, 0.3)),
+                (false, false) => ("#ffffff".to_string(), p.color.clone()),
+            };
             let _ = writeln!(
-            s,
-            r##"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="{}" stroke="{stroke}" stroke-width="1.2"/>"##,
+                s,
+                r##"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" fill="{}" stroke="{}" stroke-width="1.2"/>"##,
                 at.x - h,
                 at.y - h,
-            2.0 * h,
-            2.0 * h,
-            if linked { stroke.as_str() } else { "#ffffff" }
-        );
+                2.0 * h,
+                2.0 * h,
+                esc(&fill),
+                esc(&edge)
+            );
         }
         if d.name_shown(p) {
             let (lp, align, base) = geom::port_label(d, p, dirs);

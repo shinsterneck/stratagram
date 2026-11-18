@@ -259,7 +259,7 @@ pub fn import(text: &str) -> Result<Diagram, String> {
         .into_iter()
         .filter(|c| {
             // Also the markers of exports from before the rename ("netdiag…").
-            !["stratagramFrame", "stratagramBackground", "netdiagFrame", "netdiagBackground"].iter().any(|m| c.style.contains(m))
+            !["stratagramFrame", "stratagramBackground", "stratagramPoint", "netdiagFrame", "netdiagBackground"].iter().any(|m| c.style.contains(m))
         })
         .collect();
     let by_id: HashMap<&str, &Cell> = cells.iter().map(|c| (c.id.as_str(), c)).collect();

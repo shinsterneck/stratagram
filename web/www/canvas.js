@@ -406,15 +406,15 @@ export class DiagramView {
         ctx.setLineDash([])
         ctx.beginPath()
         ctx.arc(p.x, p.y, 4 * k, 0, 2 * Math.PI)
-        ctx.fillStyle = p.sel ? ACCENT : PAPER
+        ctx.fillStyle = p.sel ? ACCENT : (p.color || PAPER)
         ctx.fill()
         ctx.lineWidth = 1.5 * k
-        ctx.strokeStyle = hot ? GOOD : (p.sel ? ACCENT : MUTED)
+        ctx.strokeStyle = hot ? GOOD : (p.sel ? ACCENT : (p.color || MUTED))
         ctx.stroke()
         // Its label, beyond the end of its line.
         if (p.label !== "" && !p.editing) {
             ctx.font = font(11)
-            ctx.fillStyle = INK
+            ctx.fillStyle = p.color || INK
             ctx.textAlign = p.align
             ctx.textBaseline = p.base
             ctx.fillText(p.label, p.x + p.ldx, p.y + p.ldy)
@@ -1220,10 +1220,10 @@ function drawDevice(ctx, d, target) {
                 ctx.stroke()
             }
         }
-        ctx.fillStyle = on ? ACCENT : (p.linked ? d.stroke : PAPER)
+        ctx.fillStyle = on ? ACCENT : (p.linked ? (p.color || d.stroke) : PAPER)
         ctx.fillRect(p.x - r, p.y - r, 2 * r, 2 * r)
         ctx.lineWidth = 1.2 * k
-        ctx.strokeStyle = on ? ACCENT : d.stroke
+        ctx.strokeStyle = on ? ACCENT : (p.color ? (p.linked ? p.stroke : p.color) : d.stroke)
         ctx.strokeRect(p.x - r, p.y - r, 2 * r, 2 * r)
         if (p.name !== "" && !p.editing) {
             ctx.font = font(10 * k)

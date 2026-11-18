@@ -74,6 +74,23 @@ fn link_id(id: Id) -> String {
 }
 /// A connection point's label as a borderless text box, where the app puts it.
 fn point_label(out: &mut String, ctx: &Ctx, q: &Point) {
+    if !q.color.is_empty() {
+        let r = 4.5 * q.scale;
+        let _ = writeln!(
+            out,
+            r#"        <mxCell id="q{id}dot" value="" style="stratagramPoint=1;ellipse;html=1;fillColor={fill};strokeColor={edge};strokeWidth={sw:.2};resizable=0;" vertex="1" connectable="0" parent="{layer}">
+          <mxGeometry x="{x:.1}" y="{y:.1}" width="{d:.1}" height="{d:.1}" as="geometry"/>
+        </mxCell>"#,
+            id = q.id,
+            fill = esc(&q.color),
+            edge = esc(&geom::darken(&q.color, 0.3)),
+            sw = 1.2 * q.scale,
+            layer = ctx.parent(q.layer),
+            x = q.x + ctx.ox - r,
+            y = q.y + ctx.oy - r,
+            d = 2.0 * r,
+        );
+    }
     if q.label.is_empty() {
         return;
     }
@@ -93,10 +110,11 @@ fn point_label(out: &mut String, ctx: &Ctx, q: &Point) {
     };
     let _ = writeln!(
         out,
-        r#"        <mxCell id="q{id}" value="{label}" style="text;html=1;align={align};verticalAlign=middle;whiteSpace=nowrap;spacing=0;fontSize={size:.1};fontColor=#334155;" vertex="1" parent="{layer}">
+        r#"        <mxCell id="q{id}" value="{label}" style="text;html=1;align={align};verticalAlign=middle;whiteSpace=nowrap;spacing=0;fontSize={size:.1};fontColor={font};" vertex="1" parent="{layer}">
           <mxGeometry x="{x:.1}" y="{y:.1}" width="{w:.1}" height="{h:.1}" as="geometry"/>
         </mxCell>"#,
         id = q.id,
+        font = esc(if q.color.is_empty() { "#334155" } else { &q.color }),
         label = esc(&html_text(&q.label)),
         layer = ctx.parent(q.layer),
         x = x + ox,
@@ -231,11 +249,20 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device) {
         };
         let _ = writeln!(
             out,
-            r##"        <mxCell id="{id}" value="{value}" style="rounded=0;html=1;fillColor={fill};strokeColor={stroke};strokeWidth={pw:.2};resizable=0;fontSize={pf:.1};fontColor=#475569;{label_style}" vertex="1" parent="{parent}">
+            r##"        <mxCell id="{id}" value="{value}" style="rounded=0;html=1;fillColor={fill};strokeColor={edge};strokeWidth={pw:.2};resizable=0;fontSize={pf:.1};fontColor=#475569;{label_style}" vertex="1" parent="{parent}">
           <mxGeometry x="{x:.1}" y="{y:.1}" width="{s}" height="{s}" as="geometry"/>
         </mxCell>"##,
             id = port_id(p.id),
-            fill = if linked { stroke.as_str() } else { "#ffffff" },
+            fill = match (p.color.is_empty(), linked) {
+                (true, true) => stroke.clone(),
+                (false, true) => p.color.clone(),
+                _ => "#ffffff".to_string(),
+            },
+            edge = match (p.color.is_empty(), linked) {
+                (true, _) => stroke.clone(),
+                (false, true) => geom::darken(&p.color, 0.3),
+                (false, false) => p.color.clone(),
+            },
             parent = dev_id(d.id),
             // Child geometry is relative to the parent device.
             x = pos.x - d.x - PORT * d.scale / 2.0,

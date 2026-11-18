@@ -792,7 +792,7 @@ Pane {
                         wrapMode: Text.WordWrap
                         color: root.tc.muted2
                         text: root.type === "point"
-                              ? "Lines end here as if attached to nothing; the point itself is not exported (its label is). " +
+                              ? "Lines end here as if attached to nothing; the point itself is not exported (its label is), unless it has a color: then it is a dot. " +
                                 root.plural(root.sel.links, "line", "lines") + " attached.\n" +
                                 "Drag to move it; drop it on a device border to attach its lines there. " +
                                 "Shift+drag from it to draw another line, or drop a line onto it. " +
@@ -823,6 +823,20 @@ Pane {
                             value: root.type === "point" ? Math.round(root.sel.y) : 0
                             onValueModified: root.set("y", value)
                         }
+                    }
+                    Label { text: "Color" }
+                    ColorPicker {
+                        tc: root.tc
+                        Layout.fillWidth: true
+                        color: root.type === "point" ? root.sel.color : ""
+                        swatches: root.linkColors
+                        onPicked: (c) => root.set("color", c)
+                    }
+                    Button {
+                        visible: root.type === "point" && root.sel.color !== ""
+                        Layout.fillWidth: true
+                        text: "Default color"
+                        onClicked: root.set("color", "")
                     }
                 }
 
@@ -856,6 +870,20 @@ Pane {
                         from: 5; to: 95; stepSize: 5; editable: true
                         value: root.type === "port" ? root.sel.pos : 50
                         onValueModified: root.set("pos", value)
+                    }
+                    Label { text: "Color" }
+                    ColorPicker {
+                        tc: root.tc
+                        Layout.fillWidth: true
+                        color: root.type === "port" ? root.sel.color : ""
+                        swatches: root.linkColors
+                        onPicked: (c) => root.set("color", c)
+                    }
+                    Button {
+                        visible: root.type === "port" && root.sel.color !== ""
+                        Layout.fillWidth: true
+                        text: "Default color"
+                        onClicked: root.set("color", "")
                     }
                     // A layer of its own, to show or hide it apart from its device.
                     Label { text: "Layer" }

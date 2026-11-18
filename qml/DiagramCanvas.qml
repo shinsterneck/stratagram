@@ -526,10 +526,10 @@ Item {
                     ctx.stroke()
                 }
             }
-            ctx.fillStyle = on ? accent : (p.linked ? d.stroke : root.paper)
+            ctx.fillStyle = on ? accent : (p.linked ? (p.color || d.stroke) : root.paper)
             ctx.fillRect(p.x - r, p.y - r, 2 * r, 2 * r)
             ctx.lineWidth = 1.2 * k
-            ctx.strokeStyle = on ? accent : d.stroke
+            ctx.strokeStyle = on ? accent : (p.color ? (p.linked ? p.stroke : p.color) : d.stroke)
             ctx.strokeRect(p.x - r, p.y - r, 2 * r, 2 * r)
             if (p.name !== "" && !p.editing) {
                 ctx.font = (10 * k) + "px sans-serif"
@@ -555,15 +555,15 @@ Item {
         ctx.setLineDash([])
         ctx.beginPath()
         ctx.arc(p.x, p.y, 4 * k, 0, 2 * Math.PI)
-        ctx.fillStyle = p.sel ? accent : root.paper
+        ctx.fillStyle = p.sel ? accent : (p.color || root.paper)
         ctx.fill()
         ctx.lineWidth = 1.5 * k
-        ctx.strokeStyle = hot ? good : (p.sel ? accent : root.muted)
+        ctx.strokeStyle = hot ? good : (p.sel ? accent : (p.color || root.muted))
         ctx.stroke()
         // Its label, beyond the end of its line.
         if (p.label !== "" && !p.editing) {
             ctx.font = "11px sans-serif"
-            ctx.fillStyle = root.ink
+            ctx.fillStyle = p.color || root.ink
             ctx.textAlign = p.align
             ctx.textBaseline = p.base
             ctx.fillText(p.label, p.x + p.ldx, p.y + p.ldy)
