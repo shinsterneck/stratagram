@@ -39,11 +39,18 @@ editor (the same as the desktop app, compiled to WebAssembly).
   location in NetBox moves to that location's layer at the next refresh.
 - Arrange it, add notes, a frame, layers..., then **Save**: the diagram is
   kept in NetBox (one per site, in the change log).
-- **Refresh from NetBox** adds new devices and cables, renames what was
-  renamed and sets aside what is gone on the layer "Gone from NetBox";
-  nothing you placed moves, and Ctrl+Z undoes it. It does so on every
-  sheet: renamed locations rename their sheets, and new locations get new
-  sheets (a diagram saved before locations had sheets gets them too).
+- **Refresh from NetBox** opens a dialog with what NetBox has, as a tree
+  like the layer list: locations, device types, devices and their
+  interfaces. Nothing is selected at first; checking an entry selects
+  everything under it, and unfolding a device lets you pick single
+  interfaces (cables come along where both ends are chosen). Then choose
+  **Update this sheet** or **Add as a new sheet**; a new sheet is laid out
+  and shown at once. Updating adds the chosen devices and cables and
+  renames what was renamed, leaving the rest alone. With everything (the
+  site) selected, it is the full refresh: what is gone is set aside on the
+  layer "Gone from NetBox", on every sheet, renamed locations rename their
+  sheets and new locations get new sheets. Nothing you placed moves, and
+  Ctrl+Z undoes it.
 - Export SVG, PNG or draw.io from the editor's Export menu.
 - Light, Dark and Neon themes (the selector in the editor's toolbar): the
   editor follows NetBox's own light/dark switch until you pick one, which

@@ -768,6 +768,14 @@ impl Refreshed {
 /// and links NetBox no longer has move to the layer [`GONE_LAYER`] (and
 /// back if they return). Nothing else moves; drawn items stay as they are.
 pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
+    refresh_with(doc, fresh, false)
+}
+
+pub fn refresh_partial(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
+    refresh_with(doc, fresh, true)
+}
+
+fn refresh_with(doc: &mut Diagram, fresh: &Diagram, partial: bool) -> Refreshed {
     let mut out = Refreshed::default();
     let by_source: HashMap<String, Id> =
         doc.devices.iter().filter(|d| !d.source.is_empty()).map(|d| (d.source.clone(), d.id)).collect();
@@ -935,7 +943,7 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
         .filter(|l| !l.source.is_empty() && !fresh_links.contains(l.source.as_str()) && Some(l.layer) != gone_layer)
         .map(|l| l.id)
         .collect();
-    if !gone_devices.is_empty() || !gone_links.is_empty() {
+    if !partial && (!gone_devices.is_empty() || !gone_links.is_empty()) {
         let layer = gone_layer.unwrap_or_else(|| {
             let id = doc.add_layer(GONE_LAYER);
             // Its name on its devices marks them on the drawing.
@@ -965,7 +973,17 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
         })
         .filter(|t| doc.is_trace(t))
         .collect();
-    doc.traces = traces;
+    if partial {
+        let mut kept: Vec<Trace> = doc.traces.iter().filter(|t| doc.is_trace(t)).cloned().collect();
+        for t in traces {
+            if !kept.iter().any(|k| k.links == t.links) {
+                kept.push(t);
+            }
+        }
+        doc.traces = kept;
+    } else {
+        doc.traces = traces;
+    }
 
     let fresh_sources: HashSet<&str> = fresh.layers.iter().filter(|l| !l.source.is_empty()).map(|l| l.source.as_str()).collect();
     loop {
@@ -973,7 +991,7 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
             .layers
             .iter()
             .filter(|l| {
-                let gone_own = !l.source.is_empty() && !fresh_sources.contains(l.source.as_str());
+                let gone_own = !partial && !l.source.is_empty() && !fresh_sources.contains(l.source.as_str());
                 let emptied_type = l.source.is_empty() && l.name != CABLES_LAYER && managed.contains(&l.name) && Some(l.id) != home;
                 gone_own || emptied_type
             })
@@ -991,6 +1009,69 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
     place_new(doc, &new_devices);
     face_new_ports(doc, &new_ports);
     out
+}
+
+pub fn select(fresh: &Diagram, chosen: &HashSet<String>) -> Diagram {
+    let mut d = fresh.clone();
+    let picked = |s: &str| !s.is_empty() && chosen.contains(s);
+    d.devices.retain(|x| picked(&x.source) || x.ports.iter().any(|p| picked(&p.source)));
+    for x in d.devices.iter_mut().filter(|x| !picked(&x.source)) {
+        x.ports.retain(|p| picked(&p.source));
+    }
+    let ports: HashSet<Id> = d.devices.iter().flat_map(|x| x.ports.iter().map(|p| p.id)).collect();
+    d.links.retain(|l| ports.contains(&l.from.port) && ports.contains(&l.to.port));
+    let links: HashSet<Id> = d.links.iter().map(|l| l.id).collect();
+    d.traces.retain(|t| t.links.iter().all(|l| links.contains(l)));
+    let first = d.layers.first().map(|l| l.id);
+    loop {
+        let empty: Vec<Id> = d
+            .layers
+            .iter()
+            .filter(|l| Some(l.id) != first && l.frame.is_none())
+            .filter(|l| d.layer_count(l.id) == 0 && !d.layers.iter().any(|x| x.parent == l.id))
+            .filter(|l| !d.devices.iter().any(|x| x.ports.iter().any(|p| p.layer == l.id)))
+            .map(|l| l.id)
+            .collect();
+        if empty.is_empty() {
+            break;
+        }
+        d.layers.retain(|l| !empty.contains(&l.id));
+    }
+    d
+}
+
+pub fn site_tree(fresh: &Diagram, site: &str) -> Value {
+    fn device(x: &crate::model::Device) -> Value {
+        let ports: Vec<Value> = x
+            .ports
+            .iter()
+            .filter(|p| !p.source.is_empty())
+            .map(|p| serde_json::json!({"key": p.source, "name": if p.name.is_empty() { p.source.clone() } else { p.name.clone() }, "kind": "port"}))
+            .collect();
+        serde_json::json!({"key": x.source, "name": x.name, "kind": "device", "type": x.kind, "children": ports})
+    }
+    fn layer(doc: &Diagram, id: Id) -> Option<Value> {
+        let l = doc.layer(id)?;
+        if let Some(x) = doc.devices.iter().find(|x| !l.source.is_empty() && x.source == l.source) {
+            return Some(device(x));
+        }
+        let mut children: Vec<Value> = doc.layers.iter().filter(|c| c.parent == id).filter_map(|c| layer(doc, c.id)).collect();
+        children.extend(doc.devices.iter().filter(|x| x.layer == id && !x.source.is_empty()).map(device));
+        if children.is_empty() {
+            return None;
+        }
+        let kind = if l.source.starts_with("dcim.location:") { "location" } else { "group" };
+        Some(serde_json::json!({"key": if l.source.is_empty() { format!("layer:{id}") } else { l.source.clone() }, "name": l.name, "kind": kind, "children": children}))
+    }
+    let first = fresh.layers.first().map(|l| l.id).unwrap_or(0);
+    let mut children: Vec<Value> = fresh
+        .layers
+        .iter()
+        .filter(|l| l.parent == 0 && l.id != first && l.frame.is_none() && l.name != OUTSIDE_LAYER)
+        .filter_map(|l| layer(fresh, l.id))
+        .collect();
+    children.extend(fresh.devices.iter().filter(|x| x.layer == first && !x.source.is_empty()).map(device));
+    serde_json::json!({"key": "site", "name": site, "kind": "site", "children": children})
 }
 
 fn location_of(doc: &Diagram, layer: Id) -> Option<String> {
@@ -1801,5 +1882,92 @@ mod tests {
                 assert!(apart(r, b), "{} inside Building B's background", d.name);
             }
         }
+    }
+
+    #[test]
+    fn the_import_tree_follows_the_layers_down_to_the_ports() {
+        let mut e = crate::editor::Editor::default();
+        let opts = r#"{"type_layers": true, "location_layers": true}"#;
+        let tree: Value = serde_json::from_str(&e.netbox_tree(&site_with_locations().to_string(), opts).unwrap()).unwrap();
+        assert_eq!((tree["key"].as_str(), tree["name"].as_str()), (Some("site"), Some("Berlin")));
+        let names = |v: &Value| v["children"].as_array().unwrap().iter().map(|c| c["name"].as_str().unwrap().to_string()).collect::<Vec<_>>();
+        assert_eq!(names(&tree), ["Internet", "Building A", "Building B"]);
+        let a = &tree["children"][1];
+        assert_eq!((a["key"].as_str(), names(a)), (Some("dcim.location:1"), vec!["Switches".to_string(), "Floor 1".to_string()]));
+        let core = &a["children"][0]["children"][0];
+        assert_eq!((core["key"].as_str(), core["kind"].as_str()), (Some("dcim.device:2"), Some("device")));
+        assert!(core["children"].as_array().unwrap().iter().all(|p| p["kind"] == "port" && p["key"].as_str().unwrap().starts_with("dcim.")));
+        e.import_netbox(&site_with_locations().to_string(), opts).unwrap();
+        assert!(e.netbox_tree("not json", "").is_err());
+    }
+
+    #[test]
+    fn a_selection_updates_this_sheet_or_makes_a_new_one() {
+        let opts = r#"{"type_layers": true, "location_layers": true}"#;
+        let mut e = crate::editor::Editor::default();
+        e.import_netbox(&site_with_locations().to_string(), opts).unwrap();
+        let sheets = e.sheet_count();
+        // NetBox now: a new switch cabled to core-01, and the uplink cable gone.
+        let mut v = site_with_locations();
+        v["devices"]["results"].as_array_mut().unwrap().push(json!({"id": 9, "name": "access-09", "role": {"slug": "switch"}, "location": {"id": 1}}));
+        v["interfaces"].as_array_mut().unwrap().extend([iface(90, 9, "Te1/0/1", Some("tagged"), 0), iface(22, 2, "Gi1/0/2", Some("tagged"), 0)]);
+        v["cables"].as_array_mut().unwrap().push(json!({"id": 109, "a_terminations": term(22, 2, "Gi1/0/2"), "b_terminations": term(90, 9, "Te1/0/1")}));
+        v["cables"].as_array_mut().unwrap().retain(|c| c["id"] != json!(100));
+        let data = v.to_string();
+        assert!(e.import_netbox_selection(&data, opts, r#"{"items": []}"#, false).is_err());
+        // Only the new switch and core-01's port to it: added, linked; the
+        // uplink cable gone from NetBox is not set aside (not chosen).
+        let pick = r#"{"items": ["dcim.device:9", "dcim.interface:22"]}"#;
+        e.import_netbox_selection(&data, opts, pick, false).unwrap();
+        assert!(e.doc.devices.iter().any(|d| d.name == "access-09"));
+        assert!(e.doc.links.iter().any(|l| l.source == "dcim.cable:109"));
+        assert!(!e.doc.layers.iter().any(|l| l.name == GONE_LAYER), "{}", e.status);
+        assert_eq!(e.sheet_count(), sheets);
+        // A new sheet with two switches: shown at once, laid out, undone in one step.
+        let shown = e.active_sheet();
+        e.import_netbox_selection(&data, opts, r#"{"items": ["dcim.device:2", "dcim.device:9"]}"#, true).unwrap();
+        assert_eq!((e.sheet_count(), e.active_sheet()), (sheets + 1, sheets));
+        assert_eq!(e.doc.name, "Berlin (selection)");
+        assert_eq!(e.doc.devices.len(), 2);
+        assert_eq!(e.doc.links.len(), 1, "the cable between them");
+        e.undo();
+        assert_eq!((e.sheet_count(), e.active_sheet()), (sheets, shown));
+        // Everything into this sheet: the full refresh (the gone cable set aside).
+        e.import_netbox_selection(&data, opts, r#"{"all": true}"#, false).unwrap();
+        assert!(e.doc.layers.iter().any(|l| l.name == GONE_LAYER), "{}", e.status);
+    }
+
+    #[test]
+    fn selections_reach_every_kind_of_sheet_and_leave_other_layers_alone() {
+        let opts = r#"{"type_layers": true, "location_layers": true}"#;
+        let mut e = crate::editor::Editor::default();
+        e.import_netbox(&site_with_locations().to_string(), opts).unwrap();
+        let mut v = site_with_locations();
+        v["devices"]["results"].as_array_mut().unwrap().push(json!({"id": 9, "name": "access-09", "role": {"slug": "switch"}, "location": {"id": 1}}));
+        v["interfaces"].as_array_mut().unwrap().extend([iface(90, 9, "Te1/0/1", Some("tagged"), 0), iface(22, 2, "Gi1/0/2", Some("tagged"), 0)]);
+        v["cables"].as_array_mut().unwrap().push(json!({"id": 109, "a_terminations": term(22, 2, "Gi1/0/2"), "b_terminations": term(90, 9, "Te1/0/1")}));
+        let data = v.to_string();
+        let site_devices = site_diagram(&serde_json::from_str(&data).unwrap(), &by_locations()).devices.len();
+
+        // On the site's sheet, core-01 moved off its own layer by hand: a
+        // partial import of something else leaves that empty layer be.
+        let own = e.doc.layers.iter().find(|l| l.source == "dcim.device:2").unwrap().id;
+        let mine = e.doc.add_layer("Mine");
+        let core = e.doc.devices.iter().find(|d| d.source == "dcim.device:2").unwrap().id;
+        e.doc.device_mut(core).unwrap().layer = mine;
+        e.import_netbox_selection(&data, opts, r#"{"items": ["dcim.device:9"]}"#, false).unwrap();
+        assert!(e.doc.layer(own).is_some(), "NetBox still has it: {}", e.status);
+
+        // A device from Building A chosen on Building B's sheet is added there.
+        assert!(e.show_sheet_of("dcim.location:3"));
+        e.import_netbox_selection(&data, opts, r#"{"items": ["dcim.device:9"]}"#, false).unwrap();
+        assert!(e.doc.devices.iter().any(|d| d.source == "dcim.device:9"), "{}", e.status);
+
+        // A sheet made from a selection, later updated with everything: all
+        // of the site comes onto it.
+        e.import_netbox_selection(&data, opts, r#"{"items": ["dcim.device:9"]}"#, true).unwrap();
+        assert_eq!(e.doc.devices.len(), 1);
+        e.import_netbox_selection(&data, opts, r#"{"all": true}"#, false).unwrap();
+        assert_eq!(e.doc.devices.len(), site_devices, "{}", e.status);
     }
 }

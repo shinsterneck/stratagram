@@ -32,6 +32,109 @@ async function netboxData() {
     return JSON.stringify(await fetchJson(config.dataUrl))
 }
 
+function el(tag, props = {}, ...kids) {
+    const e = Object.assign(document.createElement(tag), props)
+    for (const k of kids.flat()) if (k !== null && k !== undefined) e.append(k)
+    return e
+}
+
+function importDialog(parent, tree) {
+    return new Promise((resolve) => {
+        const leaves = (n) => n.children && n.children.length ? n.children.flatMap(leaves) : [n]
+        const checked = new Set()
+        const open = new Set([tree.key])
+        const state = (n) => {
+            const all = leaves(n)
+            const on = all.filter(l => checked.has(l.key)).length
+            return on === 0 ? "none" : on === all.length ? "all" : "some"
+        }
+        const collect = (n, out) => {
+            const s = state(n)
+            if (s === "none") return
+            if (s === "all" && n.kind === "device") { out.push(n.key); return }
+            if (!n.children || !n.children.length) { if (n.kind !== "site") out.push(n.key); return }
+            for (const c of n.children) collect(c, out)
+        }
+        const list = el("div", { className: "sg-import-tree" })
+        const importButton = el("button", { className: "sg-import-go", textContent: "Import", disabled: true })
+        const target = (value, label, on) => el("label", { className: "sg-import-target" },
+            el("input", { type: "radio", name: "sg-import-target", value, checked: on }), label)
+        const here = target("current", "Update this sheet", true)
+        const fresh = target("new", "Add as a new sheet", false)
+        const count = el("span", { className: "sg-import-count" })
+        let focusKey = null, focusPart = "box"
+        const render = () => {
+            const rows = []
+            const row = (n, depth) => {
+                const s = state(n)
+                const kids = n.children && n.children.length
+                const box = el("input", { type: "checkbox", checked: s === "all", indeterminate: s === "some" })
+                box.dataset.key = n.key
+                box.addEventListener("change", () => {
+                    for (const l of leaves(n)) box.checked ? checked.add(l.key) : checked.delete(l.key)
+                    focusKey = n.key; focusPart = "box"
+                    render()
+                })
+                const toggle = el("button", { className: "sg-import-toggle", type: "button", textContent: kids ? (open.has(n.key) ? "▾" : "▸") : "", tabIndex: kids ? 0 : -1 })
+                toggle.dataset.key = n.key
+                if (kids) toggle.addEventListener("click", () => { open.has(n.key) ? open.delete(n.key) : open.add(n.key); focusKey = n.key; focusPart = "toggle"; render() })
+                const kind = n.kind === "device" ? (n.type || "device") : n.kind === "location" ? "location" : n.kind === "port" ? "port" : ""
+                rows.push(el("div", { className: "sg-import-row", style: `padding-left: ${depth * 18}px` },
+                    toggle, el("label", {}, box, el("span", { className: "sg-import-name", textContent: n.name || n.key }),
+                        kind ? el("span", { className: "sg-import-kind", textContent: kind }) : null)))
+                if (kids && open.has(n.key)) for (const c of n.children) row(c, depth + 1)
+            }
+            row(tree, 0)
+            list.replaceChildren(...rows)
+            if (focusKey !== null) {
+                const sel = focusPart === "toggle" ? "button" : "input"
+                const target = [...list.querySelectorAll(sel)].find(x => x.dataset.key === focusKey)
+                if (target) target.focus()
+            }
+            const picked = []
+            collect(tree, picked)
+            const devices = []
+            const walk = (n) => { if (n.kind === "device") devices.push(n); else for (const c of n.children || []) walk(c) }
+            walk(tree)
+            const some = devices.filter(d => state(d) !== "none").length
+            importButton.disabled = picked.length === 0
+            count.textContent = checked.size === 0 ? "Nothing selected"
+                : state(tree) === "all" ? "Everything selected"
+                : `${some} of ${devices.length} device${devices.length === 1 ? "" : "s"}`
+        }
+        const close = (result) => { backdrop.remove(); document.removeEventListener("keydown", keys, true); resolve(result) }
+        const go = () => {
+            if (importButton.disabled) return
+            const items = []
+            collect(tree, items)
+            close({ selection: { all: state(tree) === "all", items }, newSheet: fresh.querySelector("input").checked })
+        }
+        const keys = (e) => {
+            e.stopPropagation()
+            if ((e.ctrlKey || e.metaKey) && ["a", "d", "z", "y"].includes(e.key.toLowerCase())) { e.preventDefault(); return }
+            if (e.key === "Escape") { e.preventDefault(); close(null); return }
+            const onOtherButton = e.target.tagName === "BUTTON" && e.target !== importButton
+            if (e.key === "Enter" && !onOtherButton && !importButton.disabled) { e.preventDefault(); go() }
+        }
+        importButton.addEventListener("click", go)
+        const cancel = el("button", { className: "sg-import-cancel", type: "button", textContent: "Cancel" })
+        cancel.addEventListener("click", () => close(null))
+        const dialog = el("div", { className: "sg-import-dialog", role: "dialog" },
+            el("h3", { textContent: "Import from NetBox" }),
+            el("p", { className: "sg-import-hint", textContent: "Choose what to bring in. A location or type brings everything under it; unfold a device to choose single interfaces. Cables come along where both ends are chosen." }),
+            list,
+            el("div", { className: "sg-import-targets" }, here, fresh),
+            el("div", { className: "sg-import-buttons" }, count, cancel, importButton))
+        const backdrop = el("div", { className: "sg-import-backdrop" }, dialog)
+        backdrop.addEventListener("pointerdown", (e) => { if (e.target === backdrop) close(null) })
+        document.addEventListener("keydown", keys, true)
+        render()
+        parent.appendChild(backdrop)
+        const first = list.querySelector("input")
+        if (first) first.focus()
+    })
+}
+
 let saved = null
 if (config.saved) {
     saved = await fetchJson(config.diagramUrl)
@@ -65,15 +168,26 @@ const host = {
     },
     buttons: [{
         label: "Refresh from NetBox",
-        title: "Add what is new in NetBox, rename what was renamed, set aside what is gone (Ctrl+Z undoes)",
+        title: "Choose what to bring in from NetBox, into this sheet or a new one (Ctrl+Z undoes)",
         async run(app) {
+            let data
             try {
-                const err = app.ctl.refreshNetbox(await netboxData(), options)
-                if (err) app.ctl.setStatus("Cannot refresh: " + err)
+                data = await netboxData()
             } catch (e) {
                 app.ctl.setStatus("Cannot get the site from NetBox: " + e.message)
+                app.changed()
+                return
             }
-            app.changed()
+            const tree = app.ctl.netboxTree(data, options)
+            if (!tree) { app.ctl.setStatus("Cannot read the site from NetBox."); app.changed(); return }
+            const choice = await importDialog(app.el, JSON.parse(tree))
+            if (choice) {
+                const err = app.ctl.importNetboxSelection(data, options, JSON.stringify(choice.selection), choice.newSheet)
+                if (err) app.ctl.setStatus("Cannot import: " + err)
+                app.changed()
+                if (!err && choice.newSheet) app.view.fit()
+            }
+            app.view.focus()
         },
     }],
 }

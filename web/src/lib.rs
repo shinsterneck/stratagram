@@ -348,6 +348,14 @@ impl Stratagram {
         self.editor.import_netbox(json, options).err().unwrap_or_default()
     }
 
+    #[wasm_bindgen(js_name = netboxTree)]
+    pub fn netbox_tree(&self, json: &str, options: &str) -> String {
+        self.editor.netbox_tree(json, options).unwrap_or_default()
+    }
+    #[wasm_bindgen(js_name = importNetboxSelection)]
+    pub fn import_netbox_selection(&mut self, json: &str, options: &str, selection: &str, new_sheet: bool) -> String {
+        self.editor.import_netbox_selection(json, options, selection, new_sheet).err().unwrap_or_default()
+    }
     /// Bring the diagram up to date with the site in NetBox (undoable).
     /// Returns "" or what went wrong; the status says what changed.
     #[wasm_bindgen(js_name = refreshNetbox)]

@@ -4408,6 +4408,79 @@ impl Editor {
         Ok(())
     }
 
+    pub fn netbox_tree(&self, json: &str, options: &str) -> Result<String, String> {
+        let data = crate::netbox::SiteData::parse(json)?;
+        let opts = netbox_options(options)?;
+        let site = data.site.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
+        Ok(crate::netbox::site_tree(&crate::netbox::site_diagram(&data, &opts), &site).to_string())
+    }
+
+    pub fn import_netbox_selection(&mut self, json: &str, options: &str, selection: &str, new_sheet: bool) -> Result<(), String> {
+        #[derive(serde::Deserialize, Default)]
+        #[serde(default)]
+        struct Chosen {
+            all: bool,
+            items: Vec<String>,
+        }
+        let chosen: Chosen = serde_json::from_str(selection).map_err(|e| format!("bad selection: {e}"))?;
+        if !chosen.all && chosen.items.is_empty() {
+            return Err("Nothing selected.".into());
+        }
+        let data = crate::netbox::SiteData::parse(json)?;
+        let opts = netbox_options(options)?;
+        let site = crate::netbox::site_diagram(&data, &opts);
+        let locations = crate::netbox::location_diagrams(&data, &opts);
+        let netbox_sheet = (self.active_sheet == 0 && self.doc.source.is_empty())
+            || std::iter::once(&site).chain(&locations).any(|f| !f.source.is_empty() && f.source == self.doc.source);
+        if chosen.all && !new_sheet && netbox_sheet {
+            return self.refresh_netbox(json, options);
+        }
+        let picked: std::collections::HashSet<String> = chosen.items.into_iter().collect();
+        let pick = |d: &Diagram| if chosen.all { d.clone() } else { crate::netbox::select(d, &picked) };
+        let before = Saved { doc: self.doc.clone(), sheets: self.sheets.clone(), active: self.active_sheet };
+        if new_sheet {
+            let mut sheet = pick(&site);
+            if sheet.devices.is_empty() {
+                return Err("NetBox has none of that.".into());
+            }
+            let site_name = data.site.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
+            let mut all = self.all_sheets();
+            let base = if chosen.all { site_name.clone() } else { format!("{} (selection)", if site_name.is_empty() { "NetBox" } else { &site_name }) };
+            let mut name = base.clone();
+            let mut n = 2;
+            while all.iter().any(|s| s.name == name) {
+                name = format!("{base} {n}");
+                n += 1;
+            }
+            sheet.name = name.clone();
+            sheet.source = String::new();
+            let frame = all.iter().flat_map(|d| d.layers.iter()).find(|l| l.frame.is_some()).cloned();
+            let (devices, links) = (sheet.devices.len(), sheet.links.len());
+            all.push(sheet);
+            let last = all.len() - 1;
+            self.view_reset();
+            self.set_sheets(all, last);
+            self.switch_sheet(last);
+            self.dress_netbox_sheet(frame, &site_name);
+            self.status = format!("Imported {devices} devices and {links} links from NetBox onto the new sheet \"{name}\".");
+        } else {
+            let fresh = pick(&site);
+            let r = if chosen.all { crate::netbox::refresh(&mut self.doc, &fresh) } else { crate::netbox::refresh_partial(&mut self.doc, &fresh) };
+            self.status = r.summary();
+            if r == crate::netbox::Refreshed::default() {
+                return Ok(());
+            }
+            self.selection = Selection::None;
+        }
+        self.undo.push(before);
+        if self.undo.len() > UNDO_LIMIT {
+            self.undo.remove(0);
+        }
+        self.redo.clear();
+        self.touch();
+        Ok(())
+    }
+
     /// Show the sheet standing for `source` (a NetBox location, say);
     /// false if there is none.
     pub fn show_sheet_of(&mut self, source: &str) -> bool {
