@@ -427,10 +427,9 @@ impl Stratagram {
     /// The sheet in view as a Cisco Modeling Labs lab (YAML); what was
     /// left out (tunnels...) goes to the status.
     #[wasm_bindgen(js_name = exportCml)]
-    pub fn export_cml(&mut self, title: &str) -> String {
+    pub fn export_cml(&mut self, title: &str, filename: Option<String>) -> String {
         let (yaml, skipped) = stratagram_core::cml::export_in(&self.editor.doc, title, self.editor.language);
-        let left_out = skipped.summary_in(self.editor.language);
-        self.editor.status = if left_out.is_empty() { String::new() } else { self.editor.language.format("cml.skipped", &[("details", &left_out)]) };
+        self.editor.report_cml_export(filename, skipped);
         yaml
     }
     #[wasm_bindgen(js_name = exportDrawio)]

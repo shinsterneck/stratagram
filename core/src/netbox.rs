@@ -1102,6 +1102,25 @@ fn layer_like(doc: &mut Diagram, fresh: &Diagram, id: Id) -> Option<Id> {
     {
         return Some(l.id);
     }
+    // An empty type layer from an older file has no devices from which to
+    // recover its role at load time. The incoming type supplies its old
+    // default name. Adopt it only when the sibling and its role are unambiguous.
+    if let Some(kind) = fl.netbox_group.strip_prefix("type/") {
+        let former_name = plural_type_name(kind);
+        let mut siblings = doc.layers.iter().filter(|l| {
+            l.parent == parent && l.frame.is_none() && (l.name == fl.name || l.name == former_name)
+        });
+        if let Some(layer) = siblings.next()
+            && siblings.next().is_none()
+            && layer.source.is_empty() && layer.netbox_group.is_empty()
+            && doc.layer_count(layer.id) == 0 && !doc.layers.iter().any(|l| l.parent == layer.id)
+            && !doc.devices.iter().flat_map(|d| &d.ports).any(|p| p.layer == layer.id)
+        {
+            let id = layer.id;
+            doc.layer_mut(id)?.netbox_group = fl.netbox_group.clone();
+            return Some(id);
+        }
+    }
     let own = if parent == 0 {
         let active = doc.active_layer;
         let id = doc.add_layer(&fl.name);
@@ -1586,6 +1605,54 @@ mod tests {
             let group = custom_doc.layer(parent).unwrap();
             assert_eq!(group.display_name(Chinese), custom);
             assert_eq!(group.display_name(English), custom);
+        }
+    }
+
+    #[test]
+    fn refresh_reuses_unique_empty_legacy_type_layers_only() {
+        let data: SiteData = serde_json::from_value(site()).unwrap();
+        let opts = Options { type_layers: true, ..Options::default() };
+        let fresh = site_diagram(&data, &opts);
+        for ambiguous in [false, true] {
+            let mut doc = fresh.clone();
+            let switch = by_name(&doc, "core-01");
+            let (device, own) = (switch.id, switch.layer);
+            let old_group = doc.layer(own).unwrap().parent;
+            doc.remove_device(device);
+            assert!(doc.remove_layer(own));
+            if ambiguous { doc.add_layer("Switches"); }
+            doc.layer_mut(old_group).unwrap().visible = false;
+            for layer in &mut doc.layers { layer.netbox_group.clear(); }
+            let mut doc = Diagram::from_json(&doc.to_json()).unwrap();
+            assert!(doc.layer(old_group).unwrap().netbox_group.is_empty());
+            refresh(&mut doc, &fresh);
+            let group = doc.layer(by_name(&doc, "core-01").layer).unwrap().parent;
+            assert_eq!(group == old_group, !ambiguous);
+            assert_eq!(doc.layer(group).unwrap().netbox_group, "type/switch");
+            assert!(!doc.layer(old_group).unwrap().visible);
+            assert_eq!(doc.layer(old_group).unwrap().netbox_group.is_empty(), ambiguous);
+            let mut back = Diagram::from_json(&doc.to_json()).unwrap();
+            refresh(&mut back, &fresh);
+            assert_eq!(back.layer(by_name(&back, "core-01").layer).unwrap().parent, group);
+        }
+    }
+
+    #[test]
+    fn pasted_groups_keep_their_identity_only_on_empty_sheets() {
+        let data: SiteData = serde_json::from_value(site()).unwrap();
+        let fresh = site_diagram(&data, &Options { type_layers: true, ..Options::default() });
+        let mut copy = crate::editor::Editor::default();
+        copy.doc = fresh.clone();
+        let id = copy.doc.layers.iter().find(|l| l.netbox_group == "cables").unwrap().id;
+        copy.doc.layer_mut(id).unwrap().name = "布线副本".into();
+        let copied = copy.copy_sheet();
+        for empty in [true, false] {
+            let mut dest = crate::editor::Editor::default();
+            if !empty { dest.doc = fresh.clone(); }
+            assert!(dest.paste(&copied, "", Rect { x: 0.0, y: 0.0, w: 800.0, h: 600.0 }));
+            let group = dest.doc.layers.iter().find(|l| l.name == "布线副本").unwrap();
+            assert_eq!(group.netbox_group == "cables", empty);
+            assert_eq!(dest.doc.layers.iter().filter(|l| l.netbox_group == "cables").count(), 1);
         }
     }
 

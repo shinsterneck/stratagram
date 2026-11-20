@@ -742,11 +742,8 @@ impl qobject::DiagramController {
         let title = self.file_base_name().to_string();
         let (yaml, skipped) = stratagram_core::cml::export_in(&self.rust().editor.doc, &title, self.rust().editor.language);
         let ok = self.as_mut().write_export(url, yaml);
-        let left_out = skipped.summary_in(self.rust().editor.language);
-        if ok && !left_out.is_empty() {
-            let details = self.rust().editor.language.format("cml.skipped", &[("details", &left_out)]);
-            let status = format!("{}; {details}", self.rust().editor.status);
-            self.set_status_text(status);
+        if ok && let Some(path) = url_to_path(url) {
+            self.edit(|e| e.report_cml_export(Some(path.display().to_string()), skipped));
         }
         ok
     }

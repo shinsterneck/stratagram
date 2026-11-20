@@ -755,10 +755,11 @@ export class App {
 
     // Cisco Modeling Labs: the sheet in view as a lab to import.
     exportCml() {
-        const yaml = this.ctl.exportCml(this.baseName())
-        download(yaml, this.baseName() + ".yaml", "application/x-yaml")
-        const left = this.ctl.status()
-        this.run(() => this.setStatus(left ? "status.exportedWithDetails" : "status.exported", { name: this.baseName() + ".yaml", details: left }))
+        const title = this.baseName()
+        const filename = title + ".yaml"
+        const yaml = this.ctl.exportCml(title, filename)
+        download(yaml, filename, "application/x-yaml")
+        this.changed()
     }
 
     // PNG: the SVG export drawn at twice its size (sharp on high resolution

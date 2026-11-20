@@ -82,6 +82,24 @@ mod tests {
     use crate::{editor::Editor, model::Pt};
 
     #[test]
+    fn cml_export_retranslates_the_summary_without_reinterpreting_the_filename() {
+        let mut editor = Editor::default();
+        let name = "Berlin; {details} $&.yaml";
+        editor.report_cml_export(Some(name.into()), crate::cml::Skipped { tunnels: 3, ..Default::default() });
+        let english = format!("Exported {name}; left out: 3 tunnel lines (not cables in a lab)");
+        assert_eq!(editor.status, english);
+        editor.set_language(Language::Chinese);
+        assert_eq!(editor.status, format!("已导出 {name}；已跳过：3 条隧道链路（无法转换为实验拓扑中的线缆）"));
+        editor.set_language(Language::English);
+        assert_eq!(editor.status, english);
+        editor.report_cml_export(Some(name.into()), Default::default());
+        editor.set_language(Language::Chinese);
+        assert_eq!(editor.status, format!("已导出 {name}"));
+        editor.report_cml_export(None, Default::default());
+        assert!(editor.status.is_empty());
+    }
+
+    #[test]
     fn switching_languages_rerenders_file_errors_without_parsing_values() {
         let mut editor = Editor::default();
         let filename = std::path::Path::new("a: {error}.stratagram");

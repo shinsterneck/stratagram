@@ -24,6 +24,8 @@
     "cml.crowded": "因设备接口不足而跳过的 {count} 条链路",
     "cml.crowdedMany": "因设备接口不足而跳过的 {count} 条链路",
     "cml.description": "使用 Stratagram 绘制",
+    "cml.exported": "已导出 {name}",
+    "cml.exportedWithDetails": "已导出 {name}；{details}",
     "cml.leftOut": "已跳过：{items}",
     "cml.loose": "{count} 条连接自由连接点的链路",
     "cml.looseMany": "{count} 条连接自由连接点的链路",

@@ -476,20 +476,33 @@ enum FileErrorContext {
     Direct,
 }
 
-struct ReportedFileError {
-    context: FileErrorContext,
-    error: crate::i18n::Diagnostic,
+enum ReportedStatus {
+    FileError { context: FileErrorContext, error: crate::i18n::Diagnostic },
+    CmlExport { filename: Option<String>, skipped: crate::cml::Skipped },
 }
 
-impl ReportedFileError {
+impl ReportedStatus {
     fn render(&self, lang: crate::i18n::Language) -> String {
-        let detail = self.error.render(lang);
-        match &self.context {
-            FileErrorContext::Open(name) => lang.format("file.openFailed", &[("name", name), ("error", &detail)]),
-            FileErrorContext::Paste => lang.format("file.pasteFailed", &[("error", &detail)]),
-            FileErrorContext::PasteDrawio => lang.format("file.drawioPasteFailed", &[("error", &detail)]),
-            FileErrorContext::Logo => lang.format("file.logoFailed", &[("error", &detail)]),
-            FileErrorContext::Direct => detail,
+        match self {
+            Self::FileError { context, error } => {
+                let detail = error.render(lang);
+                match context {
+                    FileErrorContext::Open(name) => lang.format("file.openFailed", &[("name", name), ("error", &detail)]),
+                    FileErrorContext::Paste => lang.format("file.pasteFailed", &[("error", &detail)]),
+                    FileErrorContext::PasteDrawio => lang.format("file.drawioPasteFailed", &[("error", &detail)]),
+                    FileErrorContext::Logo => lang.format("file.logoFailed", &[("error", &detail)]),
+                    FileErrorContext::Direct => detail,
+                }
+            }
+            Self::CmlExport { filename, skipped } => {
+                let summary = skipped.summary_in(lang);
+                let details = if summary.is_empty() { summary } else { lang.format("cml.skipped", &[("details", &summary)]) };
+                match filename {
+                    Some(name) if details.is_empty() => lang.format("cml.exported", &[("name", name)]),
+                    Some(name) => lang.format("cml.exportedWithDetails", &[("name", name), ("details", &details)]),
+                    None => details,
+                }
+            }
         }
     }
 }
@@ -516,7 +529,7 @@ pub struct Editor {
     /// Style applied to newly drawn links; follows the last edited link.
     pub link_defaults: LinkStyle,
     pub status: String,
-    file_error: Option<ReportedFileError>,
+    reported_status: Option<ReportedStatus>,
     /// Folder of the last opened or saved file, kept across "New".
     pub last_dir: Option<PathBuf>,
     /// All sheets of the document, in order; the active one's place holds
@@ -567,7 +580,7 @@ impl Default for Editor {
             spacings: vec![],
             link_defaults: LinkStyle::default(),
             status: String::new(),
-            file_error: None,
+            reported_status: None,
             last_dir: None,
             sheets: Arc::new(vec![Diagram::default()]),
             active_sheet: 0,
@@ -4040,20 +4053,27 @@ impl Editor {
 
     pub fn set_language(&mut self, lang: crate::i18n::Language) {
         if lang == self.language { return; }
-        if let Some(error) = self.file_error.take()
-            && self.status == error.render(self.language)
+        if let Some(status) = self.reported_status.take()
+            && self.status == status.render(self.language)
         {
-            self.status = error.render(lang);
-            self.file_error = Some(error);
+            self.status = status.render(lang);
+            self.reported_status = Some(status);
         }
         self.language = lang;
     }
 
+    fn report_status(&mut self, reported: ReportedStatus) {
+        self.status = reported.render(self.language);
+        self.reported_status = Some(reported);
+    }
+
+    pub fn report_cml_export(&mut self, filename: Option<String>, skipped: crate::cml::Skipped) {
+        self.report_status(ReportedStatus::CmlExport { filename, skipped });
+    }
+
     fn report_file_error(&mut self, context: FileErrorContext, error: crate::i18n::Diagnostic) -> String {
         let detail = error.render(self.language);
-        let reported = ReportedFileError { context, error };
-        self.status = reported.render(self.language);
-        self.file_error = Some(reported);
+        self.report_status(ReportedStatus::FileError { context, error });
         detail
     }
 

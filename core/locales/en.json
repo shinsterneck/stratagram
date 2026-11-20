@@ -24,6 +24,8 @@
     "cml.crowded": "{count} line beyond a device's interfaces",
     "cml.crowdedMany": "{count} lines beyond a device's interfaces",
     "cml.description": "Drawn with Stratagram",
+    "cml.exported": "Exported {name}",
+    "cml.exportedWithDetails": "Exported {name}; {details}",
     "cml.leftOut": "left out: {items}",
     "cml.loose": "{count} line to a free point",
     "cml.looseMany": "{count} lines to free points",

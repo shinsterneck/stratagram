@@ -2634,6 +2634,10 @@ impl Diagram {
             d.ports.iter_mut().for_each(|p| p.source.clear());
         }
         self.links.iter_mut().for_each(|l| l.source.clear());
+        for layer in &mut self.layers {
+            layer.source.clear();
+            layer.netbox_group.clear();
+        }
     }
 
     fn sheet_file(&self) -> SheetFile {
