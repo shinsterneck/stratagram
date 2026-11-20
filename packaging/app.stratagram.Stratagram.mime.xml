@@ -7,6 +7,7 @@
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
   <mime-type type="application/x-stratagram">
     <comment>Stratagram diagram</comment>
+    <comment xml:lang="zh_CN">Stratagram 网络图</comment>
     <sub-class-of type="application/json"/>
     <generic-icon name="app.stratagram.Stratagram"/>
     <glob pattern="*.stratagram"/>

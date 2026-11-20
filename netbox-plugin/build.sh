@@ -16,12 +16,13 @@ cd "$(dirname "$0")"
 ../web/build.sh
 # The license goes into the package too.
 cp ../LICENSE ../NOTICE .
-files="../web/www/app.js ../web/www/canvas.js ../web/www/panel.js ../web/www/stratagram.css ../web/www/pkg/stratagram_web.js ../web/www/pkg/stratagram_web_bg.wasm netbox_stratagram/static/netbox_stratagram/netbox.js"
+files="../web/www/locales/*.mjs ../web/www/app.js ../web/www/i18n.js ../web/www/canvas.js ../web/www/panel.js ../web/www/stratagram.css ../web/www/pkg/stratagram_web.js ../web/www/pkg/stratagram_web_bg.wasm netbox_stratagram/static/netbox_stratagram/netbox.js"
 hash=$(cat $files | sha256sum | cut -c1-12)
 root=netbox_stratagram/static/netbox_stratagram/editor
 rm -rf "$root"
 mkdir -p "$root/$hash/pkg"
-cp ../web/www/app.js ../web/www/canvas.js ../web/www/panel.js ../web/www/stratagram.css "$root/$hash/"
+cp ../web/www/app.js ../web/www/i18n.js ../web/www/canvas.js ../web/www/panel.js ../web/www/stratagram.css "$root/$hash/"
+cp -r ../web/www/locales "$root/$hash/"
 cp ../web/www/pkg/stratagram_web.js ../web/www/pkg/stratagram_web_bg.wasm "$root/$hash/pkg/"
 printf '# Made by build.sh: where the editor build is (static/netbox_stratagram/editor/<this>/).\nEDITOR = "%s"\n' "$hash" > netbox_stratagram/editor_build.py
 if [ "$1" != "--static-only" ]; then

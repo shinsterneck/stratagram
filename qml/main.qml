@@ -8,6 +8,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import com.stratagram
+import "qrc:/stratagram/locales/messages.mjs" as Messages
 
 ApplicationWindow {
     readonly property var tc: uiColors
@@ -15,7 +16,13 @@ ApplicationWindow {
     width: 1280
     height: 800
     visible: true
-    title: ctl.title
+    title: ctl.hasFile ? ctl.title : win.translate(ctl.dirty ? "file.untitledDirty" : "file.untitled")
+
+    readonly property var languageIds: Object.keys(Messages.languages)
+    readonly property string language: prefs.language || Messages.matchLanguage(Qt.locale().uiLanguages)
+    function translate(key, values) { return Messages.translate(language, key, values) }
+
+    onLanguageChanged: if (ctl) ctl.setLanguage(language)
 
     DiagramController { id: ctl }
 
@@ -23,6 +30,7 @@ ApplicationWindow {
         id: prefs
         location: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/stratagram.conf"
         category: "ui"
+        property string language: ""
         property bool panelVisible: true
         property int layoutGap: 60
         property bool layoutTidyPorts: true
@@ -145,63 +153,64 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
+        ctl.setLanguage(win.language)
         ctl.setTheme(prefs.theme)
         ctl.startup()
         Qt.callLater(canvas.fit)
     }
 
     // actions
-    Action { id: actNew; text: "New"; shortcut: StandardKey.New; onTriggered: guard(() => { ctl.newDiagram(); forgetSheetViews(); canvas.fit() }) }
-    Action { id: actOpen; text: "Open…"; shortcut: StandardKey.Open; onTriggered: openFile() }
-    Action { id: actSave; text: "Save"; shortcut: StandardKey.Save; onTriggered: save() }
-    Action { id: actSaveAs; text: "Save as…"; shortcut: "Ctrl+Shift+S"; onTriggered: saveAs() }
+    Action { id: actNew; text: win.translate("file.new"); shortcut: StandardKey.New; onTriggered: guard(() => { ctl.newDiagram(); forgetSheetViews(); canvas.fit() }) }
+    Action { id: actOpen; text: win.translate("file.open"); shortcut: StandardKey.Open; onTriggered: openFile() }
+    Action { id: actSave; text: win.translate("file.save"); shortcut: StandardKey.Save; onTriggered: save() }
+    Action { id: actSaveAs; text: win.translate("file.saveAs"); shortcut: "Ctrl+Shift+S"; onTriggered: saveAs() }
     Action {
-        id: actExport; text: "Export SVG…"; shortcut: "Ctrl+E"
+        id: actExport; text: win.translate("file.exportSvg"); shortcut: "Ctrl+E"
         onTriggered: { exportDlg.currentFolder = ctl.fileFolder(); exportDlg.open() }
     }
     Action {
-        id: actExportPng; text: "Export PNG\u2026"; shortcut: "Ctrl+Alt+E"
+        id: actExportPng; text: win.translate("file.exportPng"); shortcut: "Ctrl+Alt+E"
         onTriggered: { pngDlg.currentFolder = ctl.fileFolder(); pngDlg.open() }
     }
     Action {
-        id: actExportDrawio; text: "Export draw.io\u2026"; shortcut: "Ctrl+Shift+E"
+        id: actExportDrawio; text: win.translate("file.exportDrawio"); shortcut: "Ctrl+Shift+E"
         onTriggered: { drawioDlg.currentFolder = ctl.fileFolder(); drawioDlg.open() }
     }
     Action {
-        id: actExportCml; text: "Export CML lab\u2026"
+        id: actExportCml; text: win.translate("file.exportCml")
         onTriggered: { cmlDlg.currentFolder = ctl.fileFolder(); cmlDlg.open() }
     }
     // Ctrl+C on the canvas; text fields keep their own copy while focused.
     Action {
-        id: actCopy; text: "Copy for draw.io"; shortcut: StandardKey.Copy
+        id: actCopy; text: win.translate("file.copyDrawio"); shortcut: StandardKey.Copy
         onTriggered: ctl.copyDrawio()
     }
-    Action { id: actCut; text: "Cut"; shortcut: StandardKey.Cut; onTriggered: ctl.cut() }
+    Action { id: actCut; text: win.translate("action.cut"); shortcut: StandardKey.Cut; onTriggered: ctl.cut() }
     // The whole sheet, layers and frame included, to paste into Stratagram.
-    Action { id: actCopySheet; text: "Copy sheet with layers and frame"; onTriggered: ctl.copySheet() }
+    Action { id: actCopySheet; text: win.translate("file.copySheet"); onTriggered: ctl.copySheet() }
     Action {
-        id: actPaste; text: "Paste"; shortcut: StandardKey.Paste
+        id: actPaste; text: win.translate("action.paste"); shortcut: StandardKey.Paste
         onTriggered: {
             const a = canvas.toWorld(0, 0), b = canvas.toWorld(canvas.width, canvas.height)
             ctl.paste(a.x, a.y, b.x - a.x, b.y - a.y)
         }
     }
-    Action { id: actUndo; text: "Undo"; shortcut: StandardKey.Undo; enabled: ctl.canUndo; onTriggered: ctl.undo() }
-    Action { id: actRedo; text: "Redo"; shortcut: StandardKey.Redo; enabled: ctl.canRedo; onTriggered: ctl.redo() }
+    Action { id: actUndo; text: win.translate("edit.undo"); shortcut: StandardKey.Undo; enabled: ctl.canUndo; onTriggered: ctl.undo() }
+    Action { id: actRedo; text: win.translate("edit.redo"); shortcut: StandardKey.Redo; enabled: ctl.canRedo; onTriggered: ctl.redo() }
     Action {
-        id: actAdd; text: "+ Device"; shortcut: "Ctrl+Shift+N"
+        id: actAdd; text: win.translate("add.device"); shortcut: "Ctrl+Shift+N"
         onTriggered: { const c = canvas.viewCenter(); ctl.addDevice(c.x, c.y) }
     }
     Action {
-        id: actNote; text: "+ Text"; shortcut: "Ctrl+Shift+T"
+        id: actNote; text: win.translate("add.text"); shortcut: "Ctrl+Shift+T"
         onTriggered: { const c = canvas.viewCenter(); ctl.addNote(c.x - 20, c.y - 10) }
     }
     Action {
-        id: actPoint; text: "+ Point"; shortcut: "Ctrl+Shift+P"
+        id: actPoint; text: win.translate("add.point"); shortcut: "Ctrl+Shift+P"
         onTriggered: { const c = canvas.viewCenter(); ctl.addPoint(c.x, c.y) }
     }
-    Action { id: actDup; text: "Duplicate"; shortcut: "Ctrl+D"; onTriggered: ctl.duplicate() }
-    Action { id: actDel; text: "Delete"; onTriggered: ctl.deleteSelected() }
+    Action { id: actDup; text: win.translate("edit.duplicate"); shortcut: "Ctrl+D"; onTriggered: ctl.duplicate() }
+    Action { id: actDel; text: win.translate("edit.delete"); onTriggered: ctl.deleteSelected() }
 
     Menu {
         id: contextMenu
@@ -219,13 +228,13 @@ ApplicationWindow {
 
         Menu {
             id: typeMenu
-            title: "Type" + (contextMenu.kind !== null ? ": " + (contextMenu.kind || "plain device") : "")
+            title: win.translate("property.type") + (contextMenu.kind !== null ? ": " + (panel.kindItems.find(i => !i.header && i.key === contextMenu.kind)?.name || contextMenu.kind || win.translate("menu.plainDevice")) : "")
             enabled: contextMenu.hasDevices
             Instantiator {
                 model: panel.kindItems
                 delegate: MenuItem {
                     required property var modelData
-                    text: (modelData.header ? modelData.name : (modelData.key === "" ? "plain device" : modelData.key)).replace(/&/g, "&&")
+                    text: (modelData.header ? modelData.name : (modelData.key === "" ? win.translate("menu.plainDevice") : modelData.name)).replace(/&/g, "&&")
                     font.bold: modelData.header
                     enabled: !modelData.header
                     checkable: !modelData.header
@@ -238,12 +247,12 @@ ApplicationWindow {
         }
         Menu {
             id: layerMenu
-            title: "Move to layer"
+            title: win.translate("menu.moveToLayer")
             Instantiator {
                 model: contextMenu.layerList
                 delegate: MenuItem {
                     required property var modelData
-                    text: ("\u2003".repeat(modelData.depth) + modelData.name + (modelData.shown ? "" : " (hidden)") + (modelData.held ? " (locked)" : "")).replace(/&/g, "&&")
+                    text: ("\u2003".repeat(modelData.depth) + modelData.name + (modelData.shown ? "" : win.translate("value.hiddenSuffix")) + (modelData.held ? win.translate("value.lockedSuffix") : "")).replace(/&/g, "&&")
                     checkable: true
                     checked: modelData.id === contextMenu.sel.layer
                     onTriggered: ctl.setProp("layer", String(modelData.id))
@@ -253,25 +262,25 @@ ApplicationWindow {
             }
         }
         MenuSeparator {}
-        MenuItem { text: "Clone"; enabled: contextMenu.canClone; onTriggered: ctl.duplicate() }
-        MenuItem { text: "Delete"; onTriggered: ctl.deleteSelected() }
+        MenuItem { text: win.translate("edit.clone"); enabled: contextMenu.canClone; onTriggered: ctl.duplicate() }
+        MenuItem { text: win.translate("edit.delete"); onTriggered: ctl.deleteSelected() }
     }
     Action {
-        id: actObjectZoom; text: "Zoom into"; shortcut: "Ctrl+I"
+        id: actObjectZoom; text: win.translate("view.deep"); shortcut: "Ctrl+I"
         checkable: true; checked: canvas.deepZoom
         onTriggered: {
             canvas.deepZoom = checked
             ctl.setDeepZoom(checked)
         }
     }
-    Action { id: actFit; text: "Fit"; shortcut: "Ctrl+0"; onTriggered: canvas.fit() }
+    Action { id: actFit; text: win.translate("view.fit"); shortcut: "Ctrl+0"; onTriggered: canvas.fit() }
     Action {
-        id: actGrid; text: "Grid"; shortcut: "Ctrl+'"
+        id: actGrid; text: win.translate("layout.grid"); shortcut: "Ctrl+'"
         checkable: true; checked: prefs.showGrid
         onTriggered: prefs.showGrid = checked
     }
     Action {
-        id: actPanel; text: "Panel"; shortcut: "Ctrl+B"
+        id: actPanel; text: win.translate("view.panel"); shortcut: "Ctrl+B"
         checkable: true; checked: prefs.panelVisible
         onTriggered: prefs.panelVisible = checked
     }
@@ -298,7 +307,7 @@ ApplicationWindow {
             ToolButton { action: actSaveAs }
             ToolButton {
                 id: exportButton
-                text: "Export ▾"
+                text: win.translate("file.exportMenu")
                 onClicked: exportMenu.open()
                 Menu {
                     id: exportMenu
@@ -310,7 +319,7 @@ ApplicationWindow {
                     MenuSeparator {}
                     MenuItem { action: actCopy }
                     MenuItem { action: actCopySheet }
-                    MenuItem { action: actPaste; text: "Paste (from stratagram or draw.io)" }
+                    MenuItem { action: actPaste; text: win.translate("file.paste") }
                 }
             }
             ToolSeparator {}
@@ -326,14 +335,14 @@ ApplicationWindow {
                 onClicked: kindPopup.visible ? kindPopup.close() : kindPopup.open()
                 ToolTip.visible: hovered && !kindPopup.visible
                 ToolTip.delay: 500
-                ToolTip.text: "Add a device of a type"
+                ToolTip.text: win.translate("add.typeHint")
             }
             ToolButton { action: actNote; font.bold: true }
             ToolButton {
                 action: actPoint; font.bold: true
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
-                ToolTip.text: "Free connection point for lines that point at nothing (Ctrl+Shift+P)"
+                ToolTip.text: win.translate("desktop.pointHint")
             }
             ToolButton { action: actUndo }
             ToolButton { action: actRedo }
@@ -342,20 +351,20 @@ ApplicationWindow {
             ToolSeparator {}
             ToolButton {
                 id: layoutButton
-                text: "Layout ▾"
+                text: win.translate("layout.menu")
                 checkable: true
                 checked: layoutPopup.visible
                 onClicked: layoutPopup.visible ? layoutPopup.close() : layoutPopup.open()
                 ToolTip.visible: hovered && !layoutPopup.visible
                 ToolTip.delay: 500
-                ToolTip.text: "Auto layout (Ctrl+L)"
+                ToolTip.text: win.translate("layout.shortcut")
             }
             ToolSeparator {}
             CheckBox {
-                text: "Snap"
+                text: win.translate("view.snap")
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
-                ToolTip.text: "Snap to grid"
+                ToolTip.text: win.translate("view.snapHint")
                 checked: ctl.snap
                 onToggled: ctl.snap = checked
             }
@@ -363,11 +372,11 @@ ApplicationWindow {
                 action: actGrid
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
-                ToolTip.text: "Show the grid (Ctrl+')"
+                ToolTip.text: win.translate("view.gridHint")
             }
             ComboBox {
                 id: themeBox
-                model: [{ value: "light", text: "Light" }, { value: "deep", text: "Dark" }, { value: "neon", text: "Neon" }]
+                model: [{ value: "light", text: win.translate("view.light") }, { value: "deep", text: win.translate("view.dark") }, { value: "neon", text: win.translate("view.neon") }]
                 textRole: "text"
                 valueRole: "value"
                 Layout.preferredWidth: 92
@@ -375,7 +384,7 @@ ApplicationWindow {
                 onActivated: prefs.theme = currentValue
                 ToolTip.visible: hovered && !popup.visible
                 ToolTip.delay: 500
-                ToolTip.text: "Theme: the colors of the diagram, its exports (SVG, PNG) and the panels.\nThe file keeps its own colors."
+                ToolTip.text: win.translate("desktop.themeHint")
             }
             ToolSeparator {}
             TextField {
@@ -383,13 +392,11 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.maximumWidth: 420
                 Layout.minimumWidth: 100
-                placeholderText: "Quick add (Ctrl+K): Firewall, Router, switch|my-box"
+                placeholderText: win.translate("quickAdd.placeholder")
                 selectByMouse: true
                 ToolTip.visible: activeFocus && text === ""
                 ToolTip.delay: 300
-                ToolTip.text: "Comma-separated devices, then Enter.\n" +
-                              "\"Router\" adds a router labeled Router;\n" +
-                              "\"router|edge-01\" (type, then name) adds a router labeled edge-01."
+                ToolTip.text: win.translate("quickAdd.tooltip")
                 onAccepted: {
                     const c = canvas.viewCenter()
                     if (ctl.quickAdd(text, c.x, c.y) > 0) {
@@ -405,8 +412,7 @@ ApplicationWindow {
                 action: actObjectZoom
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
-                ToolTip.text: "Deep zoom (Ctrl+I): zoom into a device without limit and add things inside it;\n" +
-                              "they fade out when you zoom back out and reappear when you zoom in"
+                ToolTip.text: win.translate("desktop.deepZoomHint")
             }
             ToolButton { text: "−"; onClicked: canvas.zoomBy(1 / 1.2) }
             Label {
@@ -425,15 +431,26 @@ ApplicationWindow {
         height: 26
         Label {
             anchors.left: parent.left
-            anchors.right: versionLabel.left
+            anchors.right: languageBox.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.leftMargin: 10
             anchors.rightMargin: 12
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
-            text: ctl.status
+            text: Messages.translateStatus(win.language, ctl.status)
             color: tc.muted
+        }
+        ComboBox {
+            id: languageBox
+            anchors.right: versionLabel.left
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            height: parent.height
+            model: win.languageIds.map(id => Messages.languages[id])
+            currentIndex: win.languageIds.indexOf(win.language)
+            onActivated: (i) => prefs.language = win.languageIds[i]
+            Accessible.name: win.translate("ui.language")
         }
         // Version, in the lower right corner.
         Label {
@@ -458,6 +475,7 @@ ApplicationWindow {
             Layout.fillHeight: true
             spacing: 0
             DiagramCanvas {
+                language: win.language
                 id: canvas
                 ctl: ctl
                 showGrid: prefs.showGrid
@@ -466,6 +484,7 @@ ApplicationWindow {
                 onContextMenuRequested: (x, y) => contextMenu.popup(canvas, x, y)
             }
             SheetBar {
+                translate: win.translate
                 ctl: ctl
                 tc: win.uiColors
                 Layout.fillWidth: true
@@ -493,10 +512,11 @@ ApplicationWindow {
             }
             ToolTip.visible: handleArea.containsMouse
             ToolTip.delay: 600
-            ToolTip.text: (prefs.panelVisible ? "Hide" : "Show") + " panel (Ctrl+B)"
+            ToolTip.text: win.translate(prefs.panelVisible ? "view.hidePanel" : "view.showPanel")
         }
 
         PropertiesPanel {
+            translate: win.translate
             id: panel
             ctl: ctl
             tc: win.uiColors
@@ -509,12 +529,12 @@ ApplicationWindow {
     // dialogs
     // Diagrams are saved as .stratagram; older ones (.json) still open.
     // Files from before the rename (.netdiag) still open.
-    readonly property var openFilters: ["Network diagrams (*.stratagram *.netdiag *.json)", "All files (*)"]
-    readonly property var saveFilters: ["Network diagrams (*.stratagram)", "All files (*)"]
+    readonly property var openFilters: [win.translate("desktop.openFilter"), win.translate("desktop.allFiles")]
+    readonly property var saveFilters: [win.translate("desktop.saveFilter"), win.translate("desktop.allFiles")]
 
     FileDialog {
         id: openDlg
-        title: "Open diagram"
+        title: win.translate("dialog.open")
         fileMode: FileDialog.OpenFile
         nameFilters: win.openFilters
         onAccepted: { if (ctl.open(selectedFile)) { forgetSheetViews(); canvas.fit() } canvas.forceActiveFocus() }
@@ -522,7 +542,7 @@ ApplicationWindow {
 
     FileDialog {
         id: saveDlg
-        title: "Save diagram"
+        title: win.translate("dialog.save")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "stratagram"
         nameFilters: win.saveFilters
@@ -532,38 +552,38 @@ ApplicationWindow {
 
     FileDialog {
         id: exportDlg
-        title: "Export SVG"
+        title: win.translate("dialog.exportSvg")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "svg"
-        nameFilters: ["SVG images (*.svg)"]
+        nameFilters: [win.translate("filter.svg")]
         onAccepted: ctl.exportSvg(selectedFile)
     }
 
     FileDialog {
         id: pngDlg
-        title: "Export PNG"
+        title: win.translate("dialog.exportPng")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "png"
-        nameFilters: ["PNG images (*.png)"]
+        nameFilters: [win.translate("filter.png")]
         onAccepted: ctl.exportPng(selectedFile)
     }
 
     FileDialog {
         id: drawioDlg
-        title: "Export draw.io"
+        title: win.translate("dialog.exportDrawio")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "drawio"
-        nameFilters: ["draw.io diagrams (*.drawio)", "XML files (*.xml)"]
+        nameFilters: [win.translate("filter.drawio"), win.translate("filter.xml")]
         onAccepted: ctl.exportDrawio(selectedFile)
     }
 
     // Cisco Modeling Labs: the sheet in view as a lab to import.
     FileDialog {
         id: cmlDlg
-        title: "Export CML lab"
+        title: win.translate("dialog.exportCml")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "yaml"
-        nameFilters: ["CML lab topologies (*.yaml *.yml)"]
+        nameFilters: [win.translate("filter.cml")]
         onAccepted: ctl.exportCml(selectedFile)
     }
 
@@ -593,7 +613,7 @@ ApplicationWindow {
                 topPadding: modelData.header ? 8 : 5
                 bottomPadding: modelData.header ? 2 : 5
                 contentItem: Label {
-                    text: modelData.header ? modelData.name.toUpperCase() : (modelData.key === "" ? "plain device" : modelData.name)
+                    text: modelData.header ? modelData.name.toUpperCase() : (modelData.key === "" ? win.translate("menu.plainDevice") : modelData.name)
                     font.bold: modelData.header
                     font.pixelSize: modelData.header ? 10 : 13
                     font.italic: !modelData.header && modelData.key === ""
@@ -624,23 +644,22 @@ ApplicationWindow {
 
         ColumnLayout {
             spacing: 4
-            Label { text: "Auto layout"; font.bold: true }
+            Label { text: win.translate("layout.title"); font.bold: true }
             Label {
                 Layout.maximumWidth: 260
                 wrapMode: Text.WordWrap
                 color: tc.muted2
                 font.pixelSize: 11
-                text: "Arranges the selected devices, or all shown and unlocked ones when fewer than " +
-                      "two are selected. Ctrl+Z undoes."
+                text: win.translate("layout.instructions")
             }
             Repeater {
-                model: [["hierarchy", "Hierarchy ↓", "Layers from the internet and firewalls down to servers;\nredundant pairs side by side"],
-                        ["hierarchy-lr", "Hierarchy →", "The same, left to right"],
-                        ["radial", "Radial", "Rings around the most upstream device"],
-                        ["circle", "Circle", "All devices on one circle, neighbors together"],
-                        ["grid", "Grid", "Rows of equal cells, neighbors together"],
-                        ["force", "Force-directed", "Organic: linked devices pull together (run again to refine)"],
-                        ["tidy", "Tidy", "Straighten what is there: align rows and columns, center, straight lines; devices barely move"]]
+                model: [["hierarchy", win.translate("layout.hierarchy"), win.translate("layout.hierarchyHint")],
+                        ["hierarchy-lr", win.translate("layout.hierarchyLR"), win.translate("layout.hierarchyLRHint")],
+                        ["radial", win.translate("layout.radial"), win.translate("layout.radialHint")],
+                        ["circle", win.translate("layout.circle"), win.translate("layout.circleHint")],
+                        ["grid", win.translate("layout.grid"), win.translate("layout.gridHint")],
+                        ["force", win.translate("layout.force"), win.translate("layout.forceHint")],
+                        ["tidy", win.translate("layout.tidy"), win.translate("layout.tidyHint")]]
                 ItemDelegate {
                     required property var modelData
                     Layout.fillWidth: true
@@ -655,7 +674,7 @@ ApplicationWindow {
             }
             RowLayout {
                 Layout.topMargin: 4
-                Label { text: "Spacing" }
+                Label { text: win.translate("layout.spacing") }
                 SpinBox {
                     from: 10; to: 400; stepSize: 10; editable: true
                     value: prefs.layoutGap
@@ -663,18 +682,17 @@ ApplicationWindow {
                 }
             }
             CheckBox {
-                text: "Move ports to face their links"
+                text: win.translate("layout.orientPorts")
                 checked: prefs.layoutTidyPorts
                 onToggled: prefs.layoutTidyPorts = checked
             }
             CheckBox {
-                text: "Route lines around objects"
+                text: win.translate("layout.avoidObjects")
                 checked: prefs.layoutAvoid
                 onToggled: prefs.layoutAvoid = checked
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
-                ToolTip.text: "Lines that would cross a device or text get a routing that does not\n" +
-                              "(straight or orthogonal if that is enough, else around objects)"
+                ToolTip.text: win.translate("desktop.avoidObjectsHint")
             }
         }
     }
@@ -703,17 +721,21 @@ ApplicationWindow {
         id: removeSheetDlg
         property int index: -1
         property string name: ""
-        title: "Remove sheet"
+        title: win.translate("dialog.removeSheet")
         modal: true
         anchors.centerIn: parent
         standardButtons: Dialog.Ok | Dialog.Cancel
-        onOpened: sheetDlgText.forceActiveFocus()
+        onOpened: {
+            standardButton(Dialog.Ok).text = win.translate("action.ok")
+            standardButton(Dialog.Cancel).text = win.translate("action.cancel")
+            sheetDlgText.forceActiveFocus()
+        }
         Label {
             id: sheetDlgText
             // Enter confirms, Escape (handled by the dialog) cancels.
             Keys.onReturnPressed: removeSheetDlg.accept()
             Keys.onEnterPressed: removeSheetDlg.accept()
-            text: "Remove \"" + removeSheetDlg.name + "\" and everything on it?\nYou can undo this with Ctrl+Z."
+            text: win.translate("confirm.removeSheet", { name: removeSheetDlg.name })
         }
         onAccepted: ctl.removeSheet(index)
         onClosed: canvas.forceActiveFocus()
@@ -721,11 +743,16 @@ ApplicationWindow {
 
     Dialog {
         id: confirmDlg
-        title: "Unsaved changes"
+        title: win.translate("dialog.unsaved")
         modal: true
         anchors.centerIn: parent
         standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
-        Label { text: "Save the changes to the current diagram first?" }
+        onOpened: {
+            standardButton(Dialog.Save).text = win.translate("file.save")
+            standardButton(Dialog.Discard).text = win.translate("action.discard")
+            standardButton(Dialog.Cancel).text = win.translate("action.cancel")
+        }
+        Label { text: win.translate("dialog.saveChanges") }
         onAccepted: win.save()
         onDiscarded: { confirmDlg.close(); win.runPending() }
         onRejected: win.pending = null

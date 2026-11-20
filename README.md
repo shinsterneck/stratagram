@@ -18,7 +18,17 @@ reads the result the same way.
 - Export to SVG, PNG, draw.io and Cisco Modeling Labs; plain JSON files
 
 It runs as a desktop app on Linux and Windows, in the browser, and inside NetBox as a plugin that
-draws every site from NetBox's data.
+draws every site from NetBox's data. The editor supports English and Simplified Chinese. Choose the
+language in the web toolbar or the desktop status bar. Your choice is remembered for the next visit.
+
+The web, NetBox and desktop editors share the English and Simplified Chinese catalogs in
+`web/www/locales/`. UI code refers to stable keys such as `file.save`. Edit the corresponding
+entries in `en.mjs` and `zh-CN.mjs` to change a label. Keep named placeholders such as
+`{name}` in both translations. Run `node --test web/tests/locales.test.mjs` to check the catalogs.
+`core-messages.mjs` maps messages from the Rust controller to those keys. Rust-generated captions, document
+defaults and CLI diagnostics use the catalogs in `core/locales/`. Exports use the editor’s
+language. The CLI uses `LC_ALL`, `LC_MESSAGES` or `LANG` in that order, then the system locale.
+Switching languages preserves names and text already stored in the diagram.
 
 ![Stratagram in NetBox](site/shots/netbox-editor.png)
 

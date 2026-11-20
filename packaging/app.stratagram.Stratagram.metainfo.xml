@@ -12,6 +12,7 @@
 
   <name>Stratagram</name>
   <summary>Draw network diagrams that read the same for everyone</summary>
+  <summary xml:lang="zh-CN">用统一的图形和线型绘制网络图</summary>
   <developer id="app.stratagram">
     <name>Shin Sterneck</name>
   </developer>
@@ -22,18 +23,26 @@
       Standardized stencils and line types do the styling for you, so you think about the
       topology, and everyone on your team reads the result the same way.
     </p>
+    <p xml:lang="zh-CN">Stratagram 是一款网络图编辑器。使用标准化设备图形和链路线型，可以快速绘制拓扑，让团队成员按相同的规则读图。</p>
     <ul>
       <li>28 device types with their own shapes, and line types with a meaning: 802.1Q trunk, L2, L3, IPsec, VXLAN, CAPWAP, SD-WAN, MPLS</li>
+      <li xml:lang="zh-CN">28 种设备类型均有专用图形。链路类型包括 802.1Q Trunk、L2、L3、IPsec、VXLAN、CAPWAP、SD-WAN 和 MPLS。</li>
       <li>Quick add: type “firewall, router, switch” and they appear, connected by auto layout</li>
+      <li xml:lang="zh-CN">快速添加：输入“firewall, router, switch”即可创建设备，再使用自动布局排列。</li>
       <li>Front panels of switches, routers, firewalls, servers and patch panels, with cabling followed end to end</li>
+      <li xml:lang="zh-CN">展示交换机、路由器、防火墙、服务器和配线架的前面板，并可端到端追踪线缆。</li>
       <li>Layers, sheets, frames with title blocks and legends, light, dark and neon themes</li>
+      <li xml:lang="zh-CN">支持图层、工作表、带标题栏和图例的图框，以及浅色、深色和霓虹主题。</li>
       <li>Export to SVG, PNG, draw.io and Cisco Modeling Labs; draw.io import</li>
+      <li xml:lang="zh-CN">可导出 SVG、PNG、draw.io 和 Cisco Modeling Labs 实验拓扑，也可导入 draw.io 图形。</li>
       <li>Plain JSON files, and a command line to lay out and export diagrams from scripts</li>
+      <li xml:lang="zh-CN">网络图以 JSON 文件保存，可通过命令行批量布局和导出。</li>
     </ul>
     <p>
       The same editor runs in the browser and inside NetBox, as a plugin that draws every site
       from NetBox's data.
     </p>
+    <p xml:lang="zh-CN">同一款编辑器也可在浏览器或 NetBox 中使用。NetBox 插件能根据站点数据生成网络图。</p>
   </description>
 
   <launchable type="desktop-id">app.stratagram.Stratagram.desktop</launchable>
@@ -49,18 +58,22 @@
   <screenshots>
     <screenshot type="default">
       <caption>A site drawn with Stratagram's stencils and line types</caption>
+      <caption xml:lang="zh-CN">使用 Stratagram 的设备图形和链路线型绘制的站点网络图</caption>
       <image>https://stratagram.app/shots/desktop-app.png</image>
     </screenshot>
     <screenshot>
       <caption>The dark theme</caption>
+      <caption xml:lang="zh-CN">深色主题</caption>
       <image>https://stratagram.app/shots/theme-dark.png</image>
     </screenshot>
     <screenshot>
       <caption>Front panels with numbered ports, cabled through patch panels</caption>
+      <caption xml:lang="zh-CN">带编号端口的前面板及经过配线架的线缆连接</caption>
       <image>https://stratagram.app/shots/front-panels.png</image>
     </screenshot>
     <screenshot>
       <caption>Device types, from switches and firewalls to clouds</caption>
+      <caption xml:lang="zh-CN">从交换机、防火墙到云服务的设备图形</caption>
       <image>https://stratagram.app/shots/stencils.png</image>
     </screenshot>
   </screenshots>
@@ -85,8 +98,11 @@
   </categories>
   <keywords>
     <keyword>network</keyword>
+    <keyword xml:lang="zh-CN">网络</keyword>
     <keyword>diagram</keyword>
+    <keyword xml:lang="zh-CN">网络图</keyword>
     <keyword>topology</keyword>
+    <keyword xml:lang="zh-CN">拓扑</keyword>
     <keyword>draw.io</keyword>
     <keyword>NetBox</keyword>
   </keywords>
@@ -95,37 +111,44 @@
     <release version="1.1.1" date="2026-11-17">
       <description>
         <p>Text notes are placed correctly in PNG exports.</p>
+        <p xml:lang="zh-CN">修正了 PNG 导出中文本注释的位置。</p>
       </description>
     </release>
     <release version="1.1.0" date="2026-11-15">
       <description>
         <p>NetBox locations become layers with tinted areas, nested like the locations themselves. A context menu on right-click changes a device's type, moves items to another layer, clones or deletes them.</p>
+        <p xml:lang="zh-CN">NetBox 位置现在显示为带背景色的嵌套图层。右键菜单支持更改设备类型、跨图层移动、创建副本和删除对象。</p>
       </description>
     </release>
     <release version="1.0.5" date="2026-11-08">
       <description>
         <p>A prebuilt Linux download with each release, and the AUR package stratagram-bin, which installs it without compiling.</p>
+        <p xml:lang="zh-CN">每次发布均提供预编译的 Linux 下载包，也可通过 AUR 软件包 stratagram-bin 安装。</p>
       </description>
     </release>
     <release version="1.0.4" date="2026-11-08">
       <description>
         <p>A package for Arch Linux in the Arch User Repository. The app now identifies itself as app.stratagram.Stratagram, so desktops show its icon for its window.</p>
+        <p xml:lang="zh-CN">Arch Linux 用户可通过 AUR 安装。桌面使用 app.stratagram.Stratagram 标识应用并显示窗口图标。</p>
       </description>
     </release>
     <release version="1.0.3" date="2026-11-08">
       <description>
         <p>Security: frame logos only from inside the diagram file, so opening a diagram never contacts another server.</p>
+        <p xml:lang="zh-CN">图框仅加载嵌入网络图文件的标志图像，打开网络图时无需访问外部服务器。</p>
       </description>
     </release>
     <release version="1.0.2" date="2026-11-08"/>
     <release version="1.0.1" date="2026-11-08">
       <description>
         <p>Windows installer; .stratagram files open with Stratagram on Windows and Linux.</p>
+        <p xml:lang="zh-CN">新增 Windows 安装程序。Windows 和 Linux 均可使用 Stratagram 打开 .stratagram 文件。</p>
       </description>
     </release>
     <release version="1.0.0" date="2026-11-08">
       <description>
         <p>The first public release.</p>
+        <p xml:lang="zh-CN">首次公开发布。</p>
       </description>
     </release>
   </releases>

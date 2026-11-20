@@ -31,4 +31,4 @@ include-package-data = true
 include = ["netbox_stratagram*"]
 
 [tool.setuptools.package-data]
-netbox_stratagram = ["templates/**", "static/**"]
+netbox_stratagram = ["templates/**", "static/**", "locale/*/LC_MESSAGES/*.po", "locale/*/LC_MESSAGES/*.mo"]

@@ -130,27 +130,32 @@ pub struct Skipped {
 
 impl Skipped {
     pub fn summary(&self) -> String {
-        let mut parts = vec![];
-        let n = |c: usize, what: &str| format!("{c} {what}{}", if c == 1 { "" } else { "s" });
-        if self.tunnels > 0 {
-            parts.push(n(self.tunnels, "tunnel line"));
+        self.summary_in(crate::i18n::Language::English)
+    }
+
+    pub fn summary_in(&self, lang: crate::i18n::Language) -> String {
+        let mut parts = Vec::new();
+        for (count, one, many) in [
+            (self.tunnels, "cml.tunnel", "cml.tunnels"),
+            (self.loose, "cml.loose", "cml.looseMany"),
+            (self.crowded, "cml.crowded", "cml.crowdedMany"),
+        ] {
+            if count > 0 {
+                parts.push(lang.format(if count == 1 { one } else { many }, &[("count", &count.to_string())]));
+            }
         }
-        if self.loose > 0 {
-            parts.push(n(self.loose, "line to a free point"));
-        }
-        if self.crowded > 0 {
-            parts.push(n(self.crowded, "line beyond a device's interfaces"));
-        }
-        if parts.is_empty() {
-            String::new()
-        } else {
-            format!("left out: {}", parts.join(", "))
+        if parts.is_empty() { String::new() } else {
+            lang.format("cml.leftOut", &[("items", &parts.join(lang.text("cml.separator")))])
         }
     }
 }
 
 /// The lab for `doc` titled `title`, and what was left out.
 pub fn export(doc: &Diagram, title: &str) -> (String, Skipped) {
+    export_in(doc, title, crate::i18n::Language::English)
+}
+
+pub fn export_in(doc: &Diagram, title: &str, lang: crate::i18n::Language) -> (String, Skipped) {
     let mut skipped = Skipped::default();
     let shown: Vec<&Device> = doc
         .devices
@@ -294,7 +299,7 @@ pub fn export(doc: &Diagram, title: &str) -> (String, Skipped) {
     let _ = write!(
         s,
         "lab:\n  description: {}\n  notes: ''\n  title: {}\n  version: 0.2.1\n",
-        quote("Drawn with Stratagram"),
+        quote(lang.text("cml.description")),
         quote(title)
     );
     s.push_str(if links.is_empty() {

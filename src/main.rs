@@ -12,27 +12,27 @@ use stratagram_core::{config, editor, model, svg};
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QUrl};
 
-const USAGE: &str = "usage: stratagram [FILE.stratagram]
-       stratagram --version
-       stratagram --export-svg IN.stratagram OUT.svg
-       stratagram --export-drawio IN.stratagram OUT.drawio     (all sheets, as pages)
-       stratagram --export-cml IN.stratagram OUT.yaml          (a Cisco Modeling Labs lab)
-       stratagram --export-png IN.stratagram OUT.png [SCALE]   (pixels per unit, default 2)
-       stratagram --layout KIND IN.stratagram OUT.stratagram [SPACING]
-                  KIND: hierarchy, hierarchy-lr, radial, circle, grid, force or tidy
-                  (every sheet; OUT may be IN; spacing default 60)
-SVG and PNG show the first sheet. Add --theme light|dark|neon to export them
-in that theme's colors (default light).";
+use stratagram_core::i18n::Language;
+
+fn cli_language() -> Language {
+    ["LC_ALL", "LC_MESSAGES", "LANG"].iter()
+        .filter_map(|key| std::env::var(key).ok())
+        .find(|value| !value.is_empty())
+        .map_or_else(|| Language::from_tag(&bridge::qobject::system_language().to_string()), |tag| Language::from_tag(&tag))
+}
 
 /// Headless conversions, so diagrams can be produced from scripts.
 fn run_cli(args: &[String]) -> Option<i32> {
     // `--theme NAME`, anywhere: the colors of SVG and PNG exports.
+    let lang = cli_language();
+    let usage = lang.text("cli.usage");
     let mut args = args.to_vec();
     let mut theme = stratagram_core::theme::Theme::Light;
     if let Some(i) = args.iter().position(|a| a == "--theme") {
         let name = args.get(i + 1).cloned().unwrap_or_default();
         let Some(t) = stratagram_core::theme::Theme::parse(&name) else {
-            eprintln!("stratagram: unknown theme {name:?} (light, dark or neon)\n{USAGE}");
+            let reason = lang.format("cli.theme", &[("name", &format!("{name:?}"))]);
+            eprintln!("stratagram: {reason}\n{usage}");
             return Some(2);
         };
         theme = t;
@@ -41,7 +41,7 @@ fn run_cli(args: &[String]) -> Option<i32> {
     let args = &args[..];
     let mode = args.get(1)?.as_str();
     if mode == "-h" || mode == "--help" {
-        println!("{USAGE}");
+        println!("{usage}");
         return Some(0);
     }
     if mode == "-V" || mode == "--version" {
@@ -49,19 +49,20 @@ fn run_cli(args: &[String]) -> Option<i32> {
         return Some(0);
     }
     if mode == "--layout" {
-        return Some(run_layout(args));
+        return Some(run_layout(args, lang));
     }
     if !mode.starts_with("--export-") {
         return None;
     }
     let (Some(input), Some(output)) = (args.get(2), args.get(3)) else {
-        eprintln!("{USAGE}");
+        eprintln!("{usage}");
         return Some(2);
     };
     let result = std::fs::read_to_string(input)
-        .map_err(|e| format!("cannot read {input}: {e}"))
+        .map_err(|e| lang.format("cli.read", &[("path", input), ("error", &e.to_string())]))
         .and_then(|text| {
             let mut ed = editor::Editor::default();
+            ed.language = lang;
             ed.load_json(&text, std::path::Path::new(input))?;
             Ok(ed)
         })
@@ -76,16 +77,16 @@ fn run_cli(args: &[String]) -> Option<i32> {
                 .map(|s| s.to_string_lossy().into_owned())
                 .unwrap_or_default();
             let write = |out: String| {
-                std::fs::write(output, out).map_err(|e| format!("cannot write {output}: {e}"))
+                std::fs::write(output, out).map_err(|e| lang.format("cli.write", &[("path", output), ("error", &e.to_string())]))
             };
             match mode {
-                "--export-svg" => write(svg::export_themed(doc, &file, theme)),
+                "--export-svg" => write(svg::export_themed_in(doc, &file, theme, lang)),
                 "--export-drawio" => write(ed.export_drawio(&title)),
                 "--export-cml" => {
-                    let (yaml, skipped) = stratagram_core::cml::export(doc, &title);
-                    let left_out = skipped.summary();
+                    let (yaml, skipped) = stratagram_core::cml::export_in(doc, &title, lang);
+                    let left_out = skipped.summary_in(lang);
                     if !left_out.is_empty() {
-                        eprintln!("stratagram: {left_out} (not cables in a lab)");
+                        eprintln!("stratagram: {}", lang.format("cml.skipped", &[("details", &left_out)]));
                     }
                     write(yaml)
                 }
@@ -94,16 +95,17 @@ fn run_cli(args: &[String]) -> Option<i32> {
                         None => bridge::PNG_SCALE,
                         Some(Ok(s)) if s > 0.0 && s.is_finite() => s,
                         Some(_) => {
-                            return Err(format!("the scale must be a positive number\n{USAGE}"));
+                            return Err(format!("{}\n{usage}", lang.text("cli.scale")));
                         }
                     };
                     bridge::export_png(
-                        &svg::export_themed(doc, &file, theme),
+                        &svg::export_themed_in(doc, &file, theme, lang),
                         std::path::Path::new(output),
                         scale,
+                        lang,
                     )
                 }
-                _ => Err(format!("unknown option {mode}\n{USAGE}")),
+                _ => Err(format!("{}\n{usage}", lang.format("cli.option", &[("mode", mode)]))),
             }
         });
     match result {
@@ -117,32 +119,34 @@ fn run_cli(args: &[String]) -> Option<i32> {
 
 /// `--layout KIND IN OUT [SPACING]`: auto layout for a file written by a
 /// script, saved as OUT.
-fn run_layout(args: &[String]) -> i32 {
+fn run_layout(args: &[String], lang: Language) -> i32 {
+    let usage = lang.text("cli.usage");
     let (Some(kind), Some(input), Some(output)) = (args.get(2), args.get(3), args.get(4)) else {
-        eprintln!("{USAGE}");
+        eprintln!("{usage}");
         return 2;
     };
     let gap = match args.get(5).map(|s| s.parse::<f64>()) {
         None => 60.0,
         Some(Ok(g)) if g.is_finite() && g > 0.0 => g,
         Some(_) => {
-            eprintln!("stratagram: the spacing must be a positive number\n{USAGE}");
+            eprintln!("stratagram: {}\n{usage}", lang.text("cli.spacing"));
             return 2;
         }
     };
     let result = std::fs::read_to_string(input)
-        .map_err(|e| format!("cannot read {input}: {e}"))
+        .map_err(|e| lang.format("cli.read", &[("path", input), ("error", &e.to_string())]))
         .and_then(|text| {
             let mut ed = editor::Editor::default();
+            ed.language = lang;
             ed.load_json(&text, std::path::Path::new(input))?;
             let n = ed.layout_document(kind, gap)?;
             std::fs::write(output, ed.document_json())
-                .map_err(|e| format!("cannot write {output}: {e}"))?;
+                .map_err(|e| lang.format("cli.write", &[("path", output), ("error", &e.to_string())]))?;
             Ok(n)
         });
     match result {
         Ok(n) => {
-            println!("arranged {n} devices ({kind}) into {output}");
+            println!("{}", lang.format("cli.arranged", &[("count", &n.to_string()), ("kind", kind), ("output", output)]));
             0
         }
         Err(e) => {

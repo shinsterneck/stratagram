@@ -11,20 +11,22 @@
 const config = JSON.parse(document.getElementById("stratagram-config").textContent)
 // The editor build (its folder changes with every build, see build.sh).
 const { mount } = await import(config.editorBase + "app.js")
+const i18n = await import(config.editorBase + "i18n.js")
+const { languageEvents, tr } = i18n
 const csrf = config.csrfToken
 const savedLine = document.getElementById("stratagram-saved")
 const options = JSON.stringify(config.options)
 
 function showSaved(when, dirty) {
-    const at = when ? new Date(when).toLocaleString() : null
-    savedLine.textContent = (at ? "Saved in NetBox " + at : "Not saved in NetBox yet") +
-        (dirty ? " · unsaved changes" : "") +
-        (config.canSave ? "" : " · you may not save diagrams")
+    const at = when ? new Date(when).toLocaleString(i18n.language) : null
+    savedLine.textContent = (at ? tr("netbox.saved", { time: at }) : tr("netbox.neverSaved")) +
+        (dirty ? tr("netbox.dirty") : "") +
+        (config.canSave ? "" : tr("netbox.readOnly"))
 }
 
 async function fetchJson(url, init) {
     const r = await fetch(url, Object.assign({ credentials: "same-origin", headers: { "Accept": "application/json" } }, init))
-    if (!r.ok) throw new Error(r.status === 403 ? "not allowed" : (await r.text()) || r.statusText)
+    if (!r.ok) throw new Error(r.status === 403 ? tr("error.permission") : (await r.text()) || r.statusText)
     return r.json()
 }
 
@@ -50,7 +52,7 @@ const host = {
     title() { /* NetBox's page keeps its title */ },
     dirty(d) { showSaved(savedAt, d) },
     async save(json, name) {
-        if (!config.canSave) throw new Error("you may not save diagrams in NetBox")
+        if (!config.canSave) throw new Error(tr("error.netboxPermission"))
         const r = await fetchJson(config.diagramUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRFToken": csrf, "Accept": "application/json" },
@@ -64,14 +66,14 @@ const host = {
         return name
     },
     buttons: [{
-        label: "Refresh from NetBox",
-        title: "Add what is new in NetBox, rename what was renamed, set aside what is gone (Ctrl+Z undoes)",
+        get label() { return tr("netbox.refresh") },
+        get title() { return tr("netbox.refreshHint") },
         async run(app) {
             try {
                 const err = app.ctl.refreshNetbox(await netboxData(), options)
-                if (err) app.ctl.setStatus("Cannot refresh: " + err)
+                if (err) app.setStatus("status.refreshFailed", { error: err })
             } catch (e) {
-                app.ctl.setStatus("Cannot get the site from NetBox: " + e.message)
+                app.setStatus("status.netboxFailed", { error: e.message })
             }
             app.changed()
         },
@@ -97,7 +99,7 @@ if (!saved) {
         const err = app.ctl.importNetbox(await netboxData(), options)
         if (err) app.ctl.setStatus(err)
     } catch (e) {
-        app.ctl.setStatus("Cannot get the site from NetBox: " + e.message)
+        app.setStatus("status.netboxFailed", { error: e.message })
     }
     app.changed()
     app.view.fit()
@@ -107,15 +109,16 @@ if (config.sheet && !app.ctl.showSheetOf(config.sheet)) {
     // diagram up to date, which adds its sheet.
     try {
         const err = app.ctl.refreshNetbox(await netboxData(), options)
-        if (err) app.ctl.setStatus("Cannot refresh: " + err)
+        if (err) app.setStatus("status.refreshFailed", { error: err })
     } catch (e) {
-        app.ctl.setStatus("Cannot get the site from NetBox: " + e.message)
+        app.setStatus("status.netboxFailed", { error: e.message })
     }
-    if (!app.ctl.showSheetOf(config.sheet)) app.ctl.setStatus("This location has no sheet in the diagram.")
+    if (!app.ctl.showSheetOf(config.sheet)) app.setStatus("netbox.missingSheet")
 }
 if (config.sheet) {
     app.changed()
     app.view.fit()
 }
 showSaved(savedAt, app.ctl.dirty())
+languageEvents.addEventListener("change", () => showSaved(savedAt, app.ctl.dirty()))
 window.stratagram = app

@@ -14,6 +14,7 @@ Pane {
     // The interface colors of the theme (given by main.qml).
     property var tc: ({ text: "#0f172a", muted: "#475569", muted2: "#64748b", faint: "#94a3b8", line: "#e2e8f0", alt: "#f1f5f9", base: "#ffffff", accent: "#2563eb", border: "#cbd5e1", drop: "#bfdbfe", dropParent: "#e0ecff", active: "#dbeafe" })
     id: root
+    required property var translate
     required property DiagramController ctl
     readonly property var sel: JSON.parse(ctl.selection)
     readonly property string type: sel.type
@@ -29,11 +30,12 @@ Pane {
     function removeQuestion(l) {
         const under = layers.filter(x => x.path.startsWith(l.path + " / "))
         const items = l.count + under.reduce((n, x) => n + x.count, 0)
-        const n = (k, one) => k + " " + one + (k === 1 ? "" : "s")
-        const subs = under.length ? n(under.length, "layer") + " under it" : ""
-        const on = items ? n(items, "item") + (under.length ? " on them" : " on it") : ""
-        if (!subs && !on) return ""
-        return "Remove \"" + l.name + "\" and " + (subs && on ? "the " + subs + " and the " + on : "the " + (subs || on)) + "?"
+        const n = (k, one) => plural(k, one, one + "s")
+        if (!under.length && !items) return ""
+        const subs = under.length ? root.translate("confirm.subLayers", { layers: n(under.length, "layer") }) : ""
+        const on = items ? root.translate(under.length ? "confirm.treeItems" : "confirm.layerItems", { items: n(items, "item") }) : ""
+        const contents = subs && on ? root.translate("confirm.layersAndItems", { layers: subs, items: on }) : subs || on
+        return root.translate("confirm.removeLayer", { name: l.name, contents })
     }
 
     // Where the layer list was scrolled to, kept when its rows change.
@@ -103,21 +105,21 @@ Pane {
     // selectable. "" is a plain device.
     readonly property var kindGroups: [
         ["", [""]],
-        ["Routing & switching", ["router", "ospf router", "bgp reflector", "switch", "load balancer"]],
-        ["Security", ["firewall", "cloud proxy", "zscaler"]],
-        ["Wireless", ["access point", "standalone ap", "managed ap", "wlan controller"]],
-        ["Servers & clients", ["server", "client"]],
-        ["Virtualization", ["virtual switch", "distributed virtual switch"]],
-        ["Data center", ["aci l3out"]],
-        ["Cabling", ["patch panel"]],
-        ["Internet & cloud", ["internet", "cloud", "aws", "aws transit gateway", "aws direct connect gateway", "azure", "google cloud", "alibaba cloud", "telekom cloud",
+        ["deviceGroup.routing", ["router", "ospf router", "bgp reflector", "switch", "load balancer"]],
+        ["deviceGroup.security", ["firewall", "cloud proxy", "zscaler"]],
+        ["deviceGroup.wireless", ["access point", "standalone ap", "managed ap", "wlan controller"]],
+        ["deviceGroup.servers", ["server", "client"]],
+        ["deviceGroup.virtualization", ["virtual switch", "distributed virtual switch"]],
+        ["deviceGroup.datacenter", ["aci l3out"]],
+        ["deviceGroup.cabling", ["patch panel"]],
+        ["deviceGroup.cloud", ["internet", "cloud", "aws", "aws transit gateway", "aws direct connect gateway", "azure", "google cloud", "alibaba cloud", "telekom cloud",
                               "stackit"]]
     ]
     readonly property var kindItems: {
         const items = []
         for (const [group, list] of kindGroups) {
-            if (group !== "") items.push({ header: true, key: "", name: group, group: group })
-            for (const key of list) items.push({ header: false, key: key, name: key === "" ? "none" : key, group: group })
+            if (group !== "") items.push({ header: true, key: "", name: root.translate(group), group: root.translate(group) })
+            for (const key of list) items.push({ header: false, key: key, name: root.translate(key === "" ? "property.none" : "device." + key.replace(/ /g, "_")), group: root.translate(group) })
         }
         return items
     }
@@ -128,27 +130,27 @@ Pane {
     readonly property var heads: ["none", "arrow", "open", "diamond", "circle"]
     readonly property var styles: ["solid", "dashed", "dotted"]
     readonly property var routings: ["straight", "orthogonal", "around"]
-    readonly property var routingNames: ["straight", "orthogonal", "around objects"]
+    readonly property var routingNames: ["style.straight", "style.orthogonal", "style.around"]
     readonly property var sides: ["top", "right", "bottom", "left"]
     // Frame templates by category; headers are not selectable.
     readonly property var frameGroups: [
-        ["", [["none", "none"]]],
-        ["Basic", [["lines", "lines"], ["banner", "banner"], ["minimal", "minimal"], ["card", "card"]]],
-        ["Business", [["corporate", "corporate"], ["report", "report page"], ["presentation", "presentation (16:9)"],
-                      ["executive", "executive summary"], ["proposal", "customer proposal"]]],
-        ["Technical drawing", [["titleblock", "title block"], ["iso", "ISO title block"], ["revision", "revision block"],
-                               ["blueprint", "blueprint"], ["asbuilt", "as-built"]]],
-        ["Documentation & governance", [["controlled", "controlled document"], ["signoff", "sign-off"],
-                                        ["solution", "solution design"], ["change", "change request"],
-                                        ["classification", "classification banner"]]],
-        ["Operations", [["site", "site sheet"], ["location", "data center location"], ["incident", "incident report"],
-                        ["noc", "NOC display"]]]
+        ["", [["none", "property.none"]]],
+        ["frameGroup.basic", [["lines", "frameType.lines"], ["banner", "frameType.banner"], ["minimal", "frameType.minimal"], ["card", "frameType.card"]]],
+        ["frameGroup.business", [["corporate", "frameType.corporate"], ["report", "frameType.report"], ["presentation", "frameType.presentation"],
+                      ["executive", "frameType.executive"], ["proposal", "frameType.proposal"]]],
+        ["frameGroup.technical", [["titleblock", "frameType.titleblock"], ["iso", "frameType.iso"], ["revision", "frameType.revision"],
+                               ["blueprint", "frameType.blueprint"], ["asbuilt", "frameType.asbuilt"]]],
+        ["frameGroup.governance", [["controlled", "frameType.controlled"], ["signoff", "frameType.signoff"],
+                                        ["solution", "frameType.solution"], ["change", "frameType.change"],
+                                        ["classification", "frameType.classification"]]],
+        ["frameGroup.operations", [["site", "frameType.site"], ["location", "frameType.location"], ["incident", "frameType.incident"],
+                        ["noc", "frameType.noc"]]]
     ]
     readonly property var frameItems: {
         const items = []
         for (const [group, list] of frameGroups) {
-            if (group !== "") items.push({ header: true, name: group, key: "", group: group })
-            for (const [key, name] of list) items.push({ header: false, name: name, key: key, group: group })
+            if (group !== "") items.push({ header: true, name: root.translate(group), key: "", group: root.translate(group) })
+            for (const [key, name] of list) items.push({ header: false, name: root.translate(name), key: key, group: root.translate(group) })
         }
         return items
     }
@@ -160,32 +162,32 @@ Pane {
         const t = frameTemplate
         const by = (labels) => labels[t]
         const all = [
-            ["title", "Title", ""],
-            ["subtitle", "Subtitle", "e.g. Site Berlin"],
-            ["author", t === "signoff" ? "Prepared by" : "Author", ""],
-            ["note", "Note", "e.g. Confidential, v1.2"],
-            ["customer", by({ proposal: "Prepared for" }), "Customer"],
-            ["company", by({ corporate: "Company", proposal: "Company", presentation: "Company" }), ""],
-            ["address", by({ site: "Address" }), ""],
-            ["location", by({ location: "Location path" }), "EU > Berlin > HQ > Room 2.14"],
-            ["doc_id", by({ iso: "Drawing no.", change: "Change ID", site: "Site code", controlled: "Document ID",
-                            incident: "Incident ID", location: "Location code" }),
-             by({ iso: "e.g. NET-0042", change: "e.g. CR-1042", site: "e.g. BER-01", controlled: "e.g. NET-DOC-007",
-                  incident: "e.g. INC-2291", location: "e.g. BER-HQ-R2.14-A07" }) || ""],
-            ["version", by({ controlled: "Version", solution: "Version" }), "e.g. 1.2"],
-            ["revision", by({ iso: "Revision" }), ""],
-            ["owner", by({ controlled: "Owner", solution: "Owner" }), ""],
-            ["review_date", by({ controlled: "Next review" }), "e.g. 2027-04-01"],
-            ["reviewer", by({ signoff: "Reviewed by", solution: "Reviewers" }), ""],
-            ["approver", by({ iso: "Checked by", change: "Approved by", signoff: "Approved by", asbuilt: "Accepted by" }), ""],
-            ["installer", by({ asbuilt: "Installed by" }), ""],
-            ["commissioned", by({ asbuilt: "Commissioned" }), "e.g. 2026-09-30"],
-            ["start", by({ incident: "Start" }), "e.g. 2026-10-18 09:12"],
-            ["end", by({ incident: "End" }), "ongoing"],
-            ["services", by({ incident: "Affected" }), "e.g. VPN, Email"],
-            ["page", t === "iso" ? "Sheet" : "Page", "e.g. 1/3"]
+            ["title", "frame.title", ""],
+            ["subtitle", "frame.subtitle", "example.subtitle"],
+            ["author", t === "signoff" ? "frame.preparedBy" : "frame.author", ""],
+            ["note", "frame.note", "example.note"],
+            ["customer", by({ proposal: "frame.preparedFor" }), "frame.customer"],
+            ["company", by({ corporate: "frame.company", proposal: "frame.company", presentation: "frame.company" }), ""],
+            ["address", by({ site: "frame.address" }), ""],
+            ["location", by({ location: "frame.location" }), "example.locationPath"],
+            ["doc_id", by({ iso: "frame.drawingNo", change: "frame.changeId", site: "frame.siteCode", controlled: "frame.documentId",
+                            incident: "frame.incidentId", location: "frame.locationCode" }),
+             by({ iso: "example.drawingNo", change: "example.changeId", site: "example.siteCode", controlled: "example.documentId",
+                  incident: "example.incidentId", location: "example.locationCode" }) || ""],
+            ["version", by({ controlled: "frame.version", solution: "frame.version" }), "example.version"],
+            ["revision", by({ iso: "frame.revision" }), ""],
+            ["owner", by({ controlled: "frame.owner", solution: "frame.owner" }), ""],
+            ["review_date", by({ controlled: "frame.nextReview" }), "example.reviewDate"],
+            ["reviewer", by({ signoff: "frame.reviewedBy", solution: "frame.reviewers" }), ""],
+            ["approver", by({ iso: "frame.checkedBy", change: "frame.approvedBy", signoff: "frame.approvedBy", asbuilt: "frame.acceptedBy" }), ""],
+            ["installer", by({ asbuilt: "frame.installedBy" }), ""],
+            ["commissioned", by({ asbuilt: "frame.commissioned" }), "example.commissioned"],
+            ["start", by({ incident: "frame.startTime" }), "example.start"],
+            ["end", by({ incident: "frame.endTime" }), "example.ongoing"],
+            ["services", by({ incident: "frame.affected" }), "example.services"],
+            ["page", t === "iso" ? "frame.sheet" : "frame.page", "example.page"]
         ]
-        return all.filter(f => f[1]).map(f => ({ key: f[0], label: f[1], hint: f[2] }))
+        return all.filter(f => f[1]).map(f => ({ key: f[0], label: root.translate(f[1]), hint: root.translate(f[2]) }))
     }
     // Status choices for the templates with a status badge.
     readonly property var statusChoices: ({
@@ -195,15 +197,15 @@ Pane {
     })[frameTemplate] || null
     function setFrame(key, value) { ctl.setFrame(key, String(value)) }
     readonly property var linkKinds: ["plain", "trunk", "ipsec", "vxlan", "sdwan", "mpls", "l2", "l3", "l3sub", "capwap"]
-    readonly property var linkKindNames: ["plain", "trunk (802.1Q)", "IPsec tunnel", "VXLAN tunnel", "SD-WAN", "MPLS",
-                                         "Layer 2 (switched)", "Layer 3 (routed)", "L3 subinterface (802.1Q)",
-                                         "CAPWAP tunnel (AP to WLC)"]
+    readonly property var linkKindNames: ["linkKind.plain", "linkKind.trunk", "linkKind.ipsec", "linkKind.vxlan", "term.sdwan", "term.mpls",
+                                         "linkKind.l2", "linkKind.l3", "linkKind.l3sub",
+                                         "linkKind.capwap"]
 
     function set(key, value) { ctl.setProp(key, String(value)) }
     // Set a property on every selected item of one kind ("device", "note", "link").
     function setFor(kind, key, value) { ctl.setProp(kind + ":" + key, String(value)) }
     function mixed(v) { return v === null || v === undefined }
-    function plural(n, one, many) { return n + " " + (n === 1 ? one : many) }
+    function plural(n, one, many) { return root.translate("count." + (n === 1 ? one : many), { count: n }) }
 
     padding: 12
     background: Rectangle {
@@ -237,8 +239,8 @@ Pane {
                              root.sel.links ? root.plural(root.sel.links, "link", "links") : "",
                              root.sel.notes ? root.plural(root.sel.notes, "text", "texts") : "",
                              root.sel.points ? root.plural(root.sel.points, "point", "points") : ""].filter(t => t).join(", ")
-                          : ({ none: "Nothing selected", device: "Device", note: "Text", port: "Port", link: "Link",
-                               point: "Connection point" })[root.type]
+                          : root.translate(({ none: "selection.empty", device: "selection.device", note: "selection.text", port: "selection.port", link: "selection.link",
+                               point: "selection.point" })[root.type])
                     font.bold: true
                     font.pixelSize: 15
                 }
@@ -248,7 +250,7 @@ Pane {
                     visible: root.type === "none"
                     Layout.fillWidth: true
                     spacing: 6
-                    Label { text: "Frame"; font.bold: true }
+                    Label { text: root.translate("frame.label"); font.bold: true }
                     ComboBox {
                         id: templateBox
                         Layout.fillWidth: true
@@ -273,16 +275,15 @@ Pane {
                         }
                         ToolTip.visible: hovered
                         ToolTip.delay: 500
-                        ToolTip.text: "A border with header and footer around the diagram, on its own bottom layer"
+                        ToolTip.text: root.translate("frame.hint")
                     }
                     Label {
                         Layout.fillWidth: true
                         wrapMode: Text.WrapAnywhere
                         color: root.tc.faint
                         font.pixelSize: 11
-                        text: "Defaults (author, logo, …): [frame] or [frame-" +
-                              (root.frameTemplate === "none" ? "<template>" : root.frameTemplate) + "] in " +
-                              root.ctl.configPath()
+                        text: root.translate("desktop.frameDefaults",
+                                             { template: root.frameTemplate === "none" ? "<template>" : root.frameTemplate, path: root.ctl.configPath() })
                     }
                     Repeater {
                         model: root.frame ? root.frameFields : []
@@ -301,24 +302,25 @@ Pane {
                     RowLayout {
                         visible: root.statusChoices !== null
                         Layout.fillWidth: true
-                        Label { text: "Status"; Layout.preferredWidth: 88 }
+                        Label { text: root.translate("frame.status"); Layout.preferredWidth: 88 }
                         ComboBox {
                             Layout.fillWidth: true
                             editable: true
-                            model: root.statusChoices || []
-                            editText: root.frame ? root.frame.status : ""
-                            onActivated: root.setFrame("status", currentText)
-                            onAccepted: root.setFrame("status", editText)
+                            readonly property var codes: root.statusChoices || []
+                            model: codes.map(code => root.translate("badge." + code.replace(" ", "_")))
+                            editText: root.frame ? (model[codes.indexOf(root.frame.status)] ?? root.frame.status) : ""
+                            onActivated: (index) => root.setFrame("status", codes[index])
+                            onAccepted: root.setFrame("status", codes[model.indexOf(editText)] ?? editText)
                         }
                     }
                     RowLayout {
                         visible: root.frameUses("classification", "controlled")
                         Layout.fillWidth: true
-                        Label { text: "Classification"; Layout.preferredWidth: 88; elide: Text.ElideRight }
+                        Label { text: root.translate("frame.classification"); Layout.preferredWidth: 88; elide: Text.ElideRight }
                         ComboBox {
                             Layout.fillWidth: true
                             readonly property var levels: ["public", "internal", "confidential", "restricted"]
-                            model: levels
+                            model: levels.map(label => root.translate("classification." + label))
                             currentIndex: Math.max(0, levels.indexOf(root.frame && root.frame.level ? root.frame.level : "internal"))
                             onActivated: (i) => root.setFrame("level", levels[i])
                         }
@@ -326,11 +328,11 @@ Pane {
                     RowLayout {
                         visible: root.frameUses("incident")
                         Layout.fillWidth: true
-                        Label { text: "Severity"; Layout.preferredWidth: 88 }
+                        Label { text: root.translate("frame.severity"); Layout.preferredWidth: 88 }
                         ComboBox {
                             Layout.fillWidth: true
                             readonly property var levels: ["P1", "P2", "P3", "P4"]
-                            model: ["P1 · critical", "P2 · high", "P3 · medium", "P4 · low"]
+                            model: [root.translate("severity.p1"), root.translate("severity.p2"), root.translate("severity.p3"), root.translate("severity.p4")]
                             currentIndex: Math.max(0, levels.indexOf(root.frame && root.frame.severity ? root.frame.severity.toUpperCase() : "P3"))
                             onActivated: (i) => root.setFrame("severity", levels[i])
                         }
@@ -339,12 +341,12 @@ Pane {
                         visible: root.frameUses("executive")
                         Layout.fillWidth: true
                         spacing: 2
-                        Label { text: "Summary" }
+                        Label { text: root.translate("frame.summary") }
                         TextArea {
                             Layout.fillWidth: true
                             Layout.minimumHeight: 70
                             wrapMode: TextEdit.Wrap
-                            placeholderText: "A few sentences on what the diagram shows"
+                            placeholderText: root.translate("frame.summaryHint")
                             text: root.frame ? root.frame.summary : ""
                             onTextChanged: if (activeFocus) root.setFrame("summary", text)
                             background: Rectangle { border.color: root.tc.border; radius: 3 }
@@ -353,11 +355,11 @@ Pane {
                     RowLayout {
                         visible: root.frame !== null
                         Layout.fillWidth: true
-                        Label { text: "Watermark"; Layout.preferredWidth: 88 }
+                        Label { text: root.translate("frame.watermark"); Layout.preferredWidth: 88 }
                         ComboBox {
                             Layout.fillWidth: true
                             editable: true
-                            model: ["", "DRAFT", "CONFIDENTIAL", "SAMPLE", "FOR REVIEW", "SUPERSEDED"]
+                            model: [""].concat(["draft", "confidential", "sample", "for_review", "superseded"].map(key => root.translate("watermark." + key)))
                             editText: root.frame ? root.frame.watermark : ""
                             onActivated: root.setFrame("watermark", currentText)
                             onAccepted: root.setFrame("watermark", editText)
@@ -366,7 +368,7 @@ Pane {
                     RowLayout {
                         visible: root.frame !== null
                         Layout.fillWidth: true
-                        Label { text: "Margin"; Layout.preferredWidth: 88 }
+                        Label { text: root.translate("frame.margin"); Layout.preferredWidth: 88 }
                         SpinBox {
                             Layout.fillWidth: true
                             from: 0; to: 400; stepSize: 10
@@ -379,12 +381,12 @@ Pane {
                         visible: root.frameUses("revision")
                         Layout.fillWidth: true
                         spacing: 2
-                        Label { text: "Revisions, one per line: rev | date | change | by" }
+                        Label { text: root.translate("frame.revisionsFormat") }
                         TextArea {
                             Layout.fillWidth: true
                             Layout.minimumHeight: 60
                             wrapMode: TextEdit.NoWrap
-                            placeholderText: "A | 2026-10-01 | First issue | Shin"
+                            placeholderText: root.translate("example.revision")
                             text: root.frame ? root.frame.revisions : ""
                             onTextChanged: if (activeFocus) root.setFrame("revisions", text)
                             background: Rectangle { border.color: root.tc.border; radius: 3 }
@@ -392,29 +394,29 @@ Pane {
                     }
                     CheckBox {
                         visible: root.frame !== null
-                        text: "Show date and time of last change"
+                        text: root.translate("frame.showDate")
                         checked: root.frame ? root.frame.show_date : true
                         onToggled: root.setFrame("show_date", checked)
                     }
                     CheckBox {
                         visible: root.frame !== null
-                        text: "Show the file name"
+                        text: root.translate("frame.showFilename")
                         checked: root.frame ? root.frame.show_file : false
                         onToggled: root.setFrame("show_file", checked)
                     }
                     Repeater {
-                        model: root.frame ? [["logo", "Logo"], ["logo2", root.frameUses("proposal") ? "Customer logo" : "Second logo"]] : []
+                        model: root.frame ? [["logo", root.translate("frame.logo")], ["logo2", root.frameUses("proposal") ? root.translate("frame.customerLogo") : root.translate("frame.secondLogo")]] : []
                         RowLayout {
                             required property var modelData
                             Layout.fillWidth: true
                             Label { text: modelData[1]; Layout.fillWidth: true }
                             Button {
-                                text: root.frame && root.frame[modelData[0]] ? "Change…" : "Choose…"
+                                text: root.frame && root.frame[modelData[0]] ? root.translate("frame.changeLogo") : root.translate("frame.chooseLogo")
                                 onClicked: { logoDialog.key = modelData[0]; logoDialog.open() }
                             }
                             Button {
                                 visible: root.frame !== null && root.frame[modelData[0]]
-                                text: "Remove"
+                                text: root.translate("action.remove")
                                 onClicked: root.setFrame(modelData[0], "")
                             }
                         }
@@ -424,24 +426,22 @@ Pane {
                         Layout.fillWidth: true
                         spacing: 2
                         Label {
-                            text: "Save as default for new frames"
+                            text: root.translate("frame.saveDefaults")
                             ToolTip.visible: saveHover.hovered
                             ToolTip.delay: 500
-                            ToolTip.text: "Author, company, note, color, margin, options, level, owner, reviewer, " +
-                                          "approver, installer and logos go into " + root.ctl.configPath() +
-                                          "; title, IDs and dates stay with this diagram"
+                            ToolTip.text: root.translate("desktop.saveDefaultsHint", { path: root.ctl.configPath() })
                             HoverHandler { id: saveHover }
                         }
                         RowLayout {
                             Layout.fillWidth: true
                             Button {
                                 Layout.fillWidth: true
-                                text: "All templates"
+                                text: root.translate("frame.allTemplates")
                                 onClicked: root.ctl.saveFrameDefaults(true)
                             }
                             Button {
                                 Layout.fillWidth: true
-                                text: "Only " + ((root.frameItems.find(i => i.key === root.frameTemplate) || {}).name || "")
+                                text: root.translate("desktop.templateOnly", { template: (root.frameItems.find(i => i.key === root.frameTemplate) || {}).name || "" })
                                 onClicked: root.ctl.saveFrameDefaults(false)
                             }
                         }
@@ -449,8 +449,8 @@ Pane {
                     FileDialog {
                         id: logoDialog
                         property string key: "logo"
-                        title: "Choose a logo"
-                        nameFilters: ["Images (*.png *.jpg *.jpeg)"]
+                        title: root.translate("frame.chooseLogoDialog")
+                        nameFilters: [root.translate("filter.image")]
                         onAccepted: root.setFrame(key, decodeURIComponent(selectedFile.toString().replace(/^file:\/\//, "")))
                     }
                     ColorPicker {
@@ -472,64 +472,34 @@ Pane {
                     wrapMode: Text.WordWrap
                     color: root.tc.muted
                     textFormat: Text.StyledText
-                    text: "<b>Double-click</b> empty space to add a device.<br><br>" +
-                          "<b>Drag from a device border</b> (or a port) onto another device to connect them. " +
-                          "Ports are created where you start and end.<br><br>" +
-                          "<b>Double-click a border</b> to add a port.<br><br>" +
-                          "<b>Drag a port along the border</b> to move it (Shift+drag moves it from anywhere); " +
-                          "pull a port with lines off the device to turn it into a free point (the lines stay), " +
-                          "or pull an unused port away to draw a link.<br><br>" +
-                          "<b>Double-click</b> a device, port, link or text to edit it in place, " +
-                          "or select it and press F2, Enter or just start typing.<br><br>" +
-                          "<b>Quick add</b> (Ctrl+K): type devices into the toolbar field, comma-separated, " +
-                          "and press Enter. <i>Firewall, Router</i> adds a firewall and a router; " +
-                          "<i>firewall|my-box</i> adds a firewall labeled my-box.<br><br>" +
-                          "<b>+ Text</b> (Ctrl+Shift+T) adds a free text annotation; Shift+Enter starts a new line.<br><br>" +
-                          "<b>Drop a device on a line</b> (it lights up green) to put it in between; deleting " +
-                          "the device joins the line again when both halves have the same type and label.<br><br>" +
-                          "<b>Drag a line</b> to bend it: a connection point appears where you grab it and " +
-                          "the line runs through it. Delete the point to straighten the line again.<br><br>" +
-                          "<b>Lines to nowhere</b>: drop a line on empty space and it ends at a free connection point " +
-                          "(a small ring, not exported), e.g. an arrow pointing out of the drawing. Drag the ring to " +
-                          "move the end; drop it on a device border (or port) to attach the lines there. Shift+drag " +
-                          "from it to draw on, drop other lines onto it. <b>+ Point</b> " +
-                          "(Ctrl+Shift+P) adds one on its own.<br><br>" +
-                          "<b>Drag on empty space</b> to select several items (links too), <b>Ctrl+click</b> to add " +
-                          "devices, texts or links to the selection. With several selected, this panel edits them " +
-                          "all at once: type, color, size, line style, arrows, labels, layer, and numbered renaming " +
-                          "(<i>sw-##</i> gives sw-01, sw-02…).<br><br>" +
-                          "<b>Hold Ctrl while dragging</b> a box or port to line it up with nearby boxes and ports " +
-                          "(edges, centers, straight links); a red guide shows the match. It also snaps to equal " +
-                          "spacing: midway between two boxes (also diagonally), or repeating the gap of the next " +
-                          "pair in a row or column. Pink markers show the equal distances.<br><br>" +
-                          "<b>Layers</b> (bottom of this panel): new items go into the highlighted layer. " +
-                          "Tick a layer to show or hide it; hidden layers cannot be selected and are left out of " +
-                          "SVG export. The padlock locks a layer: its items stay visible but are read only (not " +
-                          "selectable, movable or connectable) and nothing new can be added to it; clicks pass " +
-                          "through to what is underneath. The tag shows the layer's name in the lower right " +
-                          "corner of its devices. " +
-                          "Move a selection to another layer with its Layer box.<br><br>" +
-                          "<b>Arrange</b> stacks items in front of or behind others, across all layers: " +
-                          "Home to front, Page Up (Ctrl+]) forward, Page Down (Ctrl+[) backward, End to back.<br><br>" +
-                          "<b>Zoom into</b> (Ctrl+I): zoom into a device as far as you like and add things " +
-                          "inside it; they are made small to match the zoom, fade out when you zoom back out and " +
-                          "reappear when you zoom in again. Moving a device moves what is inside it.<br><br>" +
-                          "<b>Layout ▾</b> (Ctrl+L) arranges devices automatically: hierarchy (top down or left " +
-                          "to right), radial, circle, grid or force-directed. It works on the selected devices, " +
-                          "or on all of them; lines that would cross a device or text are rerouted. Ctrl+Z " +
-                          "undoes.<br><br>" +
-                          "<b>Right-click</b> a device, text or line for a menu: its type, its layer, clone and delete.<br><br>" +
-                          "<b>Pan</b> with middle/right drag or Space+drag, <b>zoom</b> with the wheel.<br><br>" +
-                          "<b>Ctrl+C</b> copies the selection (or everything) for draw.io: paste it there with " +
-                          "Ctrl+V. <b>Ctrl+V</b> here pastes stratagram copies, shapes copied in draw.io, or text " +
-                          "(as a note); Ctrl+X cuts.<br><br>" +
-                          "Arrow keys nudge, Del deletes, Ctrl+D duplicates."
+                    text: [
+                        "help.addDevice",
+                        "help.connect",
+                        "help.addPort",
+                        "help.movePort",
+                        "help.edit",
+                        "help.quickAdd",
+                        "desktopHelp.addText",
+                        "help.insertDevice",
+                        "help.bend",
+                        "desktopHelp.freePoint",
+                        "desktopHelp.select",
+                        "desktopHelp.align",
+                        "desktopHelp.layers",
+                        "desktopHelp.arrange",
+                        "desktopHelp.deepZoom",
+                        "desktopHelp.layout",
+                        "help.contextMenu",
+                        "help.pan",
+                        "desktopHelp.clipboard",
+                        "help.keys"
+                    ].map(paragraph => root.translate(paragraph)).join("<br><br>")
                 }
 
                 // device
                 Label {
                     visible: root.multi
-                    text: "Changes apply to all selected items of each kind."
+                    text: root.translate("selection.multipleHint")
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                     color: root.tc.muted2
@@ -545,7 +515,7 @@ Pane {
                     Layout.fillWidth: true
                     spacing: 6
 
-                    Label { text: "Name" }
+                    Label { text: root.translate("property.name") }
                     TextField {
                         id: deviceName
                         Layout.fillWidth: true
@@ -558,17 +528,17 @@ Pane {
                     visible: root.multi && root.dev !== null
                     Layout.fillWidth: true
                     spacing: 6
-                    Label { text: "Rename in reading order (# is the number)" }
+                    Label { text: root.translate("property.renamePattern") }
                     RowLayout {
                         Layout.fillWidth: true
                         TextField {
                             id: renamePattern
                             Layout.fillWidth: true
-                            placeholderText: "e.g. sw-## gives sw-01, sw-02…"
+                            placeholderText: root.translate("property.renameExample")
                             onAccepted: rename()
                             function rename() { if (text.trim() !== "") { root.set("name_pattern", text); text = "" } }
                         }
-                        Button { text: "Rename"; enabled: renamePattern.text.trim() !== ""; onClicked: renamePattern.rename() }
+                        Button { text: root.translate("property.rename"); enabled: renamePattern.text.trim() !== ""; onClicked: renamePattern.rename() }
                     }
                 }
 
@@ -577,7 +547,7 @@ Pane {
                     Layout.fillWidth: true
                     spacing: 6
 
-                    Label { text: "Type" + (root.dev && root.mixed(root.dev.kind) ? " (mixed)" : "") }
+                    Label { text: root.translate("property.type") + (root.dev && root.mixed(root.dev.kind) ? root.translate("value.mixedSuffix") : "") }
                     ComboBox {
                         id: kindBox
                         Layout.fillWidth: true
@@ -612,7 +582,7 @@ Pane {
                         }
                     }
 
-                    Label { text: "Fill color" + (root.dev && root.mixed(root.dev.color) ? " (mixed)" : "") }
+                    Label { text: root.translate("property.fillColor") + (root.dev && root.mixed(root.dev.color) ? root.translate("value.mixedSuffix") : "") }
                     ColorPicker {
                         tc: root.tc
                         Layout.fillWidth: true
@@ -627,8 +597,8 @@ Pane {
                     visible: root.type === "device" && root.sel.kind === "patch panel"
                     columns: 2
                     Layout.fillWidth: true
-                    Label { text: "Ports" }
-                    Label { text: "Connector" }
+                    Label { text: root.translate("property.ports") }
+                    Label { text: root.translate("property.connector") }
                     SpinBox {
                         Layout.fillWidth: true
                         from: 1; to: 288; editable: true
@@ -638,7 +608,7 @@ Pane {
                     ComboBox {
                         Layout.fillWidth: true
                         readonly property var keys: ["rj45", "lc", "sc"]
-                        model: ["RJ45", "LC (duplex)", "SC"]
+                        model: [root.translate("term.rj45"), root.translate("property.lcDuplex"), root.translate("term.sc")]
                         currentIndex: Math.max(0, keys.indexOf(root.type === "device" ? root.sel.connector : "rj45"))
                         onActivated: (i) => root.set("connector", keys[i])
                     }
@@ -651,8 +621,8 @@ Pane {
                     visible: root.type === "device" && !!root.sel.takes_ports
                     columns: 2
                     Layout.fillWidth: true
-                    Label { text: "Ports (0: a box)" }
-                    Label { text: "Connector" }
+                    Label { text: root.translate("property.portsOrBox") }
+                    Label { text: root.translate("property.connector") }
                     SpinBox {
                         Layout.fillWidth: true
                         from: 0; to: 288; editable: true
@@ -662,13 +632,13 @@ Pane {
                     ComboBox {
                         Layout.fillWidth: true
                         readonly property var keys: ["rj45", "sfp"]
-                        model: ["RJ45", "SFP"]
+                        model: [root.translate("term.rj45"), root.translate("term.sfp")]
                         currentIndex: Math.max(0, keys.indexOf(root.type === "device" ? root.sel.connector : "rj45"))
                         onActivated: (i) => root.set("connector", keys[i])
                     }
                     Label {
                         visible: root.type === "device" && root.sel.panel_ports > 0
-                        text: "Uplinks (SFP)"
+                        text: root.translate("property.uplinks")
                         Layout.columnSpan: 2
                     }
                     SpinBox {
@@ -685,8 +655,8 @@ Pane {
                     visible: root.dev !== null
                     columns: 2
                     Layout.fillWidth: true
-                    Label { text: "Width" + (root.dev && root.mixed(root.dev.w) ? " (mixed)" : "") }
-                    Label { text: "Height" + (root.dev && root.mixed(root.dev.h) ? " (mixed)" : "") }
+                    Label { text: root.translate("property.width") + (root.dev && root.mixed(root.dev.w) ? root.translate("value.mixedSuffix") : "") }
+                    Label { text: root.translate("property.height") + (root.dev && root.mixed(root.dev.h) ? root.translate("value.mixedSuffix") : "") }
                     SpinBox {
                         Layout.fillWidth: true
                         from: 40; to: 2000; stepSize: 10; editable: true
@@ -705,12 +675,12 @@ Pane {
                     visible: root.type === "device" || root.type === "port"
                     Layout.fillWidth: true
                     spacing: 6
-                    Label { text: root.type === "device" ? "Add port (" + root.sel.ports + " so far)" : "Add another port" }
+                    Label { text: root.type === "device" ? root.translate("property.addPortCount", { count: root.sel.ports }) : root.translate("property.addPort") }
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 4
                         Repeater {
-                            model: [["top", "↑ Top"], ["right", "Right →"], ["bottom", "↓ Bottom"], ["left", "← Left"]]
+                            model: [["top", root.translate("property.topButton")], ["right", root.translate("property.rightButton")], ["bottom", root.translate("property.bottomButton")], ["left", root.translate("property.leftButton")]]
                             Button {
                                 required property var modelData
                                 Layout.fillWidth: true
@@ -733,7 +703,7 @@ Pane {
                     Layout.fillWidth: true
                     spacing: 6
 
-                    Label { visible: root.type === "note"; text: "Text" }
+                    Label { visible: root.type === "note"; text: root.translate("selection.text") }
                     TextArea {
                         visible: root.type === "note"
                         Layout.fillWidth: true
@@ -743,14 +713,14 @@ Pane {
                         onTextChanged: if (activeFocus) root.set("text", text)
                     }
                     RowLayout {
-                        Label { text: "Size" + (root.note && root.mixed(root.note.size) ? " (mixed)" : "") }
+                        Label { text: root.translate("property.size") + (root.note && root.mixed(root.note.size) ? root.translate("value.mixedSuffix") : "") }
                         SpinBox {
                             from: 6; to: 96; editable: true
                             value: root.note && !root.mixed(root.note.size) ? root.note.size : 14
                             onValueModified: root.setFor("note", "size", value)
                         }
                         CheckBox {
-                            text: "Bold" + (root.note && root.mixed(root.note.bold) ? " (mixed)" : "")
+                            text: root.translate("property.bold") + (root.note && root.mixed(root.note.bold) ? root.translate("value.mixedSuffix") : "")
                             checked: root.note !== null && root.note.bold === true
                             onToggled: root.setFor("note", "bold", checked)
                         }
@@ -763,16 +733,16 @@ Pane {
                             wrapMode: Text.WordWrap
                             color: root.tc.muted2
                             text: root.type === "note" && root.sel.boxed
-                                  ? "Fixed box: the text wraps to it. Drag the corner handle to resize."
-                                  : "Drag the corner handle to give it a fixed box."
+                                  ? root.translate("property.fixedBoxHint")
+                                  : root.translate("property.resizeBoxHint")
                         }
                         Button {
                             visible: root.type === "note" && root.sel.boxed === true
-                            text: "Fit to text"
+                            text: root.translate("property.fitText")
                             onClicked: root.setFor("note", "box", "fit")
                         }
                     }
-                    Label { text: "Color" + (root.note && root.mixed(root.note.color) ? " (mixed)" : "") }
+                    Label { text: root.translate("property.color") + (root.note && root.mixed(root.note.color) ? root.translate("value.mixedSuffix") : "") }
                     ColorPicker {
                         tc: root.tc
                         Layout.fillWidth: true
@@ -792,17 +762,14 @@ Pane {
                         wrapMode: Text.WordWrap
                         color: root.tc.muted2
                         text: root.type === "point"
-                              ? "Lines end here as if attached to nothing; the point itself is not exported (its label is). " +
-                                root.plural(root.sel.links, "line", "lines") + " attached.\n" +
-                                "Drag to move it; drop it on a device border to attach its lines there. " +
-                                "Shift+drag from it to draw another line, or drop a line onto it. " +
-                                "Deleting a bend point joins its two lines back into one."
+                              ? root.translate("desktop.pointHelp",
+                                               { lines: root.plural(root.sel.links, "line", "lines") })
                               : ""
                     }
-                    Label { text: "Label" }
+                    Label { text: root.translate("property.label") }
                     TextField {
                         Layout.fillWidth: true
-                        placeholderText: "e.g. Internet, to branch office"
+                        placeholderText: root.translate("value.endpointExample")
                         text: root.type === "point" ? root.sel.label : ""
                         onTextEdited: root.set("label", text)
                     }
@@ -833,24 +800,24 @@ Pane {
                     spacing: 6
 
                     Label {
-                        text: root.type === "port" ? "on " + root.sel.device + ", " + root.sel.links + " link(s)" : ""
+                        text: root.type === "port" ? root.translate("property.portConnections", { device: root.sel.device, count: root.sel.links }) : ""
                         color: root.tc.muted2
                     }
-                    Label { text: "Name (e.g. Gi1/0/1)" }
+                    Label { text: root.translate("property.portName") }
                     TextField {
                         id: portName
                         Layout.fillWidth: true
                         text: root.type === "port" ? root.sel.name : ""
                         onTextEdited: root.set("name", text)
                     }
-                    Label { text: "Side" }
+                    Label { text: root.translate("property.side") }
                     ComboBox {
                         Layout.fillWidth: true
-                        model: root.sides
+                        model: root.sides.map(label => root.translate("side." + label))
                         currentIndex: root.type === "port" ? root.sides.indexOf(root.sel.side) : 0
                         onActivated: (i) => root.set("side", root.sides[i])
                     }
-                    Label { text: "Position along side (% from " + (root.sel.side === "left" || root.sel.side === "right" ? "top" : "left") + ")" }
+                    Label { text: root.translate("property.sidePosition", { side: root.translate(root.sel.side === "left" || root.sel.side === "right" ? "side.top" : "side.left") }) }
                     SpinBox {
                         Layout.fillWidth: true
                         from: 5; to: 95; stepSize: 5; editable: true
@@ -858,18 +825,18 @@ Pane {
                         onValueModified: root.set("pos", value)
                     }
                     // A layer of its own, to show or hide it apart from its device.
-                    Label { text: "Layer" }
+                    Label { text: root.translate("layer.label") }
                     ComboBox {
                         Layout.fillWidth: true
                         readonly property var deviceLayer: root.type === "port" ? root.itemLayers.find(l => l.id === root.sel.device_layer) : null
-                        model: ["as its device (" + (deviceLayer ? deviceLayer.name : "") + ")"]
+                        model: [root.translate("property.deviceLayer", { name: deviceLayer ? deviceLayer.name : "" })]
                                .concat(root.itemLayers.map(l => l.path + (l.shown ? "" : " (hidden)") + (l.held ? " (locked)" : "")))
                         currentIndex: root.type !== "port" || !root.sel.port_layer ? 0
                                       : 1 + root.itemLayers.findIndex(l => l.id === root.sel.port_layer)
                         onActivated: (i) => root.set("layer", i === 0 ? "" : root.itemLayers[i - 1].id)
                         ToolTip.visible: hovered
                         ToolTip.delay: 500
-                        ToolTip.text: "Hide the layer to hide the port and its name (its lines stay)"
+                        ToolTip.text: root.translate("layer.portVisibilityHint")
                     }
                 }
 
@@ -892,12 +859,12 @@ Pane {
                         color: root.tc.muted2
                         text: root.type === "link" ? root.sel.from + "  →  " + root.sel.to : ""
                     }
-                    Label { text: "Type" }
+                    Label { text: root.translate("property.type") }
                     ComboBox {
                         Layout.fillWidth: true
-                        model: root.linkKindNames
+                        model: root.linkKindNames.map(label => root.translate(label))
                         currentIndex: root.link ? root.linkKinds.indexOf(root.link.kind) : 0
-                        displayText: currentIndex < 0 ? "(mixed)" : currentText
+                        displayText: currentIndex < 0 ? root.translate("value.mixedOption") : currentText
                         onActivated: (i) => root.setFor("link", "kind", root.linkKinds[i])
                     }
                     // Encapsulation: what the line is carried over, innermost
@@ -912,22 +879,22 @@ Pane {
                             Label {
                                 Layout.fillWidth: true
                                 wrapMode: Text.WordWrap
-                                text: parent.parent.over.length > 0 ? "Carried over: <b>" + root.sel.tag + "</b>"
-                                                                   : "Carried over: nothing"
+                                text: parent.parent.over.length > 0 ? root.translate("link.carrierPrefix") + "<b>" + root.sel.tag + "</b>"
+                                                                   : root.translate("link.noCarrier")
                             }
                             Button {
                                 visible: parent.parent.over.length > 0
-                                text: "Remove outer"
+                                text: root.translate("link.removeOuter")
                                 onClicked: root.set("over", parent.parent.over.slice(0, -1).join(","))
                                 ToolTip.visible: hovered
                                 ToolTip.delay: 500
-                                ToolTip.text: "Take away the outermost carrier"
+                                ToolTip.text: root.translate("link.removeOuterHint")
                             }
                         }
                         ComboBox {
                             Layout.fillWidth: true
                             readonly property var carriers: root.linkKinds.filter(k => k !== "plain")
-                            model: ["Add a carrier around it…"].concat(carriers.map(k => root.linkKindNames[root.linkKinds.indexOf(k)]))
+                            model: [root.translate("link.addCarrier")].concat(carriers.map(k => root.translate(root.linkKindNames[root.linkKinds.indexOf(k)])))
                             currentIndex: 0
                             onActivated: (i) => {
                                 if (i > 0) root.set("over", parent.over.concat([carriers[i - 1]]).join(","))
@@ -935,77 +902,77 @@ Pane {
                             }
                             ToolTip.visible: hovered
                             ToolTip.delay: 500
-                            ToolTip.text: "Show the line encapsulated: e.g. a VXLAN line carried over IPsec. Each carrier is a band around what it carries."
+                            ToolTip.text: root.translate("desktop.carrierHint")
                         }
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        Label { text: "Label" + (root.link && root.mixed(root.link.label) ? " (mixed)" : ""); Layout.fillWidth: true }
+                        Label { text: root.translate("property.label") + (root.link && root.mixed(root.link.label) ? root.translate("value.mixedSuffix") : ""); Layout.fillWidth: true }
                         Button {
                             visible: root.type === "link" && root.sel.label_placed === true
-                            text: "Auto position"
+                            text: root.translate("link.autoPosition")
                             onClicked: root.setFor("link", "label_at", "auto")
                             ToolTip.visible: hovered
                             ToolTip.delay: 500
-                            ToolTip.text: "Let the label be placed automatically again (it was dragged along the line)"
+                            ToolTip.text: root.translate("desktop.autoPositionHint")
                         }
                     }
                     TextField {
                         id: linkLabel
                         Layout.fillWidth: true
-                        placeholderText: root.multi ? "Same label for all" : "e.g. 10G, VLAN 20"
+                        placeholderText: root.multi ? root.translate("link.commonLabel") : root.translate("link.labelExample")
                         text: root.link && !root.mixed(root.link.label) ? root.link.label : ""
                         onTextEdited: root.setFor("link", "label", text)
                     }
                     CheckBox {
-                        text: "Show label" + (root.link && root.mixed(root.link.label_hidden) ? " (mixed)" : "")
+                        text: root.translate("link.showLabel") + (root.link && root.mixed(root.link.label_hidden) ? root.translate("value.mixedSuffix") : "")
                         checked: root.link !== null && root.link.label_hidden === false
                         onToggled: root.setFor("link", "label_hidden", !checked)
                         ToolTip.visible: hovered
                         ToolTip.delay: 500
-                        ToolTip.text: "The label and the type's tag, on screen and in exports (the text is kept)"
+                        ToolTip.text: root.translate("link.showLabelHint")
                     }
 
                     GridLayout {
                         columns: 2
                         Layout.fillWidth: true
                         columnSpacing: 6
-                        Label { text: "Start" }
-                        Label { text: "End" }
+                        Label { text: root.translate("link.start") }
+                        Label { text: root.translate("link.end") }
                         ComboBox {
                             Layout.fillWidth: true
-                            model: root.heads
+                            model: root.heads.map(label => root.translate(label === "none" ? "property.none" : "style." + label))
                             currentIndex: root.link ? root.heads.indexOf(root.link.head_start) : 0
-                            displayText: currentIndex < 0 ? "(mixed)" : currentText
+                            displayText: currentIndex < 0 ? root.translate("value.mixedOption") : currentText
                             onActivated: (i) => root.setFor("link", "head_start", root.heads[i])
                         }
                         ComboBox {
                             Layout.fillWidth: true
-                            model: root.heads
+                            model: root.heads.map(label => root.translate(label === "none" ? "property.none" : "style." + label))
                             currentIndex: root.link ? root.heads.indexOf(root.link.head_end) : 0
-                            displayText: currentIndex < 0 ? "(mixed)" : currentText
+                            displayText: currentIndex < 0 ? root.translate("value.mixedOption") : currentText
                             onActivated: (i) => root.setFor("link", "head_end", root.heads[i])
                         }
-                        Label { text: "Line" }
-                        Label { text: "Routing" }
+                        Label { text: root.translate("link.line") }
+                        Label { text: root.translate("link.routing") }
                         ComboBox {
                             Layout.fillWidth: true
-                            model: root.styles
+                            model: root.styles.map(label => root.translate(label === "none" ? "property.none" : "style." + label))
                             currentIndex: root.link ? root.styles.indexOf(root.link.style) : 0
-                            displayText: currentIndex < 0 ? "(mixed)" : currentText
+                            displayText: currentIndex < 0 ? root.translate("value.mixedOption") : currentText
                             onActivated: (i) => root.setFor("link", "style", root.styles[i])
                         }
                         ComboBox {
                             Layout.fillWidth: true
-                            model: root.routingNames
+                            model: root.routingNames.map(label => root.translate(label))
                             currentIndex: root.link ? root.routings.indexOf(root.link.routing) : 0
-                            displayText: currentIndex < 0 ? "(mixed)" : currentText
+                            displayText: currentIndex < 0 ? root.translate("value.mixedOption") : currentText
                             onActivated: (i) => root.setFor("link", "routing", root.routings[i])
                         }
                     }
 
                     RowLayout {
-                        Label { text: "Width" + (root.link && root.mixed(root.link.width) ? " (mixed)" : "") }
+                        Label { text: root.translate("property.width") + (root.link && root.mixed(root.link.width) ? root.translate("value.mixedSuffix") : "") }
                         SpinBox {
                             from: 1; to: 10
                             value: root.link && !root.mixed(root.link.width) ? root.link.width : 2
@@ -1014,10 +981,10 @@ Pane {
                     }
                     RowLayout {
                         Label {
-                            text: "Label margin" + (root.link && root.mixed(root.link.label_margin) ? " (mixed)" : "")
+                            text: root.translate("link.labelMargin") + (root.link && root.mixed(root.link.label_margin) ? root.translate("value.mixedSuffix") : "")
                             ToolTip.visible: marginHover.hovered
                             ToolTip.delay: 500
-                            ToolTip.text: "Free line auto layout keeps on each side of the label, so it does not crowd the devices"
+                            ToolTip.text: root.translate("desktop.labelMarginHint")
                             HoverHandler { id: marginHover }
                         }
                         SpinBox {
@@ -1028,7 +995,7 @@ Pane {
                         }
                     }
 
-                    Label { text: "Color" + (root.link && root.mixed(root.link.color) ? " (mixed)" : "") }
+                    Label { text: root.translate("property.color") + (root.link && root.mixed(root.link.color) ? root.translate("value.mixedSuffix") : "") }
                     ColorPicker {
                         tc: root.tc
                         Layout.fillWidth: true
@@ -1040,7 +1007,7 @@ Pane {
                     Button {
                         visible: root.type === "link"
                         Layout.fillWidth: true
-                        text: "⇄ Reverse direction"
+                        text: root.translate("link.reverse")
                         onClicked: root.ctl.reverseLink()
                     }
                     Label {
@@ -1048,7 +1015,7 @@ Pane {
                         wrapMode: Text.WordWrap
                         color: root.tc.faint
                         font.pixelSize: 11
-                        text: "New links use the style you set last."
+                        text: root.translate("link.styleHint")
                     }
                 }
 
@@ -1059,23 +1026,23 @@ Pane {
                     Layout.topMargin: 8
                     spacing: 6
 
-                    Label { text: "Layer" }
+                    Label { text: root.translate("layer.label") }
                     ComboBox {
                         Layout.fillWidth: true
-                        model: root.itemLayers.map(l => l.path + (l.shown ? "" : " (hidden)") + (l.held ? " (locked)" : ""))
+                        model: root.itemLayers.map(l => l.path + (l.shown ? "" : root.translate("value.hiddenSuffix")) + (l.held ? root.translate("value.lockedSuffix") : ""))
                         currentIndex: root.itemLayers.findIndex(l => l.id === root.sel.layer)
-                        displayText: currentIndex < 0 ? "(several)" : currentText
+                        displayText: currentIndex < 0 ? root.translate("filter.several") : currentText
                         onActivated: (i) => root.set("layer", root.itemLayers[i].id)
                     }
-                    Label { text: "Arrange (front to back, across all layers)"; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    Label { text: root.translate("arrange.label"); wrapMode: Text.WordWrap; Layout.fillWidth: true }
                     GridLayout {
                         columns: 2
                         Layout.fillWidth: true
                         columnSpacing: 4
                         rowSpacing: 4
                         Repeater {
-                            model: [["front", "⤒ To front", "Home"], ["forward", "↑ Forward", "Page Up or Ctrl+]"],
-                                    ["back", "⤓ To back", "End"], ["backward", "↓ Backward", "Page Down or Ctrl+["]]
+                            model: [["front", root.translate("arrange.front"), "Home"], ["forward", root.translate("arrange.forward"), "Page Up or Ctrl+]"],
+                                    ["back", root.translate("arrange.back"), "End"], ["backward", root.translate("arrange.backward"), "Page Down or Ctrl+["]]
                             Button {
                                 required property var modelData
                                 Layout.fillWidth: true
@@ -1097,12 +1064,12 @@ Pane {
                     Button {
                         visible: ["device", "note"].includes(root.type) || (root.multi && root.sel.devices + root.sel.notes > 0)
                         Layout.fillWidth: true
-                        text: "Duplicate"
+                        text: root.translate("edit.duplicate")
                         onClicked: root.ctl.duplicate()
                     }
                     Button {
                         Layout.fillWidth: true
-                        text: "Delete"
+                        text: root.translate("edit.delete")
                         onClicked: root.ctl.deleteSelected()
                     }
                 }
@@ -1114,24 +1081,24 @@ Pane {
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 6
-            Label { text: "Layers"; font.bold: true; Layout.fillWidth: true }
+            Label { text: root.translate("layer.title"); font.bold: true; Layout.fillWidth: true }
             ToolButton {
-                text: "+ Layer"
+                text: root.translate("layer.add")
                 onClicked: { root.keepLayerScroll(); root.ctl.addLayer() }
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
-                ToolTip.text: "Add a layer; new items go into it"
+                ToolTip.text: root.translate("layer.addHint")
             }
             ToolButton {
-                text: "+ Sub-layer"
+                text: root.translate("layer.addChild")
                 enabled: root.layers.some(l => l.active && !l.frame)
                 onClicked: { root.keepLayerScroll(); root.ctl.addSublayer() }
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
-                ToolTip.text: "Add a layer under the highlighted one; new items go into it"
+                ToolTip.text: root.translate("layer.addChildHint")
             }
             ToolButton {
-                text: "Remove"
+                text: root.translate("action.remove")
                 enabled: root.layers.length > 1 && !root.layers.some(l => l.active && l.held)
                 onClicked: {
                     const l = root.layers.find(l => l.active)
@@ -1143,7 +1110,7 @@ Pane {
                 }
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
-                ToolTip.text: "Remove the active layer and everything on it (and the layers under it)"
+                ToolTip.text: root.translate("layer.removeHint")
             }
         }
         ListView {
@@ -1249,8 +1216,8 @@ Pane {
                         onClicked: { root.keepLayerScroll(); root.ctl.setLayerExpanded(row.modelData.id, !row.modelData.expanded) }
                         ToolTip.visible: hovered && enabled
                         ToolTip.delay: 500
-                        ToolTip.text: row.modelData.expanded ? "Fold the layers under it away"
-                                                             : "Show the " + row.modelData.children + " layer(s) under it"
+                        ToolTip.text: row.modelData.expanded ? root.translate("layer.foldHint")
+                                                             : root.translate("property.expandLayers", { count: row.modelData.children })
                     }
                     CheckBox {
                         checked: !!row.modelData.visible
@@ -1261,8 +1228,8 @@ Pane {
                         }
                         ToolTip.visible: hovered
                         ToolTip.delay: 500
-                        ToolTip.text: !checked ? "Hidden (click to show)"
-                                     : row.modelData.shown ? "Shown (click to hide)" : "Hidden with the layer it is under"
+                        ToolTip.text: !checked ? root.translate("layer.hiddenHint")
+                                     : row.modelData.shown ? root.translate("layer.shownHint") : root.translate("layer.parentHidden")
                     }
                     Label {
                         visible: !row.renaming
@@ -1313,8 +1280,8 @@ Pane {
                         }
                         ToolTip.visible: bgMouse.containsMouse
                         ToolTip.delay: 500
-                        ToolTip.text: row.modelData.background ? "Layer background (click to change)"
-                                                               : "Click to add a background behind this layer's items"
+                        ToolTip.text: row.modelData.background ? root.translate("layer.backgroundHint")
+                                                               : root.translate("layer.addBackgroundHint")
                     }
                     // Name tag: dark when the layer's name shows on its devices.
                     Item {
@@ -1356,8 +1323,8 @@ Pane {
                         }
                         ToolTip.visible: tagMouse.containsMouse
                         ToolTip.delay: 500
-                        ToolTip.text: row.modelData.show_name ? "Layer name shown on its devices (click to hide)"
-                                                              : "Click to show the layer name on its devices"
+                        ToolTip.text: row.modelData.show_name ? root.translate("layer.shownTagHint")
+                                                              : root.translate("layer.showTagHint")
                     }
                     // Padlock: closed and dark when locked, open and faint when not.
                     Item {
@@ -1399,16 +1366,16 @@ Pane {
                         }
                         ToolTip.visible: lockMouse.containsMouse
                         ToolTip.delay: 500
-                        ToolTip.text: row.modelData.locked ? "Locked: shown but read only (click to unlock)"
-                                                           : "Click to lock: shown but read only"
+                        ToolTip.text: row.modelData.locked ? root.translate("layer.lockedHint")
+                                                           : root.translate("layer.lockHint")
                     }
                     Label {
-                        text: row.modelData.frame ? "frame" : row.modelData.children ? root.layerTotal(row.modelData) : row.modelData.count
+                        text: row.modelData.frame ? root.translate("layer.frameBadge") : row.modelData.children ? root.layerTotal(row.modelData) : row.modelData.count
                         color: root.tc.faint
                         font.pixelSize: 11
                         ToolTip.visible: row.modelData.frame && frameHint.containsMouse
                         ToolTip.delay: 500
-                        ToolTip.text: "Holds only the frame; set it up with nothing selected"
+                        ToolTip.text: root.translate("layer.frameHint")
                         MouseArea { id: frameHint; anchors.fill: parent; hoverEnabled: true }
                     }
                 }
@@ -1419,7 +1386,7 @@ Pane {
             wrapMode: Text.WordWrap
             color: root.tc.faint
             font.pixelSize: 11
-            text: "New items go into the highlighted layer. Click to choose, double-click to rename, drag to reorder or onto another layer to put it under that one; \u25b8 shows the layers under one."
+            text: root.translate("layer.instructions")
         }
     }
 
@@ -1442,9 +1409,9 @@ Pane {
         ColumnLayout {
             width: parent.width
             spacing: 6
-            Label { text: "Background of " + (bgPopup.layer ? bgPopup.layer.name : ""); font.bold: true }
+            Label { text: root.translate("property.layerBackground", { name: bgPopup.layer ? bgPopup.layer.name : "" }); font.bold: true }
             CheckBox {
-                text: "Rectangle behind this layer's items"
+                text: root.translate("background.enabled")
                 checked: bgPopup.bg !== null
                 onToggled: bgPopup.set("enabled", checked)
             }
@@ -1453,7 +1420,7 @@ Pane {
                 columns: 2
                 columnSpacing: 6
                 Layout.fillWidth: true
-                Label { text: "Margin" }
+                Label { text: root.translate("frame.margin") }
                 SpinBox {
                     Layout.fillWidth: true
                     from: 0; to: 400; stepSize: 5
@@ -1461,7 +1428,7 @@ Pane {
                     value: bgPopup.bg ? bgPopup.bg.margin : 30
                     onValueModified: bgPopup.set("margin", value)
                 }
-                Label { text: "Opacity %" }
+                Label { text: root.translate("background.opacity") }
                 SpinBox {
                     Layout.fillWidth: true
                     from: 0; to: 100; stepSize: 5
@@ -1469,14 +1436,14 @@ Pane {
                     value: bgPopup.bg ? bgPopup.bg.opacity : 50
                     onValueModified: bgPopup.set("opacity", value)
                 }
-                Label { text: "Corners" }
+                Label { text: root.translate("background.corners") }
                 ComboBox {
                     Layout.fillWidth: true
-                    model: ["rounded", "square"]
+                    model: [root.translate("background.rounded"), root.translate("background.square")]
                     currentIndex: bgPopup.bg && !bgPopup.bg.rounded ? 1 : 0
                     onActivated: (i) => bgPopup.set("rounded", i === 0)
                 }
-                Label { text: "Radius"; visible: bgPopup.bg !== null && bgPopup.bg.rounded }
+                Label { text: root.translate("background.radius"); visible: bgPopup.bg !== null && bgPopup.bg.rounded }
                 SpinBox {
                     visible: bgPopup.bg !== null && bgPopup.bg.rounded
                     Layout.fillWidth: true
@@ -1485,15 +1452,15 @@ Pane {
                     value: bgPopup.bg ? bgPopup.bg.radius : 14
                     onValueModified: bgPopup.set("radius", value)
                 }
-                Label { text: "Border" }
+                Label { text: root.translate("background.border") }
                 ComboBox {
                     Layout.fillWidth: true
                     readonly property var styles: ["none", "solid", "dashed", "dotted"]
-                    model: styles
+                    model: styles.map(label => root.translate(label === "none" ? "property.none" : "style." + label))
                     currentIndex: bgPopup.bg ? Math.max(0, styles.indexOf(bgPopup.bg.border)) : 1
                     onActivated: (i) => bgPopup.set("border", styles[i])
                 }
-                Label { text: "Border width"; visible: bgPopup.bg !== null && bgPopup.bg.border !== "none" }
+                Label { text: root.translate("background.borderWidth"); visible: bgPopup.bg !== null && bgPopup.bg.border !== "none" }
                 SpinBox {
                     visible: bgPopup.bg !== null && bgPopup.bg.border !== "none"
                     Layout.fillWidth: true
@@ -1502,7 +1469,7 @@ Pane {
                     onValueModified: bgPopup.set("border_width", value)
                 }
             }
-            Label { visible: bgPopup.bg !== null; text: "Fill" }
+            Label { visible: bgPopup.bg !== null; text: root.translate("background.fill") }
             ColorPicker {
                 tc: root.tc
                 visible: bgPopup.bg !== null
@@ -1512,7 +1479,7 @@ Pane {
                            "#e5e7eb", "#ffffff"]
                 onPicked: (c) => bgPopup.set("fill", c)
             }
-            Label { visible: bgPopup.bg !== null && bgPopup.bg.border !== "none"; text: "Border color" }
+            Label { visible: bgPopup.bg !== null && bgPopup.bg.border !== "none"; text: root.translate("background.borderColor") }
             ColorPicker {
                 tc: root.tc
                 visible: bgPopup.bg !== null && bgPopup.bg.border !== "none"
@@ -1530,15 +1497,19 @@ Pane {
         property var layer: null
         anchors.centerIn: Overlay.overlay
         modal: true
-        title: "Remove layer"
+        title: root.translate("dialog.removeLayer")
         standardButtons: Dialog.Ok | Dialog.Cancel
-        onOpened: dlgText.forceActiveFocus()
+        onOpened: {
+            standardButton(Dialog.Ok).text = root.translate("action.ok")
+            standardButton(Dialog.Cancel).text = root.translate("action.cancel")
+            dlgText.forceActiveFocus()
+        }
         Label {
             id: dlgText
             // Enter confirms, Escape (handled by the dialog) cancels.
             Keys.onReturnPressed: removeDlg.accept()
             Keys.onEnterPressed: removeDlg.accept()
-            text: removeDlg.layer ? root.removeQuestion(removeDlg.layer) + "\nYou can undo this with Ctrl+Z." : ""
+            text: removeDlg.layer ? root.removeQuestion(removeDlg.layer) + "\n" + root.translate("confirm.undoHint") : ""
         }
         onAccepted: root.ctl.removeLayer(layer.id)
     }

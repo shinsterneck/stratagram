@@ -133,7 +133,7 @@ impl Ctx<'_> {
     }
 }
 
-fn device(out: &mut String, ctx: &Ctx, d: &Device) {
+fn device(out: &mut String, ctx: &Ctx, d: &Device, lang: crate::i18n::Language) {
     let Ctx { doc, ox, oy, label_end, .. } = *ctx;
     let fill = geom::normalize_color(&d.color).unwrap_or_else(|| "#dbeafe".into());
     let stroke = geom::darken(&fill, 0.45);
@@ -143,7 +143,7 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device) {
         label.push_str(&format!(
             "<br><span style=\"font-size:{:.1}px;opacity:0.7\">{}</span>",
             10.0 * d.scale,
-            html_text(&crate::shape::kind_label(&d.kind).to_uppercase())
+            html_text(&crate::shape::kind_label_in(&d.kind, lang).to_uppercase())
         ));
     }
     // Shape and symbols in the device's own frame (unscaled, at 0,0).
@@ -423,9 +423,9 @@ fn note(out: &mut String, ctx: &Ctx, n: &Note) {
 }
 
 /// The cells of `doc` (with layer cells unless `flat`), and its bounds.
-fn cells(doc: &Diagram, flat: bool, file: &str) -> (String, Rect) {
+fn cells(doc: &Diagram, flat: bool, file: &str, lang: crate::i18n::Language) -> (String, Rect) {
     // The frame goes along to files (in its layer), not to the clipboard.
-    let frame = if flat { None } else { crate::frame::of(doc, file) };
+    let frame = if flat { None } else { crate::frame::of_in(doc, file, lang) };
     // Layer backgrounds go along to files, not to the clipboard.
     let backgrounds = if flat { vec![] } else { doc.layer_backgrounds() };
     let b = doc
@@ -496,7 +496,7 @@ fn cells(doc: &Diagram, flat: bool, file: &str) -> (String, Rect) {
     let ctx = Ctx { doc, ox, oy, dirs: &dirs, label_end: &label_end, flat, spots: &spots };
     for it in doc.z_order() {
         match it {
-            Item::Device(i) => device(&mut cells, &ctx, &doc.devices[i]),
+            Item::Device(i) => device(&mut cells, &ctx, &doc.devices[i], lang),
             Item::Link(i) => link(&mut cells, &ctx, &doc.links[i]),
             Item::Note(i) => note(&mut cells, &ctx, &doc.notes[i]),
             // Connection points only exist as loose edge ends; their labels
@@ -602,7 +602,7 @@ fn frame_cell(out: &mut String, id: &str, parent: &str, p: &crate::frame::Prim, 
 /// (Ctrl+V) as editable shapes into the current layer, as if copied in
 /// draw.io itself.
 pub fn clipboard(doc: &Diagram) -> String {
-    let (cells, _) = cells(doc, true, "");
+    let (cells, _) = cells(doc, true, "", crate::i18n::Language::English);
     format!("<mxGraphModel><root>\n        <mxCell id=\"0\"/>\n        <mxCell id=\"1\" parent=\"0\"/>\n{cells}</root></mxGraphModel>\n")
 }
 
@@ -614,9 +614,13 @@ pub fn export(doc: &Diagram, title: &str, file: &str) -> String {
 /// Several diagrams (the sheets of a document) as the pages of one
 /// draw.io file, each `(name, diagram)`.
 pub fn export_pages(pages: &[(&str, &Diagram)], file: &str) -> String {
+    export_pages_in(pages, file, crate::i18n::Language::English)
+}
+
+pub fn export_pages_in(pages: &[(&str, &Diagram)], file: &str, lang: crate::i18n::Language) -> String {
     let mut out = String::new();
     for (i, (title, doc)) in pages.iter().enumerate() {
-        let (cells, b) = cells(doc, false, file);
+        let (cells, b) = cells(doc, false, file, lang);
         let page_w = (b.w + 2.0 * MARGIN).max(850.0).ceil();
         let page_h = (b.h + 2.0 * MARGIN).max(1100.0).ceil();
         let id = if i == 0 { "stratagram".to_string() } else { format!("stratagram-{}", i + 1) };

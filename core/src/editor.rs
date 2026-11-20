@@ -55,10 +55,10 @@ pub fn kind_color(kind: &str) -> Option<&'static str> {
 
 /// A device type as the start of a name: "Router", "Access point", "AWS";
 /// "Device" for none.
-fn kind_title(kind: &str) -> String {
+fn kind_title(kind: &str, lang: crate::i18n::Language) -> String {
     const UPPER: &[&str] = &["aws", "ospf", "bgp", "wlan", "ap", "stackit"];
     match kind {
-        "" => return "Device".into(),
+        "" => return lang.text("name.device").into(),
         // As network engineers call them.
         "aws transit gateway" => return "TGW".into(),
         "aws direct connect gateway" => return "DXGW".into(),
@@ -67,12 +67,18 @@ fn kind_title(kind: &str) -> String {
         "distributed virtual switch" => return "DVS".into(),
         _ => {}
     }
+    if let Some(label) = lang.lookup(&format!("device.{}", kind.replace(' ', "_"))) {
+        return label.to_owned();
+    }
     let words: Vec<String> = kind
         .split(' ')
         .enumerate()
         .map(|(i, w)| match w {
             w if UPPER.contains(&w) => w.to_uppercase(),
-            w if i == 0 => w[..1].to_uppercase() + &w[1..],
+            w if i == 0 => {
+                let mut chars = w.chars();
+                chars.next().map_or_else(String::new, |first| first.to_uppercase().to_string() + chars.as_str())
+            }
             w => w.to_string(),
         })
         .collect();
@@ -470,6 +476,7 @@ pub struct Editor {
     pub snap: bool,
     /// The colors the diagram is drawn in, on screen and in exports.
     pub theme: crate::theme::Theme,
+    pub language: crate::i18n::Language,
     /// Ctrl held: line dragged items up with nearby ones.
     pub align: bool,
     /// Deep zoom: the view can zoom in endlessly, and items added while
@@ -525,6 +532,7 @@ impl Default for Editor {
             zoom: 1.0,
             snap: true,
             theme: crate::theme::Theme::Light,
+            language: crate::i18n::Language::English,
             align: false,
             deep: false,
             guides: vec![],
@@ -1698,14 +1706,14 @@ impl Editor {
             if ep.is_point() {
                 return match doc.point(ep.owner()).map(|q| q.label.as_str()) {
                     Some(label) if !label.is_empty() => label.to_string(),
-                    _ => "a free point".to_string(),
+                    _ => self.language.text("tip.free").to_owned(),
                 };
             }
             let Some(d) = doc.device(ep.device) else { return "?".into() };
-            let device = if d.name.is_empty() { crate::shape::kind_label(&d.kind).to_string() } else { d.name.clone() };
+            let device = if d.name.is_empty() { crate::shape::kind_label_in(&d.kind, self.language).to_string() } else { d.name.clone() };
             let port = match d.port(ep.port) {
-                Some(p) if p.socket > 0 && p.rear => format!("back of socket {}", p.socket),
-                Some(p) if p.socket > 0 && p.name.is_empty() => format!("socket {}", p.socket),
+                Some(p) if p.socket > 0 && p.rear => self.language.format("tip.rear", &[("number", &p.socket.to_string())]),
+                Some(p) if p.socket > 0 && p.name.is_empty() => self.language.format("tip.socket", &[("number", &p.socket.to_string())]),
                 Some(p) => p.name.clone(),
                 None => String::new(),
             };
@@ -2187,7 +2195,7 @@ impl Editor {
         let s = self.level();
         let (w, h) = (120.0 * s, 60.0 * s);
         let at = self.snap_pt(Pt::new(p.x - w / 2.0, p.y - h / 2.0), s);
-        let name = self.next_device_name(&kind_title(kind));
+        let name = self.next_device_name(&kind_title(kind, self.language));
         let color = kind_color(kind).unwrap_or(KINDS[0].1);
         let id = self.doc.add_device(&name, kind, Rect { x: at.x, y: at.y, w, h }, color);
         let d =
@@ -2270,7 +2278,7 @@ impl Editor {
     pub fn add_note_at(&mut self, p: Pt) -> Id {
         self.checkpoint();
         let at = self.snap_pt(p, self.level());
-        let id = self.doc.add_note("Text", at);
+        let id = self.doc.add_note(self.language.text("name.note"), at);
         self.doc.note_mut(id).unwrap().scale = self.level();
         self.begin_edit(EditTarget::NoteText(id));
         id
@@ -2520,9 +2528,9 @@ impl Editor {
             let only_empty = self.doc.frame_layer().is_some();
             if !only_empty {
                 // Its own layer, first in the list: drawn under everything.
-                self.doc.add_layer("Frame");
+                self.doc.add_layer(self.language.text("name.frameLayer"));
                 let l = self.doc.layers.pop().unwrap();
-                self.doc.layers.insert(0, Layer { frame: Some(Frame::default()), ..l });
+                self.doc.layers.insert(0, Layer { frame: Some(Frame { title: self.language.text("name.title").into(), ..Frame::default() }), ..l });
             }
             self.fill_frame(value, only_empty);
         }
@@ -2578,7 +2586,7 @@ impl Editor {
                 let slot = if key == "logo" { (&mut f.logo, &mut f.logo_w, &mut f.logo_h) } else { (&mut f.logo2, &mut f.logo2_w, &mut f.logo2_h) };
                 (*slot.0, *slot.1, *slot.2) = (String::new(), 0.0, 0.0);
             }
-            "logo" | "logo2" => match crate::frame::logo_from(value) {
+            "logo" | "logo2" => match crate::frame::logo_from_in(value, self.language) {
                 Ok((data, w, h)) => {
                     let slot = if key == "logo" { (&mut f.logo, &mut f.logo_w, &mut f.logo_h) } else { (&mut f.logo2, &mut f.logo2_w, &mut f.logo2_h) };
                     (*slot.0, *slot.1, *slot.2) = (data, w, h);
@@ -2852,7 +2860,7 @@ impl Editor {
         let native = if native.trim().is_empty() && ours(text) { text } else { native };
         if !native.trim().is_empty() {
             let whole = serde_json::from_str::<Value>(native).ok().is_some_and(|v| v.get(SHEET_COPY) == Some(&Value::Bool(true)));
-            match Diagram::from_json(native) {
+            match Diagram::document_from_json_in(native, self.language).map(|mut sheets| sheets.remove(0)) {
                 Ok(d) if whole => return self.insert_sheet(d),
                 Ok(d) => return self.insert(d, Some(native), view),
                 Err(e) => self.status = format!("Cannot paste: {e}"),
@@ -2860,7 +2868,7 @@ impl Editor {
             return false;
         }
         if crate::drawio_import::looks_like_drawio(text) {
-            return match crate::drawio_import::import(text) {
+            return match crate::drawio_import::import_in(text, self.language) {
                 Ok(d) => self.insert(d, None, view),
                 Err(e) => {
                     self.status = format!("Cannot paste the draw.io shapes: {e}");
@@ -3590,7 +3598,7 @@ impl Editor {
     pub fn add_layer(&mut self) -> Id {
         self.checkpoint();
         let name = (self.doc.layers.len() + 1..)
-            .map(|n| format!("Layer {n}"))
+            .map(|n| self.language.numbered("name.layer", n))
             .find(|n| !self.doc.layers.iter().any(|l| &l.name == n))
             .unwrap();
         let id = self.doc.add_layer(&name);
@@ -3606,7 +3614,7 @@ impl Editor {
         }
         self.checkpoint();
         let name = (self.doc.layers.len() + 1..)
-            .map(|n| format!("Layer {n}"))
+            .map(|n| self.language.numbered("name.layer", n))
             .find(|n| !self.doc.layers.iter().any(|l| &l.name == n))
             .unwrap();
         let id = self.doc.add_sublayer(parent, &name);
@@ -3902,7 +3910,12 @@ impl Editor {
 
     pub fn new_diagram(&mut self) {
         let config_path = self.config_path.take();
-        *self = Editor { zoom: self.zoom, snap: self.snap, theme: self.theme, last_dir: self.last_dir.take(), config_path, ..Editor::default() };
+        *self = Editor {
+            doc: Diagram::empty_in(self.language),
+            zoom: self.zoom, snap: self.snap, theme: self.theme, language: self.language,
+            last_dir: self.last_dir.take(), config_path,
+            ..Editor::default()
+        };
         self.auto_frame();
     }
 
@@ -3946,20 +3959,21 @@ impl Editor {
                 values.push((key, None));
                 continue;
             }
-            match save_logo_copy(&path, &format!("{section}-{key}"), data) {
+            match save_logo_copy(&path, &format!("{section}-{key}"), data, self.language) {
                 Ok(file) => values.push((key, Some(file.display().to_string()))),
                 Err(e) => {
-                    self.status = format!("Defaults not saved: {e}.");
+                    self.status = self.language.format("defaults.failed", &[("error", &e)]);
                     return false;
                 }
             }
         }
         if let Err(e) = crate::config::set_values(&path, &section, &values) {
-            self.status = format!("Defaults not saved: cannot write {}: {e}.", crate::config::shown(&path));
+            let error = self.language.format("cli.write", &[("path", &crate::config::shown(&path)), ("error", &e.to_string())]);
+            self.status = self.language.format("defaults.failed", &[("error", &error)]);
             return false;
         }
-        let scope = if all_templates { "all templates".to_string() } else { format!("the {} template", f.template.as_str()) };
-        self.status = format!("Saved as defaults for {scope} in {} [{section}].", crate::config::shown(&path));
+        let scope = if all_templates { self.language.text("defaults.all").to_owned() } else { self.language.format("defaults.template", &[("template", f.template.as_str())]) };
+        self.status = self.language.format("defaults.saved", &[("scope", &scope), ("path", &crate::config::shown(&path)), ("section", &section)]);
         true
     }
 
@@ -3988,7 +4002,7 @@ impl Editor {
             let status = std::mem::take(&mut self.status);
             if !self.apply_frame(&key, &value) {
                 let why = std::mem::take(&mut self.status);
-                self.status = format!("stratagram.conf: cannot use {key}={value}. {why}").trim_end().to_string();
+                self.status = self.language.format("defaults.invalid", &[("key", &key), ("value", &value), ("error", &why)]).trim_end().to_string();
             } else {
                 self.status = status;
             }
@@ -3996,7 +4010,7 @@ impl Editor {
     }
 
     pub fn load(&mut self, path: &Path) -> Result<(), String> {
-        let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        let text = std::fs::read_to_string(path).map_err(|e| self.language.format("cli.read", &[("path", &path.display().to_string()), ("error", &e.to_string())]))?;
         self.load_json(&text, path)?;
         self.last_dir = path.parent().map(Path::to_path_buf);
         Ok(())
@@ -4005,11 +4019,12 @@ impl Editor {
     /// Open a diagram given as text, named `path` (just a name where there
     /// are no files, as in the browser).
     pub fn load_json(&mut self, text: &str, path: &Path) -> Result<(), String> {
-        let sheets = Diagram::document_from_json(text)?;
+        let sheets = Diagram::document_from_json_in(text, self.language)?;
         *self = Editor {
             zoom: self.zoom,
             snap: self.snap,
             theme: self.theme,
+            language: self.language,
             config_path: self.config_path.take(),
             last_dir: self.last_dir.take(),
             path: Some(path.to_path_buf()),
@@ -4030,8 +4045,8 @@ impl Editor {
 
     pub fn save(&mut self, path: &Path) -> Result<(), String> {
         let tmp = path.with_extension("tmp~");
-        std::fs::write(&tmp, self.document_json()).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
-        std::fs::rename(&tmp, path).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+        std::fs::write(&tmp, self.document_json()).map_err(|e| self.language.format("cli.write", &[("path", &path.display().to_string()), ("error", &e.to_string())]))?;
+        std::fs::rename(&tmp, path).map_err(|e| self.language.format("cli.write", &[("path", &path.display().to_string()), ("error", &e.to_string())]))?;
         self.path = Some(path.to_path_buf());
         self.last_dir = path.parent().map(Path::to_path_buf);
         self.dirty = false;
@@ -4053,11 +4068,11 @@ impl Editor {
     pub fn export_drawio(&self, title: &str) -> String {
         let all = self.all_sheets();
         if all.len() == 1 {
-            return crate::drawio::export(&all[0], title, &self.file_name());
+            return crate::drawio::export_pages_in(&[(title, &all[0])], &self.file_name(), self.language);
         }
         let names: Vec<String> = (0..all.len()).map(|i| self.sheet_name(i)).collect();
         let pages: Vec<(&str, &Diagram)> = names.iter().map(String::as_str).zip(all.iter()).collect();
-        crate::drawio::export_pages(&pages, &self.file_name())
+        crate::drawio::export_pages_in(&pages, &self.file_name(), self.language)
     }
 
     /// The whole document as a file.
@@ -4108,7 +4123,7 @@ impl Editor {
     /// Sheet `i`'s name, "Sheet <n>" if it has none.
     pub fn sheet_name(&self, i: usize) -> String {
         let name = if i == self.active_sheet { &self.doc.name } else { &self.sheets[i].name };
-        if name.trim().is_empty() { format!("Sheet {}", i + 1) } else { name.clone() }
+        if name.trim().is_empty() { self.language.numbered("name.sheet", i + 1) } else { name.clone() }
     }
 
     /// The sheets for the tabs: [{"name": ..., "active": ..., "empty": ...}].
@@ -4143,12 +4158,12 @@ impl Editor {
         // sheets are moved or removed.
         for (i, d) in all.iter_mut().enumerate() {
             if d.name.trim().is_empty() {
-                d.name = format!("Sheet {}", i + 1);
+                d.name = self.language.numbered("name.sheet", i + 1);
             }
         }
-        let name = (1..).map(|n| format!("Sheet {n}")).find(|n| !all.iter().any(|d| &d.name == n)).unwrap();
+        let name = (1..).map(|n| self.language.numbered("name.sheet", n)).find(|n| !all.iter().any(|d| &d.name == n)).unwrap();
         let at = self.active_sheet + 1;
-        let mut sheet = Diagram::default();
+        let mut sheet = Diagram::empty_in(self.language);
         sheet.name = name;
         all.insert(at, sheet);
         self.set_sheets(all, at);
@@ -4229,7 +4244,7 @@ impl Editor {
     /// ports facing their lines and lines kept clear of devices. Returns
     /// how many devices were arranged, or what went wrong.
     pub fn layout_document(&mut self, kind: &str, gap: f64) -> Result<usize, String> {
-        crate::layout::Layout::parse(kind).ok_or_else(|| format!("unknown layout {kind}"))?;
+        crate::layout::Layout::parse(kind).ok_or_else(|| self.language.format("cli.unknownLayout", &[("kind", kind)]))?;
         let shown = self.active_sheet();
         let mut arranged = 0;
         for i in 0..self.sheet_count() {
@@ -4266,11 +4281,11 @@ impl Editor {
     /// map them (JSON, "" for the defaults). The site on the first sheet,
     /// a sheet for each location after it; laid out top down; unsaved.
     pub fn import_netbox(&mut self, json: &str, options: &str) -> Result<(), String> {
-        let data = crate::netbox::SiteData::parse(json)?;
-        let opts = netbox_options(options)?;
+        let data = crate::netbox::SiteData::parse_in(json, self.language)?;
+        let opts = netbox_options(options, self.language)?;
         let doc = crate::netbox::site_diagram(&data, &opts);
         if doc.devices.is_empty() {
-            return Err("NetBox has no cabled devices there.".into());
+            return Err(self.language.text("netbox.empty").into());
         }
         let site = data.site.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
         let slug = data.site.get("slug").and_then(|n| n.as_str()).filter(|s| !s.is_empty()).unwrap_or("site").to_string();
@@ -4342,8 +4357,8 @@ impl Editor {
     /// if it stands for nothing else), renamed locations rename their
     /// sheets, and new locations get sheets of their own at the end.
     pub fn refresh_netbox(&mut self, json: &str, options: &str) -> Result<(), String> {
-        let data = crate::netbox::SiteData::parse(json)?;
-        let opts = netbox_options(options)?;
+        let data = crate::netbox::SiteData::parse_in(json, self.language)?;
+        let opts = netbox_options(options, self.language)?;
         let site = crate::netbox::site_diagram(&data, &opts);
         let locations = crate::netbox::location_diagrams(&data, &opts);
         let before = (self.doc.clone(), self.sheets.clone(), self.active_sheet);
@@ -4583,7 +4598,7 @@ impl Editor {
                 crate::shape::add_cords(&mut shape, d.front().as_ref(), &local, &cords);
                 json!({
                     "id": d.id, "x": d.x, "y": d.y, "w": d.w, "h": d.h,
-                    "name": d.name, "kind": d.kind, "kindLabel": crate::shape::kind_label(&d.kind),
+                    "name": d.name, "kind": d.kind, "kindLabel": crate::shape::kind_label_in(&d.kind, self.language),
                     "shape": shape.outline, "detail": shape.detail, "mark": shape.mark, "solid": shape.solid,
                     "ldx": shape.label.0, "ldy": shape.label.1,
                     "tile": shape.tile.map(|t| json!({"x": t.x, "y": t.y, "size": t.size, "bg": t.bg, "fg": t.fg,
@@ -4734,7 +4749,7 @@ impl Editor {
             .unwrap_or(Value::Null);
 
         // The frame, back to front; fitting the view includes it.
-        let frame = crate::frame::of(doc, &self.file_name());
+        let frame = crate::frame::of_in(doc, &self.file_name(), self.language);
         let frame_prims: Vec<Value> = frame.iter().flat_map(|f| &f.prims).map(prim_json).collect();
         let frame_over: Vec<Value> = frame.iter().flat_map(|f| &f.overlay).map(prim_json).collect();
         // Layer backgrounds, back to front.
@@ -4935,11 +4950,11 @@ impl Editor {
 /// The room a link's label needs along the line, across x and y: its box
 /// (the type's tag and the label, as drawn) plus the label margin on both
 /// sides. Nothing for a line without label or tag.
-fn netbox_options(json: &str) -> Result<crate::netbox::Options, String> {
+fn netbox_options(json: &str, lang: crate::i18n::Language) -> Result<crate::netbox::Options, String> {
     if json.trim().is_empty() {
         return Ok(Default::default());
     }
-    serde_json::from_str(json).map_err(|e| format!("bad NetBox options: {e}"))
+    serde_json::from_str(json).map_err(|e| lang.format("netbox.options", &[("error", &e.to_string())]))
 }
 
 fn label_room(l: &Link) -> crate::layout::LabelRoom {
@@ -4980,14 +4995,14 @@ fn belonging_limits(doc: &Diagram, ids: &[Id]) -> (Pt, Pt) {
 
 /// Write a logo (a data URI) as a file in a `logos` folder next to the
 /// configuration file `config`, named `name` with the image's extension.
-fn save_logo_copy(config: &Path, name: &str, data: &str) -> Result<PathBuf, String> {
-    let (head, b64) = data.split_once(";base64,").ok_or("the logo is not embedded as expected")?;
+fn save_logo_copy(config: &Path, name: &str, data: &str, lang: crate::i18n::Language) -> Result<PathBuf, String> {
+    let (head, b64) = data.split_once(";base64,").ok_or(lang.text("logo.notEmbedded"))?;
     let ext = if head.ends_with("jpeg") { "jpg" } else { "png" };
-    let bytes = crate::drawio_import::base64_decode(b64).ok_or("the logo is not valid base64")?;
+    let bytes = crate::drawio_import::base64_decode(b64).ok_or(lang.text("logo.badEncoding"))?;
     let dir = config.parent().unwrap_or(Path::new(".")).join("stratagram").join("logos");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+    std::fs::create_dir_all(&dir).map_err(|e| lang.format("file.create", &[("path", &dir.display().to_string()), ("error", &e.to_string())]))?;
     let file = dir.join(format!("{name}.{ext}"));
-    std::fs::write(&file, bytes).map_err(|e| format!("cannot write {}: {e}", file.display()))?;
+    std::fs::write(&file, bytes).map_err(|e| lang.format("cli.write", &[("path", &file.display().to_string()), ("error", &e.to_string())]))?;
     Ok(file)
 }
 

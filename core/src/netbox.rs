@@ -144,7 +144,11 @@ pub fn type_layer_name(kind: &str) -> String {
 
 impl SiteData {
     pub fn parse(json: &str) -> Result<SiteData, String> {
-        serde_json::from_str(json).map_err(|e| format!("not NetBox site data: {e}"))
+        Self::parse_in(json, crate::i18n::Language::English)
+    }
+
+    pub fn parse_in(json: &str, lang: crate::i18n::Language) -> Result<SiteData, String> {
+        serde_json::from_str(json).map_err(|e| lang.format("netbox.invalidSite", &[("error", &e.to_string())]))
     }
 }
 

@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#f1f5f9">
-<meta name="description" content="Stratagram, the network diagram editor, in the browser. Install it as an app to use it offline.">
+<meta name="description" content="">
 <link rel="stylesheet" href="stratagram.css">
 <style>
   html, body { height: 100%; margin: 0; }
@@ -21,6 +21,7 @@
 <body>
 <div id="editor"></div>
 <script type="module">
+  import { language, languageEvents, tr } from "./i18n.js"
   import { mount, fileHost } from "./app.js"
 
   // Chrome and Edge say when the editor can be installed as an app; kept
@@ -64,9 +65,17 @@
   const apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
   const safari = apple || (/Safari\//.test(ua) && !/Chrome|Chromium|Edg\/|OPR\/|Firefox/.test(ua))
   const installButton = document.createElement("button")
-  installButton.textContent = "Install app"
+  const description = document.querySelector('meta[name="description"]')
+  const localize = () => {
+    document.documentElement.lang = language
+    document.querySelector('link[rel="manifest"]').href = language === "zh-CN" ? "manifest.zh-CN.webmanifest" : "manifest.webmanifest"
+    description.content = tr("app.description")
+    installButton.textContent = tr("install.button")
+    installButton.title = tr("install.tooltip")
+  }
+  localize()
+  languageEvents.addEventListener("change", localize)
   installButton.className = "sg-install"
-  installButton.title = "Install Stratagram as an app: its own window, works offline"
   installButton.hidden = true
   installButton.addEventListener("click", async () => {
     if (installOffer) {
@@ -77,9 +86,9 @@
       if (outcome === "accepted") installed = true
       showInstall()
     } else if (safari) {
-      app.run(() => app.ctl.setStatus(apple
-        ? "To install Stratagram: tap Share, then Add to Home Screen. It then works offline."
-        : "To install Stratagram: File › Add to Dock (Safari 17 or newer). It then works offline."))
+      app.run(() => app.setStatus(apple
+        ? "install.ios"
+        : "install.safari"))
     }
   })
   const version = document.querySelector(".sg-statusline .sg-version")
@@ -95,18 +104,18 @@
     if (!wantsInstall || asked && !installed) return
     let hint
     if (inApp || installed) {
-      hint = "Stratagram is installed: this window is the app, and it works offline."
+      hint = "install.installed"
     } else if (installOffer) {
       installButton.classList.add("sg-install-hint")
-      hint = "To install Stratagram as an app, click Install app at the bottom right. It then works offline, in its own window."
+      hint = "install.available"
     } else if (safari) {
       hint = apple
-        ? "To install Stratagram: tap Share, then Add to Home Screen. It then works offline."
-        : "To install Stratagram: File › Add to Dock (Safari 17 or newer). It then works offline."
+        ? "install.ios"
+        : "install.safari"
     } else {
-      hint = "This browser does not offer to install Stratagram here. In Chrome or Edge it may already be installed (see the address bar); Firefox cannot install web apps."
+      hint = "install.unsupported"
     }
-    app.run(() => app.ctl.setStatus(hint))
+    app.run(() => app.setStatus(hint))
   }
   const showButton = showInstall
   showInstall = () => { showButton(); guide() }

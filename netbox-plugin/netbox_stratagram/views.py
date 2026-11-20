@@ -76,10 +76,10 @@ def _editor_context(request, site, base_template, sheet=None):
     diagram, hidden = _visible(request.user, site)
     # The tab is hidden without the permission, but its address still works.
     if not request.user.has_perm(VIEW):
-        denied = "You may not view site diagrams."
+        denied = _("You may not view site diagrams.")
     elif hidden:
         # Not shown, nor drawn afresh to be saved over.
-        denied = "This site has a diagram, but you may not view it."
+        denied = _("This site has a diagram, but you may not view it.")
     else:
         denied = None
     return {
@@ -170,15 +170,15 @@ class SiteDiagramDataView(View):
         # Not over one they may not view, unseen.
         hidden = diagram is not None and _visible(request.user, site)[1]
         if hidden or not _can_save(request.user, diagram):
-            return HttpResponseForbidden("You may not save diagrams.")
+            return HttpResponseForbidden(_("You may not save diagrams."))
         if len(request.body) > MAX_DIAGRAM_BYTES:
-            return HttpResponseBadRequest("The diagram is too large.")
+            return HttpResponseBadRequest(_("The diagram is too large."))
         try:
             data = json.loads(request.body)["diagram"]
         except (ValueError, KeyError, TypeError):
-            return HttpResponseBadRequest("Expected {\"diagram\": ...}.")
+            return HttpResponseBadRequest(_("Expected {\"diagram\": ...}."))
         if not isinstance(data, dict) or not isinstance(data.get("devices", []), list):
-            return HttpResponseBadRequest("Not a diagram.")
+            return HttpResponseBadRequest(_("Not a diagram."))
         action = "add" if diagram is None else "change"
         if diagram is None:
             diagram = SiteDiagram(site=site)
@@ -195,5 +195,5 @@ class SiteDiagramDataView(View):
                 if not _allowed(request.user, diagram, action):
                     raise _NotAllowed
         except _NotAllowed:
-            return HttpResponseForbidden("You may not save this site's diagram.")
+            return HttpResponseForbidden(_("You may not save this site's diagram."))
         return JsonResponse({"saved": diagram.last_updated})

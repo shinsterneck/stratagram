@@ -28,21 +28,21 @@ pub fn looks_like_drawio(text: &str) -> bool {
 
 /// Turn clipboard text from draw.io into the mxGraphModel XML: undo URL
 /// encoding, and unpack compressed `<diagram>` content.
-fn model_xml(text: &str) -> Result<String, String> {
+fn model_xml(text: &str, lang: crate::i18n::Language) -> Result<String, String> {
     let mut xml = text.trim().to_string();
     if xml.starts_with("%3C") {
         xml = percent_encoding::percent_decode_str(&xml).decode_utf8_lossy().into_owned();
     }
     if xml.starts_with("<mxfile") && !xml.contains("<mxGraphModel") {
         // <mxfile><diagram ...>base64(deflate(encodeURIComponent(xml)))</diagram></mxfile>
-        let start = xml.find("<diagram").and_then(|i| xml[i..].find('>').map(|j| i + j + 1)).ok_or("no diagram")?;
-        let end = xml[start..].find("</diagram>").map(|j| start + j).ok_or("no diagram")?;
-        let packed = base64_decode(xml[start..end].trim()).ok_or("diagram is not valid base64")?;
+        let start = xml.find("<diagram").and_then(|i| xml[i..].find('>').map(|j| i + j + 1)).ok_or(lang.text("drawio.missing"))?;
+        let end = xml[start..].find("</diagram>").map(|j| start + j).ok_or(lang.text("drawio.missing"))?;
+        let packed = base64_decode(xml[start..end].trim()).ok_or(lang.text("drawio.encoding"))?;
         let mut raw = vec![];
         use std::io::Read;
         flate2::read::DeflateDecoder::new(&packed[..])
             .read_to_end(&mut raw)
-            .map_err(|e| format!("cannot unpack diagram: {e}"))?;
+            .map_err(|e| lang.format("drawio.unpack", &[("error", &e.to_string())]))?;
         let encoded = String::from_utf8_lossy(&raw).into_owned();
         xml = percent_encoding::percent_decode_str(&encoded).decode_utf8_lossy().into_owned();
     }
@@ -109,14 +109,14 @@ fn num(m: &HashMap<String, String>, k: &str) -> f64 {
     m.get(k).and_then(|v| v.parse().ok()).filter(|v: &f64| v.is_finite()).unwrap_or(0.0)
 }
 
-fn parse_cells(xml: &str) -> Result<Vec<Cell>, String> {
+fn parse_cells(xml: &str, lang: crate::i18n::Language) -> Result<Vec<Cell>, String> {
     let mut reader = quick_xml::Reader::from_str(xml);
     let mut cells: Vec<Cell> = vec![];
     // An <object> wrapping the next mxCell: its id, label and properties.
     let mut object: Option<HashMap<String, String>> = None;
     let mut in_cell = false;
     loop {
-        let ev = reader.read_event().map_err(|e| format!("invalid draw.io XML: {e}"))?;
+        let ev = reader.read_event().map_err(|e| lang.format("drawio.xml", &[("error", &e.to_string())]))?;
         let (e, empty) = match &ev {
             Event::Start(e) => (e, false),
             Event::Empty(e) => (e, true),
@@ -251,11 +251,15 @@ fn is_port(c: &Cell, parent: Option<&Cell>) -> bool {
 
 /// Shapes from draw.io clipboard or file text, with draw.io's coordinates.
 pub fn import(text: &str) -> Result<Diagram, String> {
-    let xml = model_xml(text)?;
+    import_in(text, crate::i18n::Language::English)
+}
+
+pub fn import_in(text: &str, lang: crate::i18n::Language) -> Result<Diagram, String> {
+    let xml = model_xml(text, lang)?;
     // Our export's frame is drawn from the diagram, not part of it.
     // Our export's frame and layer backgrounds are drawn from the diagram,
     // not part of it.
-    let cells: Vec<Cell> = parse_cells(&xml)?
+    let cells: Vec<Cell> = parse_cells(&xml, lang)?
         .into_iter()
         .filter(|c| {
             // Also the markers of exports from before the rename ("netdiag…").
@@ -426,7 +430,7 @@ pub fn import(text: &str) -> Result<Diagram, String> {
         }
     }
     if d.devices.is_empty() && d.notes.is_empty() && d.links.is_empty() {
-        return Err("no shapes found".into());
+        return Err(lang.text("drawio.empty").into());
     }
     Ok(d)
 }

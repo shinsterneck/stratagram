@@ -1477,6 +1477,12 @@ struct SheetFile {
 }
 
 impl Diagram {
+    pub fn empty_in(lang: crate::i18n::Language) -> Self {
+        let mut doc = Self::default();
+        doc.layers[0].name = lang.numbered("name.layer", 1);
+        doc
+    }
+
     pub fn alloc_id(&mut self) -> Id {
         self.next_id = self.next_id.max(1);
         let id = self.next_id;
@@ -2670,12 +2676,16 @@ impl Diagram {
 
     /// The sheets of a file (at least one).
     pub fn document_from_json(s: &str) -> Result<Vec<Diagram>, String> {
-        let f: DiagramFile = serde_json::from_str(s).map_err(|e| format!("invalid diagram file: {e}"))?;
+        Self::document_from_json_in(s, crate::i18n::Language::English)
+    }
+
+    pub fn document_from_json_in(s: &str, lang: crate::i18n::Language) -> Result<Vec<Diagram>, String> {
+        let f: DiagramFile = serde_json::from_str(s).map_err(|e| lang.format("file.invalid", &[("error", &e.to_string())]))?;
         if f.format != FORMAT_NAME && f.format != LEGACY_FORMAT_NAME {
-            return Err(format!("not a {FORMAT_NAME} file (format \"{}\")", f.format));
+            return Err(lang.format("file.format", &[("expected", FORMAT_NAME), ("format", &f.format)]));
         }
         if f.version > FORMAT_VERSION {
-            return Err(format!("file version {} is newer than supported ({FORMAT_VERSION})", f.version));
+            return Err(lang.format("file.version", &[("version", &f.version.to_string()), ("supported", &FORMAT_VERSION.to_string())]));
         }
         Ok(std::iter::once(f.first).chain(f.sheets).map(Diagram::from_sheet_file).collect())
     }

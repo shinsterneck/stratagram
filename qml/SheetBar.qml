@@ -14,6 +14,7 @@ Rectangle {
     // The interface colors of the theme (given by main.qml).
     property var tc: ({ text: "#0f172a", muted: "#475569", muted2: "#64748b", faint: "#94a3b8", line: "#e2e8f0", alt: "#f1f5f9", base: "#ffffff", accent: "#2563eb", border: "#cbd5e1", drop: "#bfdbfe", dropParent: "#e0ecff", active: "#dbeafe" })
     id: root
+    required property var translate
     required property DiagramController ctl
     readonly property var sheets: JSON.parse(ctl.sheets)
     // Asks before removing a sheet with something on it.
@@ -145,7 +146,7 @@ Rectangle {
                     }
                     ToolTip.visible: closeMouse.containsMouse
                     ToolTip.delay: 500
-                    ToolTip.text: "Remove this sheet"
+                    ToolTip.text: root.translate("sheet.removeHint")
                 }
             }
         }
@@ -157,7 +158,7 @@ Rectangle {
             onClicked: root.ctl.addSheet()
             ToolTip.visible: hovered
             ToolTip.delay: 500
-            ToolTip.text: "Add a sheet"
+            ToolTip.text: root.translate("sheet.addHint")
         }
     }
 }
