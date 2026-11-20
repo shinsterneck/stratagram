@@ -27,7 +27,7 @@
     <ul>
       <li>28 device types with their own shapes, and line types with a meaning: 802.1Q trunk, L2, L3, IPsec, VXLAN, CAPWAP, SD-WAN, MPLS</li>
       <li xml:lang="zh-CN">28 种设备类型均有专用图形。链路类型包括 802.1Q Trunk、L2、L3、IPsec、VXLAN、CAPWAP、SD-WAN 和 MPLS。</li>
-      <li>Quick add: type “firewall, router, switch” and they appear, connected by auto layout</li>
+      <li>Quick add: type “firewall, router, switch” to add devices, drag between ports to connect them, then apply auto layout</li>
       <li xml:lang="zh-CN">快速添加：输入“firewall, router, switch”即可创建设备，再使用自动布局排列。</li>
       <li>Front panels of switches, routers, firewalls, servers and patch panels, with cabling followed end to end</li>
       <li xml:lang="zh-CN">展示交换机、路由器、防火墙、服务器和配线架的前面板，并可端到端追踪线缆。</li>

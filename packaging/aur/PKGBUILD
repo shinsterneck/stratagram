@@ -55,5 +55,5 @@ package() {
   install -Dm644 "packaging/$id.mime.xml" "$pkgdir/usr/share/mime/packages/$id.xml"
   install -Dm644 "packaging/$id.metainfo.xml" "$pkgdir/usr/share/metainfo/$id.metainfo.xml"
   install -Dm644 NOTICE "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
-  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" README*.md
 }

@@ -1,5 +1,7 @@
 # Stratagram
 
+English · [简体中文](README.zh-CN.md)
+
 [![Build](https://github.com/shinsterneck/stratagram/actions/workflows/build.yml/badge.svg)](https://github.com/shinsterneck/stratagram/actions/workflows/build.yml)
 
 A network diagram editor for getting a network onto the screen in minutes. Standardized stencils
@@ -12,7 +14,7 @@ reads the result the same way.
 
 - Device types with their own shapes, and line types that say what a line carries (802.1Q, L2, L3,
   IPsec, VXLAN, MPLS and more)
-- Quick add and auto layout: type what you need, Stratagram places and connects it
+- Add devices in batches, drag between ports to connect them, and use auto layout to arrange the topology
 - Front panels with numbered ports, and cabling followed end to end through patch panels
 - Layers, sheets, frames with title blocks, light, dark and neon themes
 - Export to SVG, PNG, draw.io and Cisco Modeling Labs; plain JSON files
