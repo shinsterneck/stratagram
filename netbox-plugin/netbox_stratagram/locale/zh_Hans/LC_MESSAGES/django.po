@@ -1,0 +1,63 @@
+# Simplified Chinese translations for NetBox Stratagram.
+# SPDX-License-Identifier: Apache-2.0
+msgid ""
+msgstr ""
+"Project-Id-Version: netbox-stratagram 1.1.1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-20 17:32+0800\n"
+"PO-Revision-Date: 2026-11-20 17:32+0800\n"
+"Last-Translator: Stratagram contributors\n"
+"Language: zh_Hans\n"
+"Language-Team: Simplified Chinese\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+msgid "Diagram"
+msgstr "网络图"
+
+#, python-format
+msgid "Diagram of %(site)s"
+msgstr "%(site)s 的网络图"
+
+#, python-brace-format
+msgid "Expected {\"diagram\": ...}."
+msgstr "请求体应为 {\"diagram\": ...}。"
+
+msgid "Network diagrams of sites, edited in NetBox"
+msgstr "在 NetBox 中编辑站点网络图"
+
+msgid "Not a diagram."
+msgstr "网络图数据无效。"
+
+msgid "The diagram editor was not built into this plugin (see build.sh)."
+msgstr "此插件未包含网络图编辑器，请使用 build.sh 构建。"
+
+msgid "The diagram is too large."
+msgstr "网络图文件过大。"
+
+msgid "This site has a diagram, but you may not view it."
+msgstr "此站点已有网络图，你没有查看权限。"
+
+msgid "You may not save diagrams."
+msgstr "你没有保存网络图的权限。"
+
+msgid "You may not save this site's diagram."
+msgstr "你没有保存此站点网络图的权限。"
+
+msgid "You may not view site diagrams."
+msgstr "你没有查看站点网络图的权限。"
+
+msgid "diagram"
+msgstr "网络图"
+
+msgid "site"
+msgstr "站点"
+
+msgid "site diagram"
+msgstr "站点网络图"
+
+msgid "site diagrams"
+msgstr "站点网络图"

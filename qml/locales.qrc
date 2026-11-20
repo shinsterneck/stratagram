@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/stratagram/locales">
+        <file alias="messages.mjs">../web/www/locales/messages.mjs</file>
+        <file alias="en.mjs">../web/www/locales/en.mjs</file>
+        <file alias="core-messages.mjs">../web/www/locales/core-messages.mjs</file>
+        <file alias="zh-CN.mjs">../web/www/locales/zh-CN.mjs</file>
+    </qresource>
+</RCC>

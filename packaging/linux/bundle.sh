@@ -29,7 +29,7 @@ install -Dm644 "packaging/$id.metainfo.xml" "$out/share/metainfo/$id.metainfo.xm
 install -Dm644 -t "$out/share/licenses/stratagram" LICENSE NOTICE
 cargo about generate --locked -c about.toml -m Cargo.toml --target x86_64-unknown-linux-gnu \
     -o "$out/share/licenses/stratagram/THIRD-PARTY-LICENSES.txt" about.hbs
-install -Dm644 README.md "$out/share/doc/stratagram/README.md"
+install -Dm644 -t "$out/share/doc/stratagram" README.md README.zh-CN.md
 
 tar -C dist --owner=0 --group=0 -czf "$out.tar.gz" "$name"
 echo "$out.tar.gz"

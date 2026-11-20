@@ -5,6 +5,7 @@
 """NetBox Stratagram: a site's network diagram, drawn from its devices
 and cables and edited in the browser on the site's Diagram tab."""
 
+from django.utils.translation import gettext_lazy as _
 from netbox.plugins import PluginConfig
 
 __version__ = "1.1.1"
@@ -13,7 +14,7 @@ __version__ = "1.1.1"
 class StratagramConfig(PluginConfig):
     name = "netbox_stratagram"
     verbose_name = "NetBox Stratagram"
-    description = "Network diagrams of sites, edited in NetBox"
+    description = _("Network diagrams of sites, edited in NetBox")
     author = "Shin Sterneck"
     version = __version__
     base_url = "stratagram"

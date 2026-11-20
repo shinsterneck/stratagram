@@ -20,7 +20,7 @@
 inline constexpr double png_max_side = 16384.0;
 
 // Render `svg` at `scale` (1 = one pixel per diagram unit) into the PNG
-// file `path`. Returns an error message, or nothing on success.
+// file `path`. Returns an error key, or nothing on success.
 inline QString svg_to_png(const QString& svg, const QString& path, double scale)
 {
     // Text needs a GUI application; from the command line there is none
@@ -34,20 +34,20 @@ inline QString svg_to_png(const QString& svg, const QString& path, double scale)
     }
     QSvgRenderer renderer(svg.toUtf8());
     if (!renderer.isValid())
-        return QStringLiteral("the diagram could not be rendered");
+        return QStringLiteral("png.render");
     const QSizeF base = renderer.viewBoxF().size();
     if (base.isEmpty())
-        return QStringLiteral("the diagram is empty");
+        return QStringLiteral("png.empty");
     scale = std::min(scale, png_max_side / std::max(base.width(), base.height()));
     QImage image(QSize(int(std::ceil(base.width() * scale)), int(std::ceil(base.height() * scale))), QImage::Format_ARGB32);
     if (image.isNull())
-        return QStringLiteral("the picture is too large");
+        return QStringLiteral("png.tooLarge");
     image.fill(Qt::white);
     QPainter painter(&image);
     painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
     renderer.render(&painter);
     painter.end();
     if (!image.save(path, "PNG"))
-        return QStringLiteral("cannot write ") + path;
+        return QStringLiteral("png.write");
     return QString();
 }

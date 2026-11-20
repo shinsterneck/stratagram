@@ -18,35 +18,50 @@
 use crate::model::*;
 use quick_xml::XmlVersion;
 use quick_xml::events::{BytesStart, Event};
+use crate::i18n::Diagnostic;
 use std::collections::HashMap;
 
 /// Whether `text` looks like draw.io data (plain, URL-encoded or compressed).
 pub fn looks_like_drawio(text: &str) -> bool {
     let t = text.trim_start();
-    t.starts_with("<mxGraphModel") || t.starts_with("<mxfile") || t.starts_with("%3CmxGraphModel") || t.starts_with("%3Cmxfile")
+    if t.starts_with("%3C") {
+        return is_model(&percent_encoding::percent_decode_str(t).decode_utf8_lossy());
+    }
+    is_model(t)
+}
+
+fn without_declaration(text: &str) -> &str {
+    let t = text.trim_start().trim_start_matches('\u{feff}').trim_start();
+    t.strip_prefix("<?xml").and_then(|decl| decl.split_once("?>")).map_or(t, |(_, body)| body.trim_start())
+}
+
+fn is_model(text: &str) -> bool {
+    let t = without_declaration(text);
+    t.starts_with("<mxGraphModel") || t.starts_with("<mxfile")
 }
 
 /// Turn clipboard text from draw.io into the mxGraphModel XML: undo URL
 /// encoding, and unpack compressed `<diagram>` content.
-fn model_xml(text: &str) -> Result<String, String> {
+fn model_xml(text: &str) -> Result<String, Diagnostic> {
     let mut xml = text.trim().to_string();
     if xml.starts_with("%3C") {
         xml = percent_encoding::percent_decode_str(&xml).decode_utf8_lossy().into_owned();
     }
+    let xml = without_declaration(&xml);
     if xml.starts_with("<mxfile") && !xml.contains("<mxGraphModel") {
         // <mxfile><diagram ...>base64(deflate(encodeURIComponent(xml)))</diagram></mxfile>
-        let start = xml.find("<diagram").and_then(|i| xml[i..].find('>').map(|j| i + j + 1)).ok_or("no diagram")?;
-        let end = xml[start..].find("</diagram>").map(|j| start + j).ok_or("no diagram")?;
-        let packed = base64_decode(xml[start..end].trim()).ok_or("diagram is not valid base64")?;
+        let start = xml.find("<diagram").and_then(|i| xml[i..].find('>').map(|j| i + j + 1)).ok_or_else(|| Diagnostic::new("drawio.missing", []))?;
+        let end = xml[start..].find("</diagram>").map(|j| start + j).ok_or_else(|| Diagnostic::new("drawio.missing", []))?;
+        let packed = base64_decode(xml[start..end].trim()).ok_or_else(|| Diagnostic::new("drawio.encoding", []))?;
         let mut raw = vec![];
         use std::io::Read;
         flate2::read::DeflateDecoder::new(&packed[..])
             .read_to_end(&mut raw)
-            .map_err(|e| format!("cannot unpack diagram: {e}"))?;
+            .map_err(|e| Diagnostic::new("drawio.unpack", [("error", e.to_string())]))?;
         let encoded = String::from_utf8_lossy(&raw).into_owned();
-        xml = percent_encoding::percent_decode_str(&encoded).decode_utf8_lossy().into_owned();
+        return Ok(percent_encoding::percent_decode_str(&encoded).decode_utf8_lossy().into_owned());
     }
-    Ok(xml)
+    Ok(xml.to_owned())
 }
 
 pub fn base64_decode(s: &str) -> Option<Vec<u8>> {
@@ -109,14 +124,14 @@ fn num(m: &HashMap<String, String>, k: &str) -> f64 {
     m.get(k).and_then(|v| v.parse().ok()).filter(|v: &f64| v.is_finite()).unwrap_or(0.0)
 }
 
-fn parse_cells(xml: &str) -> Result<Vec<Cell>, String> {
+fn parse_cells(xml: &str) -> Result<Vec<Cell>, Diagnostic> {
     let mut reader = quick_xml::Reader::from_str(xml);
     let mut cells: Vec<Cell> = vec![];
     // An <object> wrapping the next mxCell: its id, label and properties.
     let mut object: Option<HashMap<String, String>> = None;
     let mut in_cell = false;
     loop {
-        let ev = reader.read_event().map_err(|e| format!("invalid draw.io XML: {e}"))?;
+        let ev = reader.read_event().map_err(|e| Diagnostic::new("drawio.xml", [("error", e.to_string())]))?;
         let (e, empty) = match &ev {
             Event::Start(e) => (e, false),
             Event::Empty(e) => (e, true),
@@ -200,8 +215,41 @@ fn plain_text(html: &str) -> String {
             _ => {}
         }
     }
-    let out = out.replace("&nbsp;", " ").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&amp;", "&");
+    let out = html_entities(&out);
     out.lines().map(str::trim).filter(|l| !l.is_empty()).collect::<Vec<_>>().join("\n")
+}
+
+fn html_entities(text: &str) -> String {
+    text.replace("&nbsp;", " ").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&amp;", "&")
+}
+
+fn device_name(cell: &Cell, kind: &str) -> String {
+    let own = cell.props.contains_key("stratagram_id") || cell.props.contains_key("netdiag_id");
+    let is_caption = |line: &str| {
+        if let Some(caption) = cell.props.get("stratagram_caption") {
+            return line.eq_ignore_ascii_case(caption);
+        }
+        // Older exports did not record the caption or its language.
+        [crate::i18n::Language::English, crate::i18n::Language::Chinese].iter().any(|lang| {
+            line.eq_ignore_ascii_case(&crate::shape::kind_label_in(kind, *lang).to_uppercase())
+        })
+    };
+    if own && let Some((name, rest)) = cell.value.strip_prefix("<b>").and_then(|v| v.split_once("</b>")) {
+        // Read the visible name, including edits made in draw.io. Preserve its
+        // whitespace and line breaks when the original HTML structure survives.
+        let subtitle = rest.strip_prefix("<br><span ").and_then(|v| v.split_once('>'))
+            .and_then(|(_, content)| content.strip_suffix("</span>"));
+        if !name.contains('<') && (rest.is_empty() || subtitle.is_some_and(|s| is_caption(&html_entities(s)))) {
+            return html_entities(name);
+        }
+    }
+
+    let text = plain_text(&cell.value);
+    let mut lines: Vec<&str> = text.lines().collect();
+    if own && lines.len() > 1 && lines.last().is_some_and(|last| is_caption(last)) {
+        lines.pop();
+    }
+    lines.join(" ")
 }
 
 /// Device type from a draw.io shape style (e.g. mxgraph.cisco.routers...).
@@ -251,6 +299,14 @@ fn is_port(c: &Cell, parent: Option<&Cell>) -> bool {
 
 /// Shapes from draw.io clipboard or file text, with draw.io's coordinates.
 pub fn import(text: &str) -> Result<Diagram, String> {
+    import_in(text, crate::i18n::Language::English)
+}
+
+pub fn import_in(text: &str, lang: crate::i18n::Language) -> Result<Diagram, String> {
+    parse_import(text).map_err(|error| error.render(lang))
+}
+
+pub(crate) fn parse_import(text: &str) -> Result<Diagram, Diagnostic> {
     let xml = model_xml(text)?;
     // Our export's frame is drawn from the diagram, not part of it.
     // Our export's frame and layer backgrounds are drawn from the diagram,
@@ -308,12 +364,7 @@ pub fn import(text: &str) -> Result<Diagram, String> {
             continue;
         }
         let kind = c.props.get("kind").map(String::as_str).unwrap_or_else(|| kind_from_style(&c.style)).to_string();
-        let mut lines: Vec<String> = plain_text(&c.value).lines().map(String::from).collect();
-        // Our export puts the type under the name, in capitals.
-        if lines.len() > 1 && lines.last().is_some_and(|l| l.eq_ignore_ascii_case(&kind)) {
-            lines.pop();
-        }
-        let name = lines.join(" ");
+        let name = device_name(c, &kind);
         let fill = color(&c.style, "fillColor")
             .or_else(|| crate::editor::kind_color(&kind).map(String::from))
             .unwrap_or_else(|| "#dbeafe".into());
@@ -426,7 +477,7 @@ pub fn import(text: &str) -> Result<Diagram, String> {
         }
     }
     if d.devices.is_empty() && d.notes.is_empty() && d.links.is_empty() {
-        return Err("no shapes found".into());
+        return Err(Diagnostic::new("drawio.empty", []));
     }
     Ok(d)
 }
@@ -452,6 +503,39 @@ mod tests {
         // Same layout: relative positions are kept.
         let core = d.devices.iter().find(|x| x.name == "core-sw-01").unwrap();
         assert_eq!(core.y - fw.y, 180.0);
+    }
+
+    #[test]
+    fn localized_device_names_survive_file_and_clipboard_round_trips() {
+        use crate::i18n::Language::{Chinese, English};
+        let mut ed = crate::editor::Editor::default();
+        ed.language = Chinese;
+        ed.new_diagram();
+        let name = "  北京 <edge> & \"WAN\"\n路由器  ";
+        ed.doc.add_device(name, "router", Rect { x: 0.0, y: 0.0, w: 120.0, h: 60.0 }, "#ffeecc");
+        for xml in [ed.export_drawio("test"), ed.copy_drawio().unwrap()] {
+            assert!(looks_like_drawio(&xml));
+            assert!(xml.contains("路由器&lt;/span&gt;"));
+            let back = import_in(&xml, English).unwrap();
+            assert_eq!(back.devices[0].name, name);
+            assert_eq!(back.devices[0].kind, "router");
+            let old = xml.replace(" stratagram_caption=\"路由器\"", "");
+            assert_eq!(import_in(&old, English).unwrap().devices[0].name, name);
+            let renamed = xml.replace("北京", "上海");
+            assert_eq!(import(&renamed).unwrap().devices[0].name, name.replace("北京", "上海"));
+        }
+    }
+
+    #[test]
+    fn edited_and_foreign_labels_keep_their_visible_text() {
+        let mut cell = Cell { value: "<div>changed</div><div>路由器</div>".into(), ..Cell::default() };
+        assert_eq!(device_name(&cell, "router"), "changed 路由器");
+        cell.props.insert("stratagram_id".into(), "1".into());
+        assert_eq!(device_name(&cell, "router"), "changed");
+        cell.value = "<b>changed</b><br><span style=\"font-size:10px\">lab</span>".into();
+        assert_eq!(device_name(&cell, "router"), "changed lab");
+        cell.value = "路由器".into();
+        assert_eq!(device_name(&cell, "router"), "路由器");
     }
 
     #[test]

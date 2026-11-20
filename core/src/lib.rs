@@ -14,6 +14,7 @@ pub mod drawio_import;
 pub mod editor;
 pub mod frame;
 pub mod geom;
+pub mod i18n;
 pub mod layout;
 pub mod model;
 pub mod netbox;

@@ -12,6 +12,7 @@ fn main() {
         "qml/ColorPicker.qml",
         "qml/SheetBar.qml",
     ]))
+    .qrc("qml/locales.qrc")
     .qt_module("Quick")
     .qt_module("Svg")
     .files(["src/bridge.rs"])

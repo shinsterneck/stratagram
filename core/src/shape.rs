@@ -32,6 +32,16 @@ pub fn kind_label(kind: &str) -> &str {
     }
 }
 
+/// Localize a built-in caption at rendering time. Custom kinds belong to the document.
+pub fn kind_label_in(kind: &str, lang: crate::i18n::Language) -> &str {
+    if lang == crate::i18n::Language::Chinese
+        && let Some(label) = lang.lookup(&format!("device.{}", kind.replace(' ', "_")))
+    {
+        return label;
+    }
+    kind_label(kind)
+}
+
 /// Cloud providers: their tile color, text color and monogram. These are
 /// simple stand-ins in the brand colors, not the providers' logos.
 const PROVIDERS: [(&str, &str, &str, &str); 7] = [

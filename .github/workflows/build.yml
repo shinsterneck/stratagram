@@ -55,6 +55,8 @@ jobs:
           tool: wasm-bindgen-cli@0.2.129,cargo-about
       - name: Tests
         run: cargo test -p stratagram-core --locked
+      - name: Web localization tests
+        run: node --test web/tests/*.test.mjs
       - name: Clippy (desktop app and core)
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Clippy (browser editor)
@@ -99,7 +101,9 @@ jobs:
           New-Item -ItemType Directory -Force $dir | Out-Null
           Copy-Item target/release/stratagram.exe $dir
           windeployqt --release --qmldir qml --no-translations "$dir/stratagram.exe"
-          Copy-Item LICENSE, NOTICE, README.md $dir
+          Copy-Item LICENSE, NOTICE, README.md, README.zh-CN.md $dir
+          New-Item -ItemType Directory -Force "$dir/packaging/windows" | Out-Null
+          Copy-Item packaging/windows/Inno-Setup-LICENSE.txt "$dir/packaging/windows"
           Copy-Item packaging/qt/* $dir
           cargo about generate --locked -c about.toml -m Cargo.toml --target x86_64-pc-windows-msvc -o "$dir/THIRD-PARTY-LICENSES.txt" about.hbs
       - name: Installer and zip

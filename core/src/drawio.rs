@@ -34,6 +34,8 @@ fn esc(s: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\n', "&#xa;")
+        .replace('\r', "&#xd;")
+        .replace('\t', "&#x9;")
 }
 
 /// Escape text that goes into an `html=1` label (escaped once for HTML,
@@ -133,17 +135,18 @@ impl Ctx<'_> {
     }
 }
 
-fn device(out: &mut String, ctx: &Ctx, d: &Device) {
+fn device(out: &mut String, ctx: &Ctx, d: &Device, lang: crate::i18n::Language) {
     let Ctx { doc, ox, oy, label_end, .. } = *ctx;
     let fill = geom::normalize_color(&d.color).unwrap_or_else(|| "#dbeafe".into());
     let stroke = geom::darken(&fill, 0.45);
     let font = geom::text_on(&fill);
     let mut label = format!("<b>{}</b>", html_text(&d.name));
+    let caption = crate::shape::kind_label_in(&d.kind, lang).to_uppercase();
     if !d.kind.is_empty() {
         label.push_str(&format!(
             "<br><span style=\"font-size:{:.1}px;opacity:0.7\">{}</span>",
             10.0 * d.scale,
-            html_text(&crate::shape::kind_label(&d.kind).to_uppercase())
+            html_text(&caption)
         ));
     }
     // Shape and symbols in the device's own frame (unscaled, at 0,0).
@@ -160,7 +163,7 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device) {
     }
     let _ = writeln!(
         out,
-        r#"        <object id="{id}" label="{label}" kind="{kind}" stratagram_id="{nid}">
+        r#"        <object id="{id}" label="{label}" kind="{kind}" stratagram_id="{nid}" stratagram_caption="{caption}">
           <mxCell style="{shape}whiteSpace=wrap;html=1;fillColor={fill};strokeColor={stroke};fontColor={font};fontSize={fs13:.1};strokeWidth={sw:.2};" vertex="1" parent="{layer}">
             <mxGeometry x="{x:.1}" y="{y:.1}" width="{w:.1}" height="{h:.1}" as="geometry"/>
           </mxCell>
@@ -174,6 +177,7 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device) {
         kind = esc(&d.kind),
         shape = style,
         nid = d.id,
+        caption = esc(&caption),
         x = d.x + ox,
         y = d.y + oy,
         w = d.w,
@@ -198,7 +202,7 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device) {
         );
     }
 
-    if let Some(name) = doc.layer_badge(d) {
+    if let Some(name) = doc.layer_badge_in(d, lang) {
         // Layer name in the lower right corner, as a child so it moves along.
         let _ = writeln!(
             out,
@@ -423,9 +427,9 @@ fn note(out: &mut String, ctx: &Ctx, n: &Note) {
 }
 
 /// The cells of `doc` (with layer cells unless `flat`), and its bounds.
-fn cells(doc: &Diagram, flat: bool, file: &str) -> (String, Rect) {
+fn cells(doc: &Diagram, flat: bool, file: &str, lang: crate::i18n::Language) -> (String, Rect) {
     // The frame goes along to files (in its layer), not to the clipboard.
-    let frame = if flat { None } else { crate::frame::of(doc, file) };
+    let frame = if flat { None } else { crate::frame::of_in(doc, file, lang) };
     // Layer backgrounds go along to files, not to the clipboard.
     let backgrounds = if flat { vec![] } else { doc.layer_backgrounds() };
     let b = doc
@@ -455,7 +459,7 @@ fn cells(doc: &Diagram, flat: bool, file: &str) -> (String, Rect) {
             r#"        <mxCell id="{id}" value="{name}" parent="0"{hidden}/>"#,
             id = layer_id(l.id),
             // draw.io has no sub-layers: theirs have the names above them.
-            name = esc(&doc.layer_path(l.id)),
+            name = esc(&doc.layer_path_in(l.id, lang)),
             hidden = if doc.layer_visible(l.id) { "" } else { r#" visible="0""# },
         );
     }
@@ -496,7 +500,7 @@ fn cells(doc: &Diagram, flat: bool, file: &str) -> (String, Rect) {
     let ctx = Ctx { doc, ox, oy, dirs: &dirs, label_end: &label_end, flat, spots: &spots };
     for it in doc.z_order() {
         match it {
-            Item::Device(i) => device(&mut cells, &ctx, &doc.devices[i]),
+            Item::Device(i) => device(&mut cells, &ctx, &doc.devices[i], lang),
             Item::Link(i) => link(&mut cells, &ctx, &doc.links[i]),
             Item::Note(i) => note(&mut cells, &ctx, &doc.notes[i]),
             // Connection points only exist as loose edge ends; their labels
@@ -602,7 +606,11 @@ fn frame_cell(out: &mut String, id: &str, parent: &str, p: &crate::frame::Prim, 
 /// (Ctrl+V) as editable shapes into the current layer, as if copied in
 /// draw.io itself.
 pub fn clipboard(doc: &Diagram) -> String {
-    let (cells, _) = cells(doc, true, "");
+    clipboard_in(doc, crate::i18n::Language::English)
+}
+
+pub fn clipboard_in(doc: &Diagram, lang: crate::i18n::Language) -> String {
+    let (cells, _) = cells(doc, true, "", lang);
     format!("<mxGraphModel><root>\n        <mxCell id=\"0\"/>\n        <mxCell id=\"1\" parent=\"0\"/>\n{cells}</root></mxGraphModel>\n")
 }
 
@@ -614,9 +622,13 @@ pub fn export(doc: &Diagram, title: &str, file: &str) -> String {
 /// Several diagrams (the sheets of a document) as the pages of one
 /// draw.io file, each `(name, diagram)`.
 pub fn export_pages(pages: &[(&str, &Diagram)], file: &str) -> String {
+    export_pages_in(pages, file, crate::i18n::Language::English)
+}
+
+pub fn export_pages_in(pages: &[(&str, &Diagram)], file: &str, lang: crate::i18n::Language) -> String {
     let mut out = String::new();
     for (i, (title, doc)) in pages.iter().enumerate() {
-        let (cells, b) = cells(doc, false, file);
+        let (cells, b) = cells(doc, false, file, lang);
         let page_w = (b.w + 2.0 * MARGIN).max(850.0).ceil();
         let page_h = (b.h + 2.0 * MARGIN).max(1100.0).ceil();
         let id = if i == 0 { "stratagram".to_string() } else { format!("stratagram-{}", i + 1) };

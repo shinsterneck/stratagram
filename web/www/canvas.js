@@ -6,6 +6,10 @@
 // keyboard input in world coordinates (a port of qml/DiagramCanvas.qml).
 // Pan: middle/right drag or Space+drag. Zoom: mouse wheel.
 
+import { composing } from "./keyboard.js"
+import { language } from "./i18n.js"
+import { translateTip } from "./locales/messages.mjs"
+
 // The theme's colors around the diagram (scene.ui, see core/src/theme.rs),
 // set on every paint; the diagram's own colors come translated already.
 let ACCENT = "#2563eb"
@@ -638,6 +642,7 @@ export class DiagramView {
         }, { passive: false })
         c.addEventListener("keydown", (e) => this.keyDown(e))
         c.addEventListener("keyup", (e) => {
+            if (composing(e)) return
             if (e.key === " ") { this.spaceHeld = false; this.updateCursor(); e.preventDefault() }
         })
         c.addEventListener("blur", () => { this.spaceHeld = false; this.updateCursor() })
@@ -648,6 +653,7 @@ export class DiagramView {
     }
 
     keyDown(e) {
+        if (composing(e)) return
         if (e.ctrlKey || e.metaKey || e.altKey) return  // shortcuts: the app's
         const step = e.shiftKey ? 1 : 10
         const ctl = this.ctl
@@ -713,6 +719,7 @@ export class DiagramView {
             }
         })).observe(field)
         field.addEventListener("keydown", (e) => {
+            if (composing(e)) return
             e.stopPropagation()
             if (e.key === "Enter" && !(this.edit && this.edit.multi && e.shiftKey)) { e.preventDefault(); this.commitEdit() }
             else if (e.key === "Escape") { e.preventDefault(); this.cancelEdit() }
@@ -903,15 +910,16 @@ function tracePath(ctx, data) {
 // A line's tip: a box of `tip.lines` (the first one bold) beside the
 // pointer, at screen size, kept inside the view.
 function drawTip(ctx, tip, view) {
+    const lines = translateTip(language, tip.lines)
     const sx = view.panX + tip.x * view.zoom, sy = view.panY + tip.y * view.zoom
     const pad = 7, lh = 17
     let w = 0
-    tip.lines.forEach((t, i) => {
+    lines.forEach((t, i) => {
         ctx.font = font(12, i === 0)
         w = Math.max(w, ctx.measureText(t).width)
     })
     w += 2 * pad
-    const h = tip.lines.length * lh + 2 * pad - 4
+    const h = lines.length * lh + 2 * pad - 4
     let x = sx + 14, y = sy + 18
     if (x + w > view.width - 4) x = Math.max(4, sx - 14 - w)
     if (y + h > view.height - 4) y = Math.max(4, sy - 12 - h)
@@ -928,7 +936,7 @@ function drawTip(ctx, tip, view) {
     ctx.fillStyle = PAPER
     ctx.textAlign = "left"
     ctx.textBaseline = "top"
-    tip.lines.forEach((t, i) => {
+    lines.forEach((t, i) => {
         ctx.font = font(12, i === 0)
         ctx.fillText(t, x + pad, y + pad + i * lh)
     })

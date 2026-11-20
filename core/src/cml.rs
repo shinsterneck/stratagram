@@ -13,7 +13,7 @@
 //! and are left out, as are lines ending at a free point. Text notes become
 //! text annotations. What is hidden is left out, as in SVG export.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 use crate::geom;
@@ -130,27 +130,32 @@ pub struct Skipped {
 
 impl Skipped {
     pub fn summary(&self) -> String {
-        let mut parts = vec![];
-        let n = |c: usize, what: &str| format!("{c} {what}{}", if c == 1 { "" } else { "s" });
-        if self.tunnels > 0 {
-            parts.push(n(self.tunnels, "tunnel line"));
+        self.summary_in(crate::i18n::Language::English)
+    }
+
+    pub fn summary_in(&self, lang: crate::i18n::Language) -> String {
+        let mut parts = Vec::new();
+        for (count, one, many) in [
+            (self.tunnels, "cml.tunnel", "cml.tunnels"),
+            (self.loose, "cml.loose", "cml.looseMany"),
+            (self.crowded, "cml.crowded", "cml.crowdedMany"),
+        ] {
+            if count > 0 {
+                parts.push(lang.format(if count == 1 { one } else { many }, &[("count", &count.to_string())]));
+            }
         }
-        if self.loose > 0 {
-            parts.push(n(self.loose, "line to a free point"));
-        }
-        if self.crowded > 0 {
-            parts.push(n(self.crowded, "line beyond a device's interfaces"));
-        }
-        if parts.is_empty() {
-            String::new()
-        } else {
-            format!("left out: {}", parts.join(", "))
+        if parts.is_empty() { String::new() } else {
+            lang.format("cml.leftOut", &[("items", &parts.join(lang.text("cml.separator")))])
         }
     }
 }
 
 /// The lab for `doc` titled `title`, and what was left out.
 pub fn export(doc: &Diagram, title: &str) -> (String, Skipped) {
+    export_in(doc, title, crate::i18n::Language::English)
+}
+
+pub fn export_in(doc: &Diagram, title: &str, lang: crate::i18n::Language) -> (String, Skipped) {
     let mut skipped = Skipped::default();
     let shown: Vec<&Device> = doc
         .devices
@@ -264,7 +269,8 @@ pub fn export(doc: &Diagram, title: &str) -> (String, Skipped) {
         cy = shown.iter().map(|d| d.y + d.h / 2.0).sum::<f64>() / shown.len() as f64;
     }
     // Labels are unique in a lab.
-    let mut seen: HashMap<String, usize> = HashMap::new();
+    let mut seen = HashSet::new();
+    let mut hostnames = HashSet::new();
     let mut s = String::new();
     // Text notes as text annotations.
     let notes: Vec<_> = doc
@@ -294,7 +300,7 @@ pub fn export(doc: &Diagram, title: &str) -> (String, Skipped) {
     let _ = write!(
         s,
         "lab:\n  description: {}\n  notes: ''\n  title: {}\n  version: 0.2.1\n",
-        quote("Drawn with Stratagram"),
+        quote(lang.text("cml.description")),
         quote(title)
     );
     s.push_str(if links.is_empty() {
@@ -321,16 +327,16 @@ pub fn export(doc: &Diagram, title: &str) -> (String, Skipped) {
         } else {
             d.name.trim().to_string()
         };
-        let count = seen.entry(base.clone()).or_default();
-        *count += 1;
-        let label = if *count == 1 {
-            base
-        } else {
-            format!("{base}-{count}")
-        };
+        let mut label = base.clone();
+        let mut suffix = 2;
+        while !seen.insert(label.clone()) {
+            label = format!("{base}-{suffix}");
+            suffix += 1;
+        }
         let list = ifaces.get(&d.id).cloned().unwrap_or_default();
         let config = if p.ios {
-            ios_config(&label, &list)
+            let hostname = ios_hostname(&label, &node_id[&d.id], &mut hostnames);
+            ios_config(&hostname, &list)
         } else {
             String::new()
         };
@@ -362,19 +368,29 @@ pub fn export(doc: &Diagram, title: &str) -> (String, Skipped) {
     (s, skipped)
 }
 
+/// Preserve readable hostnames, using the ASCII CML node ID when a label
+/// cannot supply a leading letter. Uniqueness is checked after sanitizing.
+fn ios_hostname(label: &str, node_id: &str, used: &mut HashSet<String>) -> String {
+    const LIMIT: usize = 63;
+    let ascii: String = label.chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
+        .collect();
+    let cleaned = ascii.trim_matches('-');
+    let base = if cleaned.starts_with(|ch: char| ch.is_ascii_alphabetic()) { cleaned } else { node_id };
+    let mut host = base[..base.len().min(LIMIT)].trim_end_matches('-').to_owned();
+    let mut suffix = 2;
+    while !used.insert(host.to_ascii_lowercase()) {
+        let tail = format!("-{suffix}");
+        let prefix = &base[..base.len().min(LIMIT - tail.len())];
+        host = format!("{}{tail}", prefix.trim_end_matches('-'));
+        suffix += 1;
+    }
+    host
+}
+
 /// A start configuration for an IOS style platform: the hostname, and each
 /// cabled interface described by the port's name in the drawing.
-fn ios_config(label: &str, ifaces: &[(String, usize, String, String)]) -> String {
-    let host: String = label
-        .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' {
-                c
-            } else {
-                '-'
-            }
-        })
-        .collect();
+fn ios_config(host: &str, ifaces: &[(String, usize, String, String)]) -> String {
     let mut c = format!("hostname {host}\n");
     for (_, _, name, port) in ifaces.iter().filter(|i| !i.3.is_empty()) {
         let _ = write!(
@@ -409,6 +425,19 @@ fn quote(s: &str) -> String {
 mod tests {
     use super::*;
     use crate::model::{LinkStyle, Rect, Side};
+
+    #[test]
+    fn ios_hostnames_are_unique_after_converting_international_labels() {
+        let mut used = HashSet::new();
+        for (index, name) in ["路由器 1", "交换机 1", "n0", "EDGE-01", "edge 01", &"a".repeat(70), &"a".repeat(71)].iter().enumerate() {
+            let host = ios_hostname(name, &format!("n{index}"), &mut used);
+            assert!(host.starts_with(|c: char| c.is_ascii_alphabetic()));
+            assert!(host.len() <= 63 && !host.ends_with('-'));
+            assert!(host.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-'));
+        }
+        assert_eq!(used.len(), 7);
+        assert!(used.contains("edge-01") && used.contains("edge-01-2"));
+    }
 
     #[test]
     fn a_network_becomes_a_lab() {

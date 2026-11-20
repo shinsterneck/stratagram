@@ -30,15 +30,23 @@ pub fn dash_array(style: LineStyle, width: f64) -> Option<String> {
 
 /// [`export`] in `theme`'s colors.
 pub fn export_themed(doc: &Diagram, file: &str, theme: crate::theme::Theme) -> String {
-    theme.recolor_svg(&export(doc, file))
+    export_themed_in(doc, file, theme, crate::i18n::Language::English)
+}
+
+pub fn export_themed_in(doc: &Diagram, file: &str, theme: crate::theme::Theme, lang: crate::i18n::Language) -> String {
+    theme.recolor_svg(&export_in(doc, file, lang))
 }
 
 /// Hidden layers are left out.
 /// `file` is the diagram's file name, for frames that show it.
 pub fn export(doc: &Diagram, file: &str) -> String {
+    export_in(doc, file, crate::i18n::Language::English)
+}
+
+fn export_in(doc: &Diagram, file: &str, lang: crate::i18n::Language) -> String {
     let doc = &doc.visible_only();
     // With a frame, the page is the frame plus a little room.
-    let frame = crate::frame::of(doc, file);
+    let frame = crate::frame::of_in(doc, file, lang);
     let b = match &frame {
         Some(f) => f.outer.inflate(10.0),
         None => doc
@@ -97,7 +105,7 @@ pub fn export(doc: &Diagram, file: &str) -> String {
             Item::Device(i) => {
                 let d = &doc.devices[i];
                 let local = Device { w: d.w / d.scale, h: d.h / d.scale, scale: 1.0, ..d.clone() };
-                scaled(&mut s, Pt::new(d.x, d.y), d.scale, |s| device(s, doc, &local, &dirs));
+                scaled(&mut s, Pt::new(d.x, d.y), d.scale, |s| device(s, doc, &local, &dirs, lang));
             }
             Item::Note(i) => {
                 let n = &doc.notes[i];
@@ -362,7 +370,7 @@ fn label(s: &mut String, l: &Link, tag: &str, p: Pt, c: &str) {
     }
 }
 
-fn device(s: &mut String, doc: &Diagram, d: &Device, dirs: &HashMap<Id, Vec<Pt>>) {
+fn device(s: &mut String, doc: &Diagram, d: &Device, dirs: &HashMap<Id, Vec<Pt>>, lang: crate::i18n::Language) {
     let fill = esc(&d.color);
     let stroke = geom::darken(&d.color, 0.45);
     let text = geom::text_on(&d.color);
@@ -452,10 +460,10 @@ fn device(s: &mut String, doc: &Diagram, d: &Device, dirs: &HashMap<Id, Vec<Pt>>
             s,
             r##"<text x="{cx:.1}" y="{:.1}" font-size="10" text-anchor="middle" fill="{text}" fill-opacity="0.7">{}</text>"##,
             cy + 13.0,
-            esc(&crate::shape::kind_label(&d.kind).to_uppercase())
+            esc(&crate::shape::kind_label_in(&d.kind, lang).to_uppercase())
         );
     }
-    if let Some(name) = doc.layer_badge(d) {
+    if let Some(name) = doc.layer_badge_in(d, lang) {
         let _ = writeln!(
             s,
             r##"<text x="{:.1}" y="{:.1}" font-size="9" text-anchor="end" fill="{text}" fill-opacity="0.55">{}</text>"##,

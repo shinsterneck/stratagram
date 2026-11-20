@@ -6,6 +6,7 @@
 #pragma once
 
 #include <QtCore/QString>
+#include <QtCore/QLocale>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QStyleHints>
 
@@ -18,4 +19,9 @@ inline void setup_app()
     // The interface is designed light (dark text on light panels); keep it
     // so when the desktop prefers dark.
     QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+}
+
+inline QString system_language()
+{
+    return QLocale::system().name();
 }

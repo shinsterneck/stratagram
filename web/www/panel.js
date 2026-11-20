@@ -5,29 +5,32 @@
 // The properties panel: an editor for the current selection, with the layer
 // list pinned underneath (a port of qml/PropertiesPanel.qml).
 
+import { composing } from "./keyboard.js"
+import { tr } from "./i18n.js"
+
 // Device types by category, as in the desktop app. "" is a plain device.
 export const KIND_GROUPS = [
-    ["Routing & switching", ["router", "ospf router", "bgp reflector", "switch", "load balancer"]],
-    ["Security", ["firewall", "cloud proxy", "zscaler"]],
-    ["Wireless", ["access point", "standalone ap", "managed ap", "wlan controller"]],
-    ["Servers & clients", ["server", "client"]],
-    ["Virtualization", ["virtual switch", "distributed virtual switch"]],
-    ["Data center", ["aci l3out"]],
-    ["Cabling", ["patch panel"]],
-    ["Internet & cloud", ["internet", "cloud", "aws", "aws transit gateway", "aws direct connect gateway", "azure", "google cloud", "alibaba cloud", "telekom cloud", "stackit"]],
+    ["deviceGroup.routing", ["router", "ospf router", "bgp reflector", "switch", "load balancer"]],
+    ["deviceGroup.security", ["firewall", "cloud proxy", "zscaler"]],
+    ["deviceGroup.wireless", ["access point", "standalone ap", "managed ap", "wlan controller"]],
+    ["deviceGroup.servers", ["server", "client"]],
+    ["deviceGroup.virtualization", ["virtual switch", "distributed virtual switch"]],
+    ["deviceGroup.datacenter", ["aci l3out"]],
+    ["deviceGroup.cabling", ["patch panel"]],
+    ["deviceGroup.cloud", ["internet", "cloud", "aws", "aws transit gateway", "aws direct connect gateway", "azure", "google cloud", "alibaba cloud", "telekom cloud", "stackit"]],
 ]
 
 const FRAME_GROUPS = [
-    ["Basic", [["lines", "lines"], ["banner", "banner"], ["minimal", "minimal"], ["card", "card"]]],
-    ["Business", [["corporate", "corporate"], ["report", "report page"], ["presentation", "presentation (16:9)"],
-                  ["executive", "executive summary"], ["proposal", "customer proposal"]]],
-    ["Technical drawing", [["titleblock", "title block"], ["iso", "ISO title block"], ["revision", "revision block"],
-                           ["blueprint", "blueprint"], ["asbuilt", "as-built"]]],
-    ["Documentation & governance", [["controlled", "controlled document"], ["signoff", "sign-off"],
-                                    ["solution", "solution design"], ["change", "change request"],
-                                    ["classification", "classification banner"]]],
-    ["Operations", [["site", "site sheet"], ["location", "data center location"], ["incident", "incident report"],
-                    ["noc", "NOC display"]]],
+    ["frameGroup.basic", [["lines", "frameType.lines"], ["banner", "frameType.banner"], ["minimal", "frameType.minimal"], ["card", "frameType.card"]]],
+    ["frameGroup.business", [["corporate", "frameType.corporate"], ["report", "frameType.report"], ["presentation", "frameType.presentation"],
+                  ["executive", "frameType.executive"], ["proposal", "frameType.proposal"]]],
+    ["frameGroup.technical", [["titleblock", "frameType.titleblock"], ["iso", "frameType.iso"], ["revision", "frameType.revision"],
+                           ["blueprint", "frameType.blueprint"], ["asbuilt", "frameType.asbuilt"]]],
+    ["frameGroup.governance", [["controlled", "frameType.controlled"], ["signoff", "frameType.signoff"],
+                                    ["solution", "frameType.solution"], ["change", "frameType.change"],
+                                    ["classification", "frameType.classification"]]],
+    ["frameGroup.operations", [["site", "frameType.site"], ["location", "frameType.location"], ["incident", "frameType.incident"],
+                    ["noc", "frameType.noc"]]],
 ]
 
 const DEVICE_COLORS = ["#dbeafe", "#bfdbfe", "#bbf7d0", "#fde68a", "#fecaca", "#ddd6fe",
@@ -38,41 +41,18 @@ const BG_FILLS = ["#e0f2fe", "#dbeafe", "#dcfce7", "#fef9c3", "#ffedd5", "#fee2e
 const BG_BORDERS = ["#7dd3fc", "#2563eb", "#16a34a", "#ca8a04", "#ea580c", "#dc2626", "#9333ea", "#64748b", "#334155", "#000000"]
 const HEADS = ["none", "arrow", "open", "diamond", "circle"]
 const STYLES = ["solid", "dashed", "dotted"]
-const ROUTINGS = [["straight", "straight"], ["orthogonal", "orthogonal"], ["around", "around objects"]]
+const ROUTINGS = [["straight", "style.straight"], ["orthogonal", "style.orthogonal"], ["around", "style.around"]]
 const SIDES = ["top", "right", "bottom", "left"]
-const LINK_KINDS = [["plain", "plain"], ["trunk", "trunk (802.1Q)"], ["ipsec", "IPsec tunnel"], ["vxlan", "VXLAN tunnel"],
-                    ["sdwan", "SD-WAN"], ["mpls", "MPLS"], ["l2", "Layer 2 (switched)"], ["l3", "Layer 3 (routed)"],
-                    ["l3sub", "L3 subinterface (802.1Q)"], ["capwap", "CAPWAP tunnel (AP to WLC)"]]
+const LINK_KINDS = [["plain", "linkKind.plain"], ["trunk", "linkKind.trunk"], ["ipsec", "linkKind.ipsec"], ["vxlan", "linkKind.vxlan"],
+                    ["sdwan", "term.sdwan"], ["mpls", "term.mpls"], ["l2", "linkKind.l2"], ["l3", "linkKind.l3"],
+                    ["l3sub", "linkKind.l3sub"], ["capwap", "linkKind.capwap"]]
 
-const HELP = `
-<b>Double-click</b> empty space to add a device.<br><br>
-<b>Drag from a device border</b> (or a port) onto another device to connect them. Ports are created where you start and end.<br><br>
-<b>Double-click a border</b> to add a port.<br><br>
-<b>Drag a port along the border</b> to move it (Shift+drag moves it from anywhere); pull a port with lines off the device
-to turn it into a free point (the lines stay), or pull an unused port away to draw a link.<br><br>
-<b>Double-click</b> a device, port, link or text to edit it in place, or select it and press F2, Enter or just start typing.<br><br>
-<b>Quick add</b> (Ctrl+K): type devices into the toolbar field, comma-separated, and press Enter. <i>Firewall, Router</i>
-adds a firewall and a router; <i>firewall|my-box</i> adds a firewall labeled my-box.<br><br>
-<b>+ Text</b> adds a free text annotation; Shift+Enter starts a new line.<br><br>
-<b>Drop a device on a line</b> (it lights up green) to put it in between; deleting the device joins the line again when
-both halves have the same type and label.<br><br>
-<b>Drag a line</b> to bend it: a connection point appears where you grab it and the line runs through it. Delete the
-point to straighten the line again.<br><br>
-<b>Lines to nowhere</b>: drop a line on empty space and it ends at a free connection point (a small ring, not exported).
-Drag the ring to move the end; drop it on a device border (or port) to attach the lines there. <b>+ Point</b> adds one on its own.<br><br>
-<b>Drag on empty space</b> to select several items, <b>Ctrl+click</b> to add to the selection. With several selected,
-this panel edits them all at once, including numbered renaming (<i>sw-##</i> gives sw-01, sw-02…).<br><br>
-<b>Hold Ctrl while dragging</b> to line things up with nearby boxes and ports, and to snap to equal spacing.<br><br>
-<b>Layers</b> (bottom of this panel): new items go into the highlighted layer. Tick a layer to show or hide it; the
-padlock makes it read only; the tag shows its name on its devices.<br><br>
-<b>Arrange</b>: Home to front, Page Up forward, Page Down backward, End to back.<br><br>
-<b>Zoom into</b> (Ctrl+I): zoom into a device without limit and add things inside it.<br><br>
-<b>Layout ▾</b> (Ctrl+L) arranges devices automatically. Ctrl+Z undoes.<br><br>
-<b>Right-click</b> a device, text or line for a menu: its type, its layer, clone and delete.<br><br>
-<b>Pan</b> with middle/right drag or Space+drag, <b>zoom</b> with the wheel.<br><br>
-<b>Ctrl+C</b> copies the selection for draw.io and for pasting here; <b>Ctrl+V</b> pastes Stratagram copies, draw.io
-shapes or text; Ctrl+X cuts.<br><br>
-Arrow keys nudge, Del deletes, Ctrl+D duplicates.`
+const HELP = [
+    "help.addDevice", "help.connect", "help.addPort", "help.movePort", "help.edit",
+    "help.quickAdd", "help.addText", "help.insertDevice", "help.bend", "help.freePoint",
+    "help.select", "help.align", "help.layers", "help.arrange", "help.deepZoom",
+    "help.layout", "help.contextMenu", "help.pan", "help.clipboard", "help.keys",
+]
 
 // A DOM element: h("div", {className: "x", onclick: f}, child, "text", ...).
 // What removing layer `l` asks, naming what goes with it: the layers under
@@ -80,11 +60,12 @@ Arrow keys nudge, Del deletes, Ctrl+D duplicates.`
 export function removeQuestion(l, layers) {
     const under = layers.filter(x => x.path.startsWith(l.path + " / "))
     const items = l.count + under.reduce((n, x) => n + x.count, 0)
-    const n = (k, one) => `${k} ${one}${k === 1 ? "" : "s"}`
-    const subs = under.length ? n(under.length, "layer") + " under it" : ""
-    const on = items ? n(items, "item") + (under.length ? " on them" : " on it") : ""
-    if (!subs && !on) return ""
-    return `Remove "${l.name}" and ` + (subs && on ? `the ${subs} and the ${on}` : `the ${subs || on}`) + "?"
+    const n = (k, one) => plural(k, one, one + "s")
+    if (!under.length && !items) return ""
+    const subs = under.length ? tr("confirm.subLayers", { layers: n(under.length, "layer") }) : ""
+    const on = items ? tr(under.length ? "confirm.treeItems" : "confirm.layerItems", { items: n(items, "item") }) : ""
+    const contents = subs && on ? tr("confirm.layersAndItems", { layers: subs, items: on }) : subs || on
+    return tr("confirm.removeLayer", { name: l.name, contents })
 }
 
 export function h(tag, props = {}, ...kids) {
@@ -104,7 +85,7 @@ export function h(tag, props = {}, ...kids) {
 }
 
 const mixed = (v) => v === null || v === undefined
-const plural = (n, one, many) => n + " " + (n === 1 ? one : many)
+const plural = (n, one, many) => tr("count." + (n === 1 ? one : many), { count: n })
 
 function select(options, value, onPick, extra = {}) {
     // options: [value, label] pairs, or [group, [[value, label], ...]] with groups.
@@ -118,7 +99,7 @@ function select(options, value, onPick, extra = {}) {
             s.appendChild(h("option", { value: o[0] }, o[1]))
         }
     }
-    if (value === null) s.appendChild(h("option", { value: "", disabled: true, hidden: true }, "(mixed)"))
+    if (value === null) s.appendChild(h("option", { value: "", disabled: true, hidden: true }, tr("value.mixedOption")))
     s.value = value === null ? "" : value
     s.addEventListener("change", () => onPick(s.value))
     return s
@@ -126,7 +107,7 @@ function select(options, value, onPick, extra = {}) {
 
 function number(value, min, max, step, onSet, fallback) {
     const i = h("input", { type: "number", min, max, step, value: mixed(value) ? "" : Math.round(value * 100) / 100,
-                           placeholder: mixed(value) ? "mixed" : "" })
+                           placeholder: mixed(value) ? tr("value.mixed") : "" })
     i.addEventListener("change", () => {
         const v = Number(i.value)
         if (i.value !== "" && Number.isFinite(v)) onSet(Math.min(max, Math.max(min, v)))
@@ -254,36 +235,36 @@ export class Panel {
             ? [sel.devices ? plural(sel.devices, "device", "devices") : "", sel.links ? plural(sel.links, "link", "links") : "",
                sel.notes ? plural(sel.notes, "text", "texts") : "", sel.points ? plural(sel.points, "point", "points") : ""]
                 .filter(t => t).join(", ")
-            : ({ none: "Nothing selected", device: "Device", note: "Text", port: "Port", link: "Link", point: "Connection point" })[type]
+            : ({ none: tr("selection.empty"), device: tr("selection.device"), note: tr("selection.text"), port: tr("selection.port"), link: tr("selection.link"), point: tr("selection.point") })[type]
         out.push(h("h2", {}, title))
 
         if (type === "none") {
             out.push(...this.frameSection(sel.frame || null))
-            out.push(h("div", { className: "sg-help", innerHTML: HELP }))
+            out.push(h("div", { className: "sg-help", innerHTML: HELP.map(key => tr(key)).join("<br><br>") }))
             return out
         }
-        if (multi) out.push(h("p", { className: "sg-hint" }, "Changes apply to all selected items of each kind."))
+        if (multi) out.push(h("p", { className: "sg-hint" }, tr("selection.multipleHint")))
 
         // device
         if (multi && dev) out.push(h("h3", {}, plural(sel.devices, "Device", "Devices")))
-        if (type === "device") out.push(h("label", {}, "Name"), text(sel.name, v => this.set("name", v)))
+        if (type === "device") out.push(h("label", {}, tr("property.name")), text(sel.name, v => this.set("name", v)))
         if (multi && dev) {
-            const pattern = h("input", { type: "text", placeholder: "e.g. sw-## gives sw-01, sw-02…" })
+            const pattern = h("input", { type: "text", placeholder: tr("property.renameExample") })
             const rename = () => { if (pattern.value.trim() !== "") { this.set("name_pattern", pattern.value); pattern.value = "" } }
-            pattern.addEventListener("keydown", (e) => { if (e.key === "Enter") rename() })
-            out.push(h("label", {}, "Rename in reading order (# is the number)"),
-                     h("div", { className: "sg-inline" }, pattern, h("button", { onclick: rename }, "Rename")))
+            pattern.addEventListener("keydown", (e) => { if (!composing(e) && e.key === "Enter") rename() })
+            out.push(h("label", {}, tr("property.renamePattern")),
+                     h("div", { className: "sg-inline" }, pattern, h("button", { onclick: rename }, tr("property.rename"))))
         }
         if (dev) {
             const kind = mixed(dev.kind) ? null : dev.kind
             const known = KIND_GROUPS.some(([, list]) => list.includes(kind))
-            const options = [["", "none"]]
+            const options = [["", tr("property.none")]]
             if (kind && !known) options.push([kind, kind])
-            options.push(...KIND_GROUPS.map(([g, list]) => [g, list.map(k => [k, k])]), ["\u0000other", "other…"])
-            out.push(h("label", {}, "Type" + (kind === null ? " (mixed)" : "")),
+            options.push(...KIND_GROUPS.map(([g, list]) => [tr(g), list.map(k => [k, tr("device." + k.replace(/ /g, "_"))])]), ["\u0000other", tr("property.other")])
+            out.push(h("label", {}, tr("property.type") + (kind === null ? tr("value.mixedSuffix") : "")),
                      select(options, kind, (v) => {
                          if (v === "\u0000other") {
-                             const typed = prompt("Device type", kind || "")
+                             const typed = prompt(tr("property.deviceType"), kind || "")
                              if (typed !== null) this.setFor("device", "kind", typed.trim())
                              else this.render()
                          } else this.setFor("device", "kind", v)
@@ -291,61 +272,60 @@ export class Panel {
             if (type === "device" && kind === "patch panel") {
                 // Its sockets; the panel widens to fit them.
                 out.push(h("div", { className: "sg-grid2" },
-                    h("label", {}, "Ports"), h("label", {}, "Connector"),
+                    h("label", {}, tr("property.ports")), h("label", {}, tr("property.connector")),
                     number(sel.panel_ports, 1, 288, 1, v => this.set("panel_ports", Math.round(v)), 24),
-                    select([["rj45", "RJ45"], ["lc", "LC (duplex)"], ["sc", "SC"]], sel.connector, v => this.set("connector", v))))
+                    select([["rj45", tr("term.rj45")], ["lc", tr("property.lcDuplex")], ["sc", tr("term.sc")]], sel.connector, v => this.set("connector", v))))
             }
             if (type === "device" && sel.takes_ports) {
                 // A switch, router, firewall or server with ports (0: a box):
                 // its front, odd ports on top, even ones below, the uplinks
                 // (SFP) apart at the right.
                 out.push(h("div", { className: "sg-grid2" },
-                    h("label", {}, "Ports (0: a box)"), h("label", {}, "Connector"),
+                    h("label", {}, tr("property.portsOrBox")), h("label", {}, tr("property.connector")),
                     number(sel.panel_ports, 0, 288, 1, v => this.set("panel_ports", Math.round(v)), 0),
-                    select([["rj45", "RJ45"], ["sfp", "SFP"]], sel.connector, v => this.set("connector", v))))
+                    select([["rj45", tr("term.rj45")], ["sfp", tr("term.sfp")]], sel.connector, v => this.set("connector", v))))
                 if (sel.panel_ports > 0) {
-                    out.push(h("label", {}, "Uplinks (SFP)"),
+                    out.push(h("label", {}, tr("property.uplinks")),
                              number(sel.uplinks, 0, 48, 1, v => this.set("uplinks", Math.round(v)), 0))
                 }
             }
-            out.push(h("label", {}, "Fill color" + (mixed(dev.color) ? " (mixed)" : "")),
+            out.push(h("label", {}, tr("property.fillColor") + (mixed(dev.color) ? tr("value.mixedSuffix") : "")),
                      colorPicker(mixed(dev.color) ? "" : dev.color, DEVICE_COLORS, c => this.setFor("device", "color", c)))
             out.push(h("div", { className: "sg-grid2" },
-                h("label", {}, "Width" + (mixed(dev.w) ? " (mixed)" : "")), h("label", {}, "Height" + (mixed(dev.h) ? " (mixed)" : "")),
+                h("label", {}, tr("property.width") + (mixed(dev.w) ? tr("value.mixedSuffix") : "")), h("label", {}, tr("property.height") + (mixed(dev.h) ? tr("value.mixedSuffix") : "")),
                 number(dev.w, 40, 2000, 10, v => this.setFor("device", "w", v), 120),
                 number(dev.h, 30, 2000, 10, v => this.setFor("device", "h", v), 60)))
         }
         if (type === "device" || type === "port") {
-            out.push(h("label", {}, type === "device" ? `Add port (${sel.ports} so far)` : "Add another port"),
-                     h("div", { className: "sg-buttons4" }, [["top", "↑ Top"], ["right", "Right →"], ["bottom", "↓ Bottom"], ["left", "← Left"]]
+            out.push(h("label", {}, type === "device" ? tr("property.addPortCount", { count: sel.ports }) : tr("property.addPort")),
+                     h("div", { className: "sg-buttons4" }, [["top", tr("property.topButton")], ["right", tr("property.rightButton")], ["bottom", tr("property.bottomButton")], ["left", tr("property.leftButton")]]
                          .map(([side, label]) => h("button", { onclick: () => { this.ctl.addPort(side); this.app.changed() } }, label))))
         }
 
         // note
         if (multi && note) out.push(h("h3", {}, plural(sel.notes, "Text", "Texts")))
         if (note) {
-            if (type === "note") out.push(h("label", {}, "Text"), textarea(sel.text, v => this.set("text", v), { wrap: "off" }))
+            if (type === "note") out.push(h("label", {}, tr("selection.text")), textarea(sel.text, v => this.set("text", v), { wrap: "off" }))
             out.push(h("div", { className: "sg-inline" },
-                h("span", {}, "Size" + (mixed(note.size) ? " (mixed)" : "")),
+                h("span", {}, tr("property.size") + (mixed(note.size) ? tr("value.mixedSuffix") : "")),
                 number(note.size, 6, 96, 1, v => this.setFor("note", "size", v), 14),
-                checkbox("Bold" + (mixed(note.bold) ? " (mixed)" : ""), note.bold === true, c => this.setFor("note", "bold", c))))
+                checkbox(tr("property.bold") + (mixed(note.bold) ? tr("value.mixedSuffix") : ""), note.bold === true, c => this.setFor("note", "bold", c))))
             if (type === "note") {
                 out.push(h("div", { className: "sg-inline" },
-                    h("p", { className: "sg-hint" }, sel.boxed ? "Fixed box: the text wraps to it. Drag the corner handle to resize."
-                                                              : "Drag the corner handle to give it a fixed box."),
-                    sel.boxed ? h("button", { onclick: () => this.setFor("note", "box", "fit") }, "Fit to text") : null))
+                    h("p", { className: "sg-hint" }, sel.boxed ? tr("property.fixedBoxHint")
+                                                              : tr("property.resizeBoxHint")),
+                    sel.boxed ? h("button", { onclick: () => this.setFor("note", "box", "fit") }, tr("property.fitText")) : null))
             }
-            out.push(h("label", {}, "Color" + (mixed(note.color) ? " (mixed)" : "")),
+            out.push(h("label", {}, tr("property.color") + (mixed(note.color) ? tr("value.mixedSuffix") : "")),
                      colorPicker(mixed(note.color) ? "" : note.color, LINK_COLORS, c => this.setFor("note", "color", c)))
         }
 
         // point
         if (type === "point") {
             out.push(h("p", { className: "sg-hint" },
-                "Lines end here as if attached to nothing; the point itself is not exported (its label is). " +
-                plural(sel.links, "line", "lines") + " attached. Drag to move it; drop it on a device border to attach " +
-                "its lines there. Deleting a bend point joins its two lines back into one."))
-            out.push(h("label", {}, "Label"), text(sel.label, v => this.set("label", v), { placeholder: "e.g. Internet, to branch office" }))
+                tr("point.intro") +
+                plural(sel.links, "line", "lines") + tr("point.moveHint")))
+            out.push(h("label", {}, tr("property.label")), text(sel.label, v => this.set("label", v), { placeholder: tr("value.endpointExample") }))
             out.push(h("div", { className: "sg-grid2" }, h("label", {}, "X"), h("label", {}, "Y"),
                 number(Math.round(sel.x), -100000, 100000, 10, v => this.set("x", v), 0),
                 number(Math.round(sel.y), -100000, 100000, 10, v => this.set("y", v), 0)))
@@ -353,17 +333,17 @@ export class Panel {
 
         // port
         if (type === "port") {
-            out.push(h("p", { className: "sg-hint" }, `on ${sel.device}, ${sel.links} link(s)`))
-            out.push(h("label", {}, "Name (e.g. Gi1/0/1)"), text(sel.name, v => this.set("name", v)))
-            out.push(h("label", {}, "Side"), select(SIDES.map(s => [s, s]), sel.side, v => this.set("side", v)))
-            out.push(h("label", {}, "Position along side (% from " + (sel.side === "left" || sel.side === "right" ? "top" : "left") + ")"),
+            out.push(h("p", { className: "sg-hint" }, tr("property.portConnections", { device: sel.device, count: sel.links })))
+            out.push(h("label", {}, tr("property.portName")), text(sel.name, v => this.set("name", v)))
+            out.push(h("label", {}, tr("property.side")), select(SIDES.map(s => [s, tr("side." + s)]), sel.side, v => this.set("side", v)))
+            out.push(h("label", {}, tr("property.sidePosition", { side: tr(sel.side === "left" || sel.side === "right" ? "side.top" : "side.left") })),
                      number(sel.pos, 5, 95, 5, v => this.set("pos", v), 50))
             // A layer of its own, to show or hide it apart from its device.
             const itemLayers = (this.layers || []).filter(l => !l.frame)
             const own = itemLayers.find(l => l.id === sel.device_layer)
-            out.push(h("label", { title: "Hide the layer to hide the port and its name (its lines stay)" }, "Layer"),
-                     select([["", "as its device (" + (own ? own.name : "") + ")"],
-                             ...itemLayers.map(l => [String(l.id), l.path + (l.shown ? "" : " (hidden)") + (l.held ? " (locked)" : "")])],
+            out.push(h("label", { title: tr("layer.portVisibilityHint") }, tr("layer.label")),
+                     select([["", tr("property.deviceLayer", { name: own ? own.name : "" })],
+                             ...itemLayers.map(l => [String(l.id), l.path + (l.shown ? "" : tr("value.hiddenSuffix")) + (l.held ? tr("value.lockedSuffix") : "")])],
                             sel.port_layer ? String(sel.port_layer) : "", v => this.set("layer", v)))
         }
 
@@ -371,62 +351,62 @@ export class Panel {
         if (multi && link) out.push(h("h3", {}, plural(sel.links, "Link", "Links")))
         if (link) {
             if (type === "link") out.push(h("p", { className: "sg-hint" }, sel.from + "  →  " + sel.to))
-            out.push(h("label", {}, "Type"), select(LINK_KINDS, mixed(link.kind) ? null : link.kind, v => this.setFor("link", "kind", v)))
+            out.push(h("label", {}, tr("property.type")), select(LINK_KINDS.map(([k, name]) => [k, tr(name)]), mixed(link.kind) ? null : link.kind, v => this.setFor("link", "kind", v)))
             if (type === "link") {
                 // Encapsulation: what the line is carried over, innermost
                 // first (VXLAN over IPsec over MPLS).
                 const over = sel.over || []
                 out.push(h("div", { className: "sg-inline" },
-                    h("span", { innerHTML: over.length > 0 ? "Carried over: <b>" + escapeHtml(sel.tag) + "</b>" : "Carried over: nothing" }),
-                    over.length > 0 ? h("button", { title: "Take away the outermost carrier",
-                                                    onclick: () => this.set("over", over.slice(0, -1).join(",")) }, "Remove outer") : null))
+                    h("span", { innerHTML: over.length > 0 ? tr("link.carrierPrefix") + "<b>" + escapeHtml(sel.tag) + "</b>" : tr("link.noCarrier") }),
+                    over.length > 0 ? h("button", { title: tr("link.removeOuterHint"),
+                                                    onclick: () => this.set("over", over.slice(0, -1).join(",")) }, tr("link.removeOuter")) : null))
                 const carriers = LINK_KINDS.filter(([k]) => k !== "plain")
-                out.push(select([["", "Add a carrier around it…"], ...carriers], "", (v) => {
+                out.push(select([["", tr("link.addCarrier")], ...carriers.map(([k, name]) => [k, tr(name)])], "", (v) => {
                     if (v) this.set("over", over.concat([v]).join(","))
-                }, { title: "Show the line encapsulated: e.g. a VXLAN line carried over IPsec" }))
+                }, { title: tr("link.carrierHint") }))
             }
             out.push(h("div", { className: "sg-inline" },
-                h("label", {}, "Label" + (mixed(link.label) ? " (mixed)" : "")),
-                type === "link" && sel.label_placed ? h("button", { title: "Place the label automatically again",
-                                                                    onclick: () => this.setFor("link", "label_at", "auto") }, "Auto position") : null))
+                h("label", {}, tr("property.label") + (mixed(link.label) ? tr("value.mixedSuffix") : "")),
+                type === "link" && sel.label_placed ? h("button", { title: tr("link.autoPositionHint"),
+                                                                    onclick: () => this.setFor("link", "label_at", "auto") }, tr("link.autoPosition")) : null))
             out.push(text(mixed(link.label) ? "" : link.label, v => this.setFor("link", "label", v),
-                          { placeholder: multi ? "Same label for all" : "e.g. 10G, VLAN 20" }))
-            out.push(checkbox("Show label" + (mixed(link.label_hidden) ? " (mixed)" : ""), link.label_hidden === false,
+                          { placeholder: multi ? tr("link.commonLabel") : tr("link.labelExample") }))
+            out.push(checkbox(tr("link.showLabel") + (mixed(link.label_hidden) ? tr("value.mixedSuffix") : ""), link.label_hidden === false,
                               c => this.setFor("link", "label_hidden", !c),
-                              { title: "The label and the type's tag, on screen and in exports (the text is kept)" }))
-            const pick = (key, list) => select(list.map(x => Array.isArray(x) ? x : [x, x]), mixed(link[key]) ? null : link[key],
+                              { title: tr("link.showLabelHint") }))
+            const pick = (key, list) => select(list.map(x => Array.isArray(x) ? [x[0], tr(x[1])] : [x, tr(x === "none" ? "property.none" : "style." + x)]), mixed(link[key]) ? null : link[key],
                                                v => this.setFor("link", key, v))
             out.push(h("div", { className: "sg-grid2" },
-                h("label", {}, "Start"), h("label", {}, "End"), pick("head_start", HEADS), pick("head_end", HEADS),
-                h("label", {}, "Line"), h("label", {}, "Routing"), pick("style", STYLES), pick("routing", ROUTINGS)))
+                h("label", {}, tr("link.start")), h("label", {}, tr("link.end")), pick("head_start", HEADS), pick("head_end", HEADS),
+                h("label", {}, tr("link.line")), h("label", {}, tr("link.routing")), pick("style", STYLES), pick("routing", ROUTINGS)))
             out.push(h("div", { className: "sg-grid2" },
-                h("label", {}, "Width" + (mixed(link.width) ? " (mixed)" : "")),
-                h("label", { title: "Free line auto layout keeps on each side of the label" },
-                  "Label margin" + (mixed(link.label_margin) ? " (mixed)" : "")),
+                h("label", {}, tr("property.width") + (mixed(link.width) ? tr("value.mixedSuffix") : "")),
+                h("label", { title: tr("link.labelMarginHint") },
+                  tr("link.labelMargin") + (mixed(link.label_margin) ? tr("value.mixedSuffix") : "")),
                 number(link.width, 1, 10, 1, v => this.setFor("link", "width", v), 2),
                 number(link.label_margin, 0, 200, 4, v => this.setFor("link", "label_margin", v), 24)))
-            out.push(h("label", {}, "Color" + (mixed(link.color) ? " (mixed)" : "")),
+            out.push(h("label", {}, tr("property.color") + (mixed(link.color) ? tr("value.mixedSuffix") : "")),
                      colorPicker(mixed(link.color) ? "" : link.color, LINK_COLORS, c => this.setFor("link", "color", c)))
             if (type === "link") out.push(h("button", { className: "sg-wide", onclick: () => { this.ctl.reverseLink(); this.app.changed() } },
-                                            "⇄ Reverse direction"))
-            out.push(h("p", { className: "sg-hint" }, "New links use the style you set last."))
+                                            tr("link.reverse")))
+            out.push(h("p", { className: "sg-hint" }, tr("link.styleHint")))
         }
 
         // layer and stacking
         if (["device", "note", "link", "point", "multi"].includes(type)) {
             const itemLayers = (this.layers || []).filter(l => !l.frame)
-            const layerOptions = itemLayers.map(l => [String(l.id), l.path + (l.shown ? "" : " (hidden)") + (l.held ? " (locked)" : "")])
-            out.push(h("h3", {}, "Layer"),
+            const layerOptions = itemLayers.map(l => [String(l.id), l.path + (l.shown ? "" : tr("value.hiddenSuffix")) + (l.held ? tr("value.lockedSuffix") : "")])
+            out.push(h("h3", {}, tr("layer.label")),
                      select(layerOptions, sel.layer >= 0 ? String(sel.layer) : null, v => this.set("layer", v)))
-            out.push(h("label", {}, "Arrange (front to back, across all layers)"),
-                     h("div", { className: "sg-grid2" }, [["front", "⤒ To front", "Home"], ["forward", "↑ Forward", "Page Up"],
-                                                         ["back", "⤓ To back", "End"], ["backward", "↓ Backward", "Page Down"]]
+            out.push(h("label", {}, tr("arrange.label")),
+                     h("div", { className: "sg-grid2" }, [["front", tr("arrange.front"), "Home"], ["forward", tr("arrange.forward"), "Page Up"],
+                                                         ["back", tr("arrange.back"), "End"], ["backward", tr("arrange.backward"), "Page Down"]]
                          .map(([op, label, key]) => h("button", { title: key, onclick: () => { this.ctl.arrange(op); this.app.changed() } }, label))))
         }
         const dup = ["device", "note"].includes(type) || (multi && sel.devices + sel.notes > 0)
         out.push(h("div", { className: "sg-grid2 sg-actions" },
-            dup ? h("button", { onclick: () => { this.ctl.duplicate(); this.app.changed() } }, "Duplicate") : null,
-            h("button", { onclick: () => { this.ctl.deleteSelected(); this.app.changed() } }, "Delete")))
+            dup ? h("button", { onclick: () => { this.ctl.duplicate(); this.app.changed() } }, tr("edit.duplicate")) : null,
+            h("button", { onclick: () => { this.ctl.deleteSelected(); this.app.changed() } }, tr("edit.delete"))))
         return out
     }
 
@@ -435,36 +415,36 @@ export class Panel {
     frameSection(frame) {
         const t = frame ? frame.template : "none"
         const uses = (...ts) => ts.includes(t)
-        const out = [h("h3", {}, "Frame"),
-                     select([["none", "none"], ...FRAME_GROUPS], t, v => this.setFrame("template", v),
-                            { title: "A border with header and footer around the diagram, on its own bottom layer" })]
+        const out = [h("h3", {}, tr("frame.label")),
+                     select([["none", tr("property.none")], ...FRAME_GROUPS.map(([g, items]) => [tr(g), items.map(([id, name]) => [id, tr(name)])])], t, v => this.setFrame("template", v),
+                            { title: tr("frame.hint") })]
         if (!frame) return out
         const by = (labels) => labels[t]
         const fields = [
-            ["title", "Title", ""],
-            ["subtitle", "Subtitle", "e.g. Site Berlin"],
-            ["author", t === "signoff" ? "Prepared by" : "Author", ""],
-            ["note", "Note", "e.g. Confidential, v1.2"],
-            ["customer", by({ proposal: "Prepared for" }), "Customer"],
-            ["company", by({ corporate: "Company", proposal: "Company", presentation: "Company" }), ""],
-            ["address", by({ site: "Address" }), ""],
-            ["location", by({ location: "Location path" }), "EU > Berlin > HQ > Room 2.14"],
-            ["doc_id", by({ iso: "Drawing no.", change: "Change ID", site: "Site code", controlled: "Document ID",
-                            incident: "Incident ID", location: "Location code" }),
-             by({ iso: "e.g. NET-0042", change: "e.g. CR-1042", site: "e.g. BER-01", controlled: "e.g. NET-DOC-007",
-                  incident: "e.g. INC-2291", location: "e.g. BER-HQ-R2.14-A07" }) || ""],
-            ["version", by({ controlled: "Version", solution: "Version" }), "e.g. 1.2"],
-            ["revision", by({ iso: "Revision" }), ""],
-            ["owner", by({ controlled: "Owner", solution: "Owner" }), ""],
-            ["review_date", by({ controlled: "Next review" }), "e.g. 2027-04-01"],
-            ["reviewer", by({ signoff: "Reviewed by", solution: "Reviewers" }), ""],
-            ["approver", by({ iso: "Checked by", change: "Approved by", signoff: "Approved by", asbuilt: "Accepted by" }), ""],
-            ["installer", by({ asbuilt: "Installed by" }), ""],
-            ["commissioned", by({ asbuilt: "Commissioned" }), "e.g. 2026-09-30"],
-            ["start", by({ incident: "Start" }), "e.g. 2026-10-18 09:12"],
-            ["end", by({ incident: "End" }), "ongoing"],
-            ["services", by({ incident: "Affected" }), "e.g. VPN, Email"],
-            ["page", t === "iso" ? "Sheet" : "Page", "e.g. 1/3"],
+            ["title", tr("frame.title"), ""],
+            ["subtitle", tr("frame.subtitle"), tr("example.subtitle")],
+            ["author", t === "signoff" ? tr("frame.preparedBy") : tr("frame.author"), ""],
+            ["note", tr("frame.note"), tr("example.note")],
+            ["customer", by({ proposal: tr("frame.preparedFor") }), tr("frame.customer")],
+            ["company", by({ corporate: tr("frame.company"), proposal: tr("frame.company"), presentation: tr("frame.company") }), ""],
+            ["address", by({ site: tr("frame.address") }), ""],
+            ["location", by({ location: tr("frame.location") }), tr("example.locationPath")],
+            ["doc_id", by({ iso: tr("frame.drawingNo"), change: tr("frame.changeId"), site: tr("frame.siteCode"), controlled: tr("frame.documentId"),
+                            incident: tr("frame.incidentId"), location: tr("frame.locationCode") }),
+             by({ iso: tr("example.drawingNo"), change: tr("example.changeId"), site: tr("example.siteCode"), controlled: tr("example.documentId"),
+                  incident: tr("example.incidentId"), location: tr("example.locationCode") }) || ""],
+            ["version", by({ controlled: tr("frame.version"), solution: tr("frame.version") }), tr("example.version")],
+            ["revision", by({ iso: tr("frame.revision") }), ""],
+            ["owner", by({ controlled: tr("frame.owner"), solution: tr("frame.owner") }), ""],
+            ["review_date", by({ controlled: tr("frame.nextReview") }), tr("example.reviewDate")],
+            ["reviewer", by({ signoff: tr("frame.reviewedBy"), solution: tr("frame.reviewers") }), ""],
+            ["approver", by({ iso: tr("frame.checkedBy"), change: tr("frame.approvedBy"), signoff: tr("frame.approvedBy"), asbuilt: tr("frame.acceptedBy") }), ""],
+            ["installer", by({ asbuilt: tr("frame.installedBy") }), ""],
+            ["commissioned", by({ asbuilt: tr("frame.commissioned") }), tr("example.commissioned")],
+            ["start", by({ incident: tr("frame.startTime") }), tr("example.start")],
+            ["end", by({ incident: tr("frame.endTime") }), tr("example.ongoing")],
+            ["services", by({ incident: tr("frame.affected") }), tr("example.services")],
+            ["page", t === "iso" ? tr("frame.sheet") : tr("frame.page"), tr("example.page")],
         ]
         for (const [key, label, hint] of fields) {
             if (label) out.push(row(label, text(frame[key], v => this.setFrame(key, v), { placeholder: hint })))
@@ -472,29 +452,33 @@ export class Panel {
         // Status choices for the templates with a status badge.
         const statuses = { change: ["draft", "approved", "implemented", "rejected"], solution: ["draft", "in review", "final"],
                            noc: ["operational", "degraded", "outage", "maintenance"] }[t]
-        if (statuses) out.push(row("Status", suggest(frame.status, statuses, v => this.setFrame("status", v))))
+        if (statuses) {
+            const labels = statuses.map(code => tr("badge." + code.replace(" ", "_")))
+            const shown = labels[statuses.indexOf(frame.status)] ?? frame.status
+            out.push(row(tr("frame.status"), suggest(shown, labels, v => this.setFrame("status", statuses[labels.indexOf(v)] ?? v))))
+        }
         if (uses("classification", "controlled")) {
             const levels = ["public", "internal", "confidential", "restricted"]
-            out.push(row("Classification", select(levels.map(l => [l, l]), frame.level || "internal", v => this.setFrame("level", v))))
+            out.push(row(tr("frame.classification"), select(levels.map(l => [l, tr("classification." + l)]), frame.level || "internal", v => this.setFrame("level", v))))
         }
         if (uses("incident")) {
-            out.push(row("Severity", select([["P1", "P1 · critical"], ["P2", "P2 · high"], ["P3", "P3 · medium"], ["P4", "P4 · low"]],
+            out.push(row(tr("frame.severity"), select([["P1", tr("severity.p1")], ["P2", tr("severity.p2")], ["P3", tr("severity.p3")], ["P4", tr("severity.p4")]],
                                             (frame.severity || "P3").toUpperCase(), v => this.setFrame("severity", v))))
         }
         if (uses("executive")) {
-            out.push(h("label", {}, "Summary"),
-                     textarea(frame.summary, v => this.setFrame("summary", v), { placeholder: "A few sentences on what the diagram shows" }))
+            out.push(h("label", {}, tr("frame.summary")),
+                     textarea(frame.summary, v => this.setFrame("summary", v), { placeholder: tr("frame.summaryHint") }))
         }
-        out.push(row("Watermark", suggest(frame.watermark, ["DRAFT", "CONFIDENTIAL", "SAMPLE", "FOR REVIEW", "SUPERSEDED"],
+        out.push(row(tr("frame.watermark"), suggest(frame.watermark, ["draft", "confidential", "sample", "for_review", "superseded"].map(key => tr("watermark." + key)),
                                           v => this.setFrame("watermark", v))))
-        out.push(row("Margin", number(frame.margin, 0, 400, 10, v => this.setFrame("margin", v), 40)))
+        out.push(row(tr("frame.margin"), number(frame.margin, 0, 400, 10, v => this.setFrame("margin", v), 40)))
         if (uses("revision")) {
-            out.push(h("label", {}, "Revisions, one per line: rev | date | change | by"),
-                     textarea(frame.revisions, v => this.setFrame("revisions", v), { wrap: "off", placeholder: "A | 2026-10-01 | First issue | Shin" }))
+            out.push(h("label", {}, tr("frame.revisionsFormat")),
+                     textarea(frame.revisions, v => this.setFrame("revisions", v), { wrap: "off", placeholder: tr("example.revision") }))
         }
-        out.push(checkbox("Show date and time of last change", frame.show_date, c => this.setFrame("show_date", c)))
-        out.push(checkbox("Show the file name", frame.show_file, c => this.setFrame("show_file", c)))
-        for (const [key, label] of [["logo", "Logo"], ["logo2", uses("proposal") ? "Customer logo" : "Second logo"]]) {
+        out.push(checkbox(tr("frame.showDate"), frame.show_date, c => this.setFrame("show_date", c)))
+        out.push(checkbox(tr("frame.showFilename"), frame.show_file, c => this.setFrame("show_file", c)))
+        for (const [key, label] of [["logo", tr("frame.logo")], ["logo2", uses("proposal") ? tr("frame.customerLogo") : tr("frame.secondLogo")]]) {
             const input = h("input", { type: "file", accept: "image/png,image/jpeg", hidden: true })
             input.addEventListener("change", () => {
                 const file = input.files[0]
@@ -504,10 +488,10 @@ export class Panel {
                 reader.readAsDataURL(file)
             })
             out.push(h("div", { className: "sg-inline" }, h("span", { className: "sg-grow" }, label), input,
-                       h("button", { onclick: () => input.click() }, frame[key] ? "Change…" : "Choose…"),
-                       frame[key] ? h("button", { onclick: () => this.setFrame(key, "") }, "Remove") : null))
+                       h("button", { onclick: () => input.click() }, frame[key] ? tr("frame.changeLogo") : tr("frame.chooseLogo")),
+                       frame[key] ? h("button", { onclick: () => this.setFrame(key, "") }, tr("action.remove")) : null))
         }
-        out.push(h("label", {}, "Color"), colorPicker(frame.color, FRAME_COLORS, c => this.setFrame("color", c)))
+        out.push(h("label", {}, tr("property.color")), colorPicker(frame.color, FRAME_COLORS, c => this.setFrame("color", c)))
         out.push(h("hr"))
         return out
     }
@@ -528,18 +512,18 @@ export class Panel {
         // A layer's items with those of the layers under it.
         const total = (l) => layers.filter(x => x === l || x.path.startsWith(l.path + " / ")).reduce((n, x) => n + x.count, 0)
         const head = h("div", { className: "sg-inline" },
-            h("h3", { className: "sg-grow" }, "Layers"),
-            h("button", { className: "sg-flat", title: "Add a layer; new items go into it", onclick: act(() => ctl.addLayer()) }, "+ Layer"),
-            h("button", { className: "sg-flat", title: "Add a layer under the highlighted one; new items go into it",
-                          disabled: !active || active.frame, onclick: act(() => ctl.addSublayer()) }, "+ Sub-layer"),
-            h("button", { className: "sg-flat", title: "Remove the active layer and everything on it (and the layers under it)",
+            h("h3", { className: "sg-grow" }, tr("layer.title")),
+            h("button", { className: "sg-flat", title: tr("layer.addHint"), onclick: act(() => ctl.addLayer()) }, tr("layer.add")),
+            h("button", { className: "sg-flat", title: tr("layer.addChildHint"),
+                          disabled: !active || active.frame, onclick: act(() => ctl.addSublayer()) }, tr("layer.addChild")),
+            h("button", { className: "sg-flat", title: tr("layer.removeHint"),
                           disabled: layers.length <= 1 || layers.some(l => l.active && l.held),
                           onclick: act(() => {
                               if (!active) return
                               // Asked first only when there is something to lose.
                               const ask = removeQuestion(active, layers)
-                              if (!ask || confirm(ask + "\nYou can undo this with Ctrl+Z.")) ctl.removeLayer(active.id)
-                          }) }, "Remove"))
+                              if (!ask || confirm(ask + "\n" + tr("confirm.undoHint"))) ctl.removeLayer(active.id)
+                          }) }, tr("action.remove")))
         // Dragging a layer: before or after another (under the same layer),
         // or into it, which then lights up as the new parent.
         const parentOf = new Map(layers.map(l => [l.id, l.parent]))
@@ -573,7 +557,7 @@ export class Panel {
             if (parent && rowOf.has(parent)) rowOf.get(parent).classList.add(place === "into" ? "sg-drop-into" : "sg-drop-parent")
         }
         const list = h("div", { className: "sg-layer-list" }, layers.filter(l => !l.folded).map(l => {
-            const name = h("span", { className: "sg-grow sg-layer-name", title: (l.depth ? l.path + "\n" : "") + "Double-click to rename" }, l.name)
+            const name = h("span", { className: "sg-grow sg-layer-name", title: (l.depth ? l.path + "\n" : "") + tr("sheet.renameHint") }, l.name)
             name.style.fontWeight = l.active ? "600" : ""
             name.style.fontStyle = l.held ? "italic" : ""
             // Hidden, by itself or with a layer it is under.
@@ -590,6 +574,7 @@ export class Panel {
                     this.app.changed()
                 }
                 field.addEventListener("keydown", (e) => {
+                    if (composing(e)) return
                     e.stopPropagation()
                     if (e.key === "Enter") field.blur()
                     else if (e.key === "Escape") { finish(false); field.blur() }
@@ -600,13 +585,13 @@ export class Panel {
                 field.select()
             })
             const vis = h("input", { type: "checkbox", checked: l.visible,
-                                     title: !l.visible ? "Hidden (click to show)" : l.shown ? "Shown (click to hide)" : "Hidden with the layer it is under" })
+                                     title: !l.visible ? tr("layer.hiddenHint") : l.shown ? tr("layer.shownHint") : tr("layer.parentHidden") })
             vis.addEventListener("click", (e) => e.stopPropagation())
             vis.addEventListener("change", act(() => ctl.setLayerVisible(l.id, vis.checked)))
             const icon = (cls, title, on, f) => h("button", { className: "sg-icon " + cls + (on ? " sg-on" : ""), title,
                                                                onclick: (e) => { e.stopPropagation(); f() } })
             const bg = l.background
-            const bgIcon = l.frame ? null : icon("sg-bg", bg ? "Layer background (click to change)" : "Click to add a background behind this layer's items",
+            const bgIcon = l.frame ? null : icon("sg-bg", bg ? tr("layer.backgroundHint") : tr("layer.addBackgroundHint"),
                                                  !!bg, () => this.backgroundPopup(l))
             if (bgIcon && bg) {
                 bgIcon.style.setProperty("--fill", bg.fill)
@@ -615,7 +600,7 @@ export class Panel {
             }
             // Sub-layers fold away under their layer.
             const fold = l.children > 0
-                ? h("button", { className: "sg-fold", title: l.expanded ? "Fold the layers under it away" : `Show the ${l.children} layer(s) under it`,
+                ? h("button", { className: "sg-fold", title: l.expanded ? tr("layer.foldHint") : tr("property.expandLayers", { count: l.children }),
                                 onclick: (e) => { e.stopPropagation(); ctl.setLayerExpanded(l.id, !l.expanded); this.app.changed() } },
                     l.expanded ? "\u25be" : "\u25b8")
                 : h("span", { className: "sg-fold" })
@@ -623,13 +608,13 @@ export class Panel {
                               onclick: () => { if (!l.frame) { ctl.setActiveLayer(l.id); this.app.changed() } } },
                 fold, vis, name,
                 bgIcon,
-                l.frame ? null : icon("sg-tag", l.show_name ? "Layer name shown on its devices (click to hide)" : "Click to show the layer name on its devices",
+                l.frame ? null : icon("sg-tag", l.show_name ? tr("layer.shownTagHint") : tr("layer.showTagHint"),
                                       l.show_name, act(() => ctl.setLayerShowName(l.id, !l.show_name))),
-                l.frame ? null : icon("sg-lock", l.locked ? "Locked: shown but read only (click to unlock)" : "Click to lock: shown but read only",
+                l.frame ? null : icon("sg-lock", l.locked ? tr("layer.lockedHint") : tr("layer.lockHint"),
                                       l.locked, act(() => ctl.setLayerLocked(l.id, !l.locked))),
-                h("span", { className: "sg-count", title: l.frame ? "Holds only the frame; set it up with nothing selected"
-                                                          : l.children ? "Items on it (and on the layers under it)" : "" },
-                  l.frame ? "frame" : String(l.children ? total(l) : l.count)))
+                h("span", { className: "sg-count", title: l.frame ? tr("layer.frameHint")
+                                                          : l.children ? tr("layer.countHint") : "" },
+                  l.frame ? tr("layer.frameBadge") : String(l.children ? total(l) : l.count)))
             // Deep down, the steps get smaller (the path is in the tooltip).
             row.style.paddingLeft = (2 + (l.depth <= 8 ? 14 * l.depth : Math.min(112 + 3 * (l.depth - 8), 180))) + "px"
             rowOf.set(l.id, row)
@@ -678,7 +663,7 @@ export class Panel {
             if (from && d) { ctl.moveLayer(from, d.target, d.place); this.app.changed() }
         })
         this.layersEl.replaceChildren(head, list,
-            h("p", { className: "sg-hint" }, "New items go into the highlighted layer. Click to choose, double-click to rename, drag to reorder or onto another layer to put it under that one; \u25b8 shows the layers under one."))
+            h("p", { className: "sg-hint" }, tr("layer.instructions")))
         list.scrollTop = scrolled
         if (keep) this.app.view.focus()
     }
@@ -691,24 +676,24 @@ export class Panel {
         const build = () => {
             const l = (this.layers || []).find(x => x.id === layer.id) || layer
             const bg = l.background
-            const kids = [h("h3", {}, "Background of " + l.name),
-                          checkbox("Rectangle behind this layer's items", !!bg, c => set("enabled", c))]
+            const kids = [h("h3", {}, tr("property.layerBackground", { name: l.name })),
+                          checkbox(tr("background.enabled"), !!bg, c => set("enabled", c))]
             if (bg) {
-                kids.push(row("Margin", number(bg.margin, 0, 400, 5, v => set("margin", v), 30)),
-                          row("Opacity %", number(bg.opacity, 0, 100, 5, v => set("opacity", v), 50)),
-                          row("Corners", select([["true", "rounded"], ["false", "square"]], String(!!bg.rounded), v => set("rounded", v))))
-                if (bg.rounded) kids.push(row("Radius", number(bg.radius, 0, 100, 2, v => set("radius", v), 14)))
-                kids.push(row("Border", select(["none", "solid", "dashed", "dotted"].map(s => [s, s]), bg.border, v => set("border", v))))
-                if (bg.border !== "none") kids.push(row("Border width", number(Math.round(bg.border_width), 1, 10, 1, v => set("border_width", v), 2)))
-                kids.push(h("label", {}, "Fill"), colorPicker(bg.fill, BG_FILLS, c => set("fill", c)))
-                if (bg.border !== "none") kids.push(h("label", {}, "Border color"), colorPicker(bg.border_color, BG_BORDERS, c => set("border_color", c)))
+                kids.push(row(tr("frame.margin"), number(bg.margin, 0, 400, 5, v => set("margin", v), 30)),
+                          row(tr("background.opacity"), number(bg.opacity, 0, 100, 5, v => set("opacity", v), 50)),
+                          row(tr("background.corners"), select([["true", tr("background.rounded")], ["false", tr("background.square")]], String(!!bg.rounded), v => set("rounded", v))))
+                if (bg.rounded) kids.push(row(tr("background.radius"), number(bg.radius, 0, 100, 2, v => set("radius", v), 14)))
+                kids.push(row(tr("background.border"), select(["none", "solid", "dashed", "dotted"].map(s => [s, tr(s === "none" ? "property.none" : "style." + s)]), bg.border, v => set("border", v))))
+                if (bg.border !== "none") kids.push(row(tr("background.borderWidth"), number(Math.round(bg.border_width), 1, 10, 1, v => set("border_width", v), 2)))
+                kids.push(h("label", {}, tr("background.fill")), colorPicker(bg.fill, BG_FILLS, c => set("fill", c)))
+                if (bg.border !== "none") kids.push(h("label", {}, tr("background.borderColor")), colorPicker(bg.border_color, BG_BORDERS, c => set("border_color", c)))
             }
-            kids.push(h("button", { className: "sg-wide", onclick: () => close() }, "Close"))
+            kids.push(h("button", { className: "sg-wide", onclick: () => close() }, tr("background.close")))
             pop.replaceChildren(...kids)
         }
         const close = () => { pop.remove(); document.removeEventListener("pointerdown", outside, true) }
         const outside = (e) => { if (!pop.contains(e.target)) close() }
-        pop.addEventListener("keydown", (e) => { if (e.key === "Escape") close() })
+        pop.addEventListener("keydown", (e) => { if (!composing(e) && e.key === "Escape") close() })
         build()
         this.app.el.appendChild(pop)
         const r = this.el.getBoundingClientRect(), app = this.app.el.getBoundingClientRect()

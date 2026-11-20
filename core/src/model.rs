@@ -1029,9 +1029,17 @@ pub struct Layer {
     /// device's own layer: "dcim.device:42"); "" if nothing.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub source: String,
+    /// Stable role of an automatically created NetBox group, scoped to its parent.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub netbox_group: String,
 }
 
 impl Layer {
+    /// Imported groups keep a stable identity. A renamed group displays the user's own label.
+    pub fn display_name(&self, lang: crate::i18n::Language) -> &str {
+        crate::netbox::group_label(self, lang)
+    }
+
     pub fn new(id: Id, name: &str) -> Layer {
         Layer {
             id,
@@ -1043,6 +1051,7 @@ impl Layer {
             background: None,
             parent: 0,
             expanded: false,
+            netbox_group: String::new(),
             source: String::new(),
         }
     }
@@ -1477,6 +1486,12 @@ struct SheetFile {
 }
 
 impl Diagram {
+    pub fn empty_in(lang: crate::i18n::Language) -> Self {
+        let mut doc = Self::default();
+        doc.layers[0].name = lang.numbered("name.layer", 1);
+        doc
+    }
+
     pub fn alloc_id(&mut self) -> Id {
         self.next_id = self.next_id.max(1);
         let id = self.next_id;
@@ -2046,9 +2061,12 @@ impl Diagram {
     /// Its name with the names of the layers it is under ("Servers /
     /// srv-01").
     pub fn layer_path(&self, id: Id) -> String {
-        let mut names: Vec<&str> = self.layer_ancestors(id).iter().rev().filter_map(|a| self.layer(*a)).map(|l| l.name.as_str()).collect();
-        names.extend(self.layer(id).map(|l| l.name.as_str()));
-        names.join(" / ")
+        self.layer_path_in(id, crate::i18n::Language::English)
+    }
+
+    pub fn layer_path_in(&self, id: Id, lang: crate::i18n::Language) -> String {
+        self.layer_ancestors(id).into_iter().rev().chain(std::iter::once(id))
+            .filter_map(|id| self.layer(id)).map(|l| l.display_name(lang)).collect::<Vec<_>>().join(" / ")
     }
 
     /// The top layer `id` is under (itself if it is one).
@@ -2194,7 +2212,11 @@ impl Diagram {
 
     /// The layer name to show on a device, if its layer shows names.
     pub fn layer_badge(&self, d: &Device) -> Option<&str> {
-        self.layer(d.layer).filter(|l| l.show_name).map(|l| l.name.as_str())
+        self.layer_badge_in(d, crate::i18n::Language::English)
+    }
+
+    pub fn layer_badge_in(&self, d: &Device, lang: crate::i18n::Language) -> Option<&str> {
+        self.layer(d.layer).filter(|l| l.show_name).map(|l| l.display_name(lang))
     }
 
     /// Locked: the layer, or a layer it is under.
@@ -2612,6 +2634,10 @@ impl Diagram {
             d.ports.iter_mut().for_each(|p| p.source.clear());
         }
         self.links.iter_mut().for_each(|l| l.source.clear());
+        for layer in &mut self.layers {
+            layer.source.clear();
+            layer.netbox_group.clear();
+        }
     }
 
     fn sheet_file(&self) -> SheetFile {
@@ -2644,6 +2670,7 @@ impl Diagram {
             next_id: 1,
         };
         d.repair();
+        crate::netbox::identify_legacy_groups(&mut d);
         d
     }
 
@@ -2670,12 +2697,22 @@ impl Diagram {
 
     /// The sheets of a file (at least one).
     pub fn document_from_json(s: &str) -> Result<Vec<Diagram>, String> {
-        let f: DiagramFile = serde_json::from_str(s).map_err(|e| format!("invalid diagram file: {e}"))?;
+        Self::document_from_json_in(s, crate::i18n::Language::English)
+    }
+
+    pub fn document_from_json_in(s: &str, lang: crate::i18n::Language) -> Result<Vec<Diagram>, String> {
+        Self::parse_document(s).map_err(|error| error.render(lang))
+    }
+
+    pub(crate) fn parse_document(s: &str) -> Result<Vec<Diagram>, crate::i18n::Diagnostic> {
+        use crate::i18n::Diagnostic;
+        let f: DiagramFile = serde_json::from_str(s)
+            .map_err(|e| Diagnostic::new("file.invalid", [("error", e.to_string())]))?;
         if f.format != FORMAT_NAME && f.format != LEGACY_FORMAT_NAME {
-            return Err(format!("not a {FORMAT_NAME} file (format \"{}\")", f.format));
+            return Err(Diagnostic::new("file.format", [("expected", FORMAT_NAME.to_owned()), ("format", f.format)]));
         }
         if f.version > FORMAT_VERSION {
-            return Err(format!("file version {} is newer than supported ({FORMAT_VERSION})", f.version));
+            return Err(Diagnostic::new("file.version", [("version", f.version.to_string()), ("supported", FORMAT_VERSION.to_string())]));
         }
         Ok(std::iter::once(f.first).chain(f.sheets).map(Diagram::from_sheet_file).collect())
     }

@@ -2,7 +2,9 @@
 Type=Application
 Name=Stratagram
 GenericName=Network Diagram Editor
+GenericName[zh_CN]=网络图编辑器
 Comment=Draw network diagrams and export them to SVG and draw.io
+Comment[zh_CN]=绘制网络图并导出为 SVG 和 draw.io 文件
 Exec=stratagram %f
 TryExec=stratagram
 Icon=app.stratagram.Stratagram
@@ -11,4 +13,5 @@ StartupNotify=true
 StartupWMClass=stratagram
 Categories=Graphics;2DGraphics;VectorGraphics;Qt;
 Keywords=network;diagram;topology;drawio;svg;
+Keywords[zh_CN]=网络;网络图;拓扑;drawio;svg;
 MimeType=application/x-stratagram;

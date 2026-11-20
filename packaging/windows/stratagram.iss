@@ -1,4 +1,4 @@
-; This file is part of Stratagram: https://github.com/shinsterneck/stratagram
+﻿; This file is part of Stratagram: https://github.com/shinsterneck/stratagram
 ; Copyright 2026 Shin Sterneck. Licensed under the Apache License, Version 2.0 (see LICENSE).
 ; SPDX-License-Identifier: Apache-2.0
 
@@ -52,8 +52,18 @@ OutputBaseFilename=stratagram-{#Version}-windows-x64-setup
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"
+
+[CustomMessages]
+english.OpenDiagramFiles=Open .stratagram files with Stratagram
+chinesesimplified.OpenDiagramFiles=使用 Stratagram 打开 .stratagram 文件
+english.DiagramFileTypes=File types:
+chinesesimplified.DiagramFileTypes=文件类型：
+english.DiagramFile=Stratagram diagram
+chinesesimplified.DiagramFile=Stratagram 网络图
+
 [Tasks]
-Name: "assoc"; Description: "Open .stratagram files with Stratagram"; GroupDescription: "File types:"
+Name: "assoc"; Description: "{cm:OpenDiagramFiles}"; GroupDescription: "{cm:DiagramFileTypes}"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
@@ -70,7 +80,7 @@ Name: "{autodesktop}\Stratagram"; Filename: "{app}\stratagram.exe"; Tasks: deskt
 ; uninstalled.
 Root: HKA; Subkey: "Software\Classes\.stratagram"; ValueType: string; ValueName: ""; ValueData: "Stratagram.Diagram"; Flags: uninsdeletevalue; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\.stratagram\OpenWithProgids"; ValueType: string; ValueName: "Stratagram.Diagram"; ValueData: ""; Flags: uninsdeletevalue; Tasks: assoc
-Root: HKA; Subkey: "Software\Classes\Stratagram.Diagram"; ValueType: string; ValueName: ""; ValueData: "Stratagram diagram"; Flags: uninsdeletekey; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\Stratagram.Diagram"; ValueType: string; ValueName: ""; ValueData: "{cm:DiagramFile}"; Flags: uninsdeletekey; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\Stratagram.Diagram\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\stratagram.exe,0"; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\Stratagram.Diagram\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\stratagram.exe"" ""%1"""; Tasks: assoc
 Root: HKA; Subkey: "Software\Classes\Applications\stratagram.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "Stratagram"; Flags: uninsdeletekey

@@ -5,12 +5,15 @@
 import QtQuick
 import QtQuick.Controls
 import com.stratagram
+import "qrc:/stratagram/locales/messages.mjs" as Messages
 
 // Renders the scene computed in Rust and forwards mouse input in world
 // coordinates. Pan: middle/right drag or Space+drag. Zoom: mouse wheel.
 Item {
     id: root
 
+    required property string language
+    onLanguageChanged: repaintAll()
     required property DiagramController ctl
 
     property real zoom: 1.0
@@ -909,15 +912,16 @@ Item {
     // A line's tip: a box of `tip.lines` (the first one bold) beside the
     // pointer, at screen size, kept inside the view.
     function drawTip(ctx, tip) {
+        const lines = Messages.translateTip(root.language, tip.lines)
         const sx = panX + tip.x * zoom, sy = panY + tip.y * zoom
         const pad = 7, lh = 17
         let w = 0
-        for (let i = 0; i < tip.lines.length; i++) {
+        for (let i = 0; i < lines.length; i++) {
             ctx.font = (i === 0 ? "bold " : "") + "12px sans-serif"
-            w = Math.max(w, ctx.measureText(tip.lines[i]).width)
+            w = Math.max(w, ctx.measureText(lines[i]).width)
         }
         w += 2 * pad
-        const h = tip.lines.length * lh + 2 * pad - 4
+        const h = lines.length * lh + 2 * pad - 4
         let x = sx + 14, y = sy + 18
         if (x + w > diagram.width - 4) x = Math.max(4, sx - 14 - w)
         if (y + h > diagram.height - 4) y = Math.max(4, sy - 12 - h)
@@ -931,9 +935,9 @@ Item {
         ctx.fillStyle = root.paper
         ctx.textAlign = "left"
         ctx.textBaseline = "top"
-        for (let i = 0; i < tip.lines.length; i++) {
+        for (let i = 0; i < lines.length; i++) {
             ctx.font = (i === 0 ? "bold " : "") + "12px sans-serif"
-            ctx.fillText(tip.lines[i], x + pad, y + pad + i * lh)
+            ctx.fillText(lines[i], x + pad, y + pad + i * lh)
         }
         ctx.restore()
     }

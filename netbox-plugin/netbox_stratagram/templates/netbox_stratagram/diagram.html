@@ -4,7 +4,7 @@
 
 {# The Diagram tab of a site or a location (base_template: its page). #}
 {% extends base_template %}
-{% load static %}
+{% load static i18n %}
 
 {% block head %}
   {{ block.super }}
@@ -27,7 +27,7 @@
   {% elif editor_version %}
     <div id="stratagram-editor"></div>
   {% else %}
-    <div class="alert alert-warning">The diagram editor was not built into this plugin (see build.sh).</div>
+    <div class="alert alert-warning">{% translate "The diagram editor was not built into this plugin (see build.sh)." %}</div>
   {% endif %}
   {{ stratagram|json_script:"stratagram-config" }}
 {% endblock %}

@@ -7,6 +7,7 @@
 //! lines, texts and an image (the logo), which the canvas, the SVG export
 //! and the draw.io export each draw the same way.
 
+use crate::i18n::Diagnostic;
 use crate::geom;
 use crate::model::*;
 
@@ -77,6 +78,10 @@ pub fn content_bounds(doc: &Diagram) -> Option<Rect> {
 /// The frame of `doc` (if it has one on a shown layer), around what is
 /// shown. `file` is the file's name, for frames that show it.
 pub fn of(doc: &Diagram, file: &str) -> Option<FrameLayout> {
+    of_in(doc, file, crate::i18n::Language::English)
+}
+
+pub fn of_in(doc: &Diagram, file: &str, lang: crate::i18n::Language) -> Option<FrameLayout> {
     let f = doc.frame()?;
     let content = content_bounds(doc).unwrap_or(Rect { x: 0.0, y: 0.0, w: 320.0, h: 200.0 });
     let mut legend: Vec<(LinkKind, String)> = vec![];
@@ -90,12 +95,17 @@ pub fn of(doc: &Diagram, file: &str) -> Option<FrameLayout> {
     }
     legend.sort_by_key(|(k, _)| LinkKind::ALL.iter().position(|x| x == k));
     let info = Info { changed: doc.changed.clone().unwrap_or_default(), file: file.into(), legend };
-    Some(layout(f, content, &info))
+    Some(layout_in(f, content, &info, lang))
 }
 
 /// Rough width of `text` at `size` (for sizing the frame to fit its texts).
 fn text_w(text: &str, size: f64, bold: bool) -> f64 {
-    text.chars().count() as f64 * size * if bold { 0.62 } else { 0.56 }
+    let latin = if bold { 0.62 } else { 0.56 };
+    text.chars().map(|ch| size * if is_wide(ch) { 1.0 } else { latin }).sum()
+}
+
+fn is_wide(ch: char) -> bool {
+    matches!(ch as u32, 0x3000..=0x30ff | 0x3400..=0x9fff | 0xf900..=0xfaff | 0xff01..=0xff60 | 0x20000..=0x3134f)
 }
 
 /// `color` mixed with white, `k` of the way (0 = the color, 1 = white).
@@ -112,17 +122,17 @@ fn join(parts: &[&str]) -> String {
 }
 
 /// The classification levels, with their label and color.
-fn level(level: &str) -> (&'static str, &'static str) {
+fn level(lang: crate::i18n::Language, level: &str) -> (&'static str, &'static str) {
     match level.trim().to_lowercase().as_str() {
-        "public" => ("PUBLIC", "#16a34a"),
-        "confidential" => ("CONFIDENTIAL", "#d97706"),
-        "restricted" => ("RESTRICTED", "#dc2626"),
-        _ => ("INTERNAL", "#2563eb"),
+        "public" => (lang.text("frame.public"), "#16a34a"),
+        "confidential" => (lang.text("frame.confidential"), "#d97706"),
+        "restricted" => (lang.text("frame.restricted"), "#dc2626"),
+        _ => (lang.text("frame.internal"), "#2563eb"),
     }
 }
 
 /// Change status badge: label and color.
-fn status(status: &str) -> Option<(String, &'static str)> {
+fn status(lang: crate::i18n::Language, status: &str) -> Option<(String, &'static str)> {
     let s = status.trim();
     let color = match s.to_lowercase().as_str() {
         "" => return None,
@@ -132,17 +142,33 @@ fn status(status: &str) -> Option<(String, &'static str)> {
         "rejected" | "outage" | "down" => "#dc2626",
         _ => "#d97706",
     };
-    Some((s.to_uppercase(), color))
+    let label = match s.to_ascii_lowercase().as_str() {
+        "draft" => lang.text("badge.draft").to_owned(),
+        "approved" => lang.text("badge.approved").to_owned(),
+        "final" => lang.text("badge.final").to_owned(),
+        "operational" => lang.text("badge.operational").to_owned(),
+        "ok" => lang.text("badge.ok").to_owned(),
+        "up" => lang.text("badge.up").to_owned(),
+        "implemented" => lang.text("badge.implemented").to_owned(),
+        "maintenance" => lang.text("badge.maintenance").to_owned(),
+        "rejected" => lang.text("badge.rejected").to_owned(),
+        "outage" => lang.text("badge.outage").to_owned(),
+        "down" => lang.text("badge.down").to_owned(),
+        "in review" => lang.text("badge.in_review").to_owned(),
+        "degraded" => lang.text("badge.degraded").to_owned(),
+        _ => s.to_uppercase(),
+    };
+    Some((label, color))
 }
 
 /// Incident severity badge: label and color.
-fn severity(s: &str) -> (String, &'static str) {
+fn severity(lang: crate::i18n::Language, s: &str) -> (String, &'static str) {
     match s.trim().to_uppercase().as_str() {
-        "P1" => ("P1 · CRITICAL".into(), "#dc2626"),
-        "P2" => ("P2 · HIGH".into(), "#ea580c"),
-        "P3" => ("P3 · MEDIUM".into(), "#d97706"),
-        "P4" => ("P4 · LOW".into(), "#64748b"),
-        "" => ("INCIDENT".into(), "#64748b"),
+        "P1" => (lang.text("frame.p1_critical").into(), "#dc2626"),
+        "P2" => (lang.text("frame.p2_high").into(), "#ea580c"),
+        "P3" => (lang.text("frame.p3_medium").into(), "#d97706"),
+        "P4" => (lang.text("frame.p4_low").into(), "#64748b"),
+        "" => (lang.text("frame.incident").into(), "#64748b"),
         other => (other.to_string(), "#d97706"),
     }
 }
@@ -154,7 +180,19 @@ fn wrap(text: &str, size: f64, max_w: f64) -> Vec<String> {
         let mut line = String::new();
         for word in para.split_whitespace() {
             let candidate = if line.is_empty() { word.to_string() } else { format!("{line} {word}") };
-            if !line.is_empty() && text_w(&candidate, size, false) > max_w {
+            if word.chars().any(is_wide) && text_w(word, size, false) > max_w {
+                if !line.is_empty() { lines.push(std::mem::take(&mut line)); }
+                let mut width = 0.0;
+                for ch in word.chars() {
+                    let advance = size * if is_wide(ch) { 1.0 } else { 0.56 };
+                    if !line.is_empty() && width + advance > max_w {
+                        lines.push(std::mem::take(&mut line));
+                        width = 0.0;
+                    }
+                    line.push(ch);
+                    width += advance;
+                }
+            } else if !line.is_empty() && text_w(&candidate, size, false) > max_w {
                 lines.push(std::mem::replace(&mut line, word.to_string()));
             } else {
                 line = candidate;
@@ -175,17 +213,21 @@ fn breadcrumb(path: &str) -> String {
 }
 
 pub fn kind_label(k: LinkKind) -> &'static str {
+    kind_label_in(k, crate::i18n::Language::English)
+}
+
+pub fn kind_label_in(k: LinkKind, lang: crate::i18n::Language) -> &'static str {
     match k {
-        LinkKind::Plain => "Link",
-        LinkKind::Trunk => "802.1Q trunk",
-        LinkKind::Ipsec => "IPsec tunnel",
-        LinkKind::Vxlan => "VXLAN tunnel",
-        LinkKind::Capwap => "CAPWAP tunnel",
-        LinkKind::L2 => "L2 switched",
+        LinkKind::Plain => lang.text("frame.link"),
+        LinkKind::Trunk => lang.text("frame.802_1q_trunk"),
+        LinkKind::Ipsec => lang.text("frame.ipsec_tunnel"),
+        LinkKind::Vxlan => lang.text("frame.vxlan_tunnel"),
+        LinkKind::Capwap => lang.text("frame.capwap_tunnel"),
+        LinkKind::L2 => lang.text("frame.l2_switched"),
         LinkKind::Sdwan => "SD-WAN",
         LinkKind::Mpls => "MPLS",
-        LinkKind::L3 => "L3 routed",
-        LinkKind::L3Sub => "L3 subinterface",
+        LinkKind::L3 => lang.text("frame.l3_routed"),
+        LinkKind::L3Sub => lang.text("frame.l3_subinterface"),
     }
 }
 
@@ -265,11 +307,15 @@ impl Out {
 
 /// The frame's settings laid out around `content`.
 pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
+    layout_in(f, content, info, crate::i18n::Language::English)
+}
+
+fn layout_in(f: &Frame, content: Rect, info: &Info, lang: crate::i18n::Language) -> FrameLayout {
     use FrameTemplate as T;
     let color = geom::normalize_color(&f.color).unwrap_or_else(|| "#1e293b".into());
     let changed = if f.show_date { info.changed.as_str() } else { "" };
-    let date = if changed.is_empty() { String::new() } else { format!("Last change: {changed}") };
-    let page = if f.page.is_empty() { String::new() } else { format!("Page {}", f.page) };
+    let date = if changed.is_empty() { String::new() } else { lang.format("frame.changed", &[("value", changed)]) };
+    let page = if f.page.is_empty() { String::new() } else { lang.format("frame.pageValue", &[("value", &f.page)]) };
     let file = if f.show_file { info.file.as_str() } else { "" };
     // The texts along the footer: left, center, right.
     let footer = [join(&[&f.author, file]), f.note.clone(), join(&[&date, &page])];
@@ -283,10 +329,10 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
     // Both logos side by side.
     let logo_w = |h: f64| one_w(logo, h) + one_w(logo2, h) + if logo.is_some() && logo2.is_some() { 10.0 } else { 0.0 };
     let any_logo = logo.is_some() || logo2.is_some();
-    let badge = status(&f.status);
+    let badge = status(lang, &f.status);
     let badge_w = badge.as_ref().map_or(0.0, |(s, _)| text_w(s, 10.0, true) + 20.0);
     let code_w = if f.doc_id.is_empty() { 0.0 } else { text_w(&f.doc_id, 14.0, true).max(30.0) + 20.0 };
-    let legend_w: f64 = info.legend.iter().map(|(k, _)| 26.0 + 8.0 + text_w(kind_label(*k), 10.0, false) + 18.0).sum();
+    let legend_w: f64 = info.legend.iter().map(|(k, _)| 26.0 + 8.0 + text_w(kind_label_in(*k, lang), 10.0, false) + 18.0).sum();
     let site_line = join(&[&f.address, &f.subtitle]);
     let revisions = &f.revisions;
     // Revision table columns: rev, date, change, by.
@@ -294,29 +340,29 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
         let widest = |get: &dyn Fn(&Revision) -> &str, caption: &str, min: f64| {
             revisions.iter().map(|r| text_w(get(r), 9.5, false)).fold(text_w(caption, 7.0, true), f64::max).max(min) + 14.0
         };
-        [widest(&|r| &r.rev, "REV", 22.0), widest(&|r| &r.date, "DATE", 60.0), widest(&|r| &r.change, "CHANGE", 140.0), widest(&|r| &r.author, "BY", 50.0)]
+        [widest(&|r| &r.rev, lang.text("frame.rev"), 22.0), widest(&|r| &r.date, lang.text("frame.date"), 60.0), widest(&|r| &r.change, lang.text("frame.change"), 140.0), widest(&|r| &r.author, lang.text("frame.by"), 50.0)]
     };
     let rev_h = 15.0 * (revisions.len() as f64 + 1.0);
     const ZONE: f64 = 14.0;
     const ISO_BLOCK: (f64, f64) = (330.0, 84.0);
     const PANEL: f64 = 260.0;
-    let level_label = if f.level.is_empty() { "" } else { level(&f.level).0 };
+    let level_label = if f.level.is_empty() { "" } else { level(lang, &f.level).0 };
     // Document control table (controlled document): two rows of cells.
     let control = [
-        [("DOCUMENT", f.doc_id.as_str()), ("VERSION", f.version.as_str()), ("CLASSIFICATION", level_label)],
-        [("OWNER", f.owner.as_str()), ("NEXT REVIEW", f.review_date.as_str()), ("LAST CHANGE", changed)],
+        [(lang.text("frame.document"), f.doc_id.as_str()), (lang.text("frame.version"), f.version.as_str()), (lang.text("frame.classification"), level_label)],
+        [(lang.text("frame.owner"), f.owner.as_str()), (lang.text("frame.next_review"), f.review_date.as_str()), (lang.text("frame.last_change"), changed)],
     ];
     let control_cols: Vec<f64> = (0..3)
         .map(|j| control.iter().map(|row| text_w(row[j].1, 10.0, false).max(text_w(row[j].0, 7.0, true))).fold(0.0, f64::max) + 16.0)
         .collect();
     let control_w: f64 = control_cols.iter().sum();
     let summary = wrap(&f.summary, 11.0, PANEL - 28.0);
-    let (sev_label, sev_color) = severity(&f.severity);
-    let stamp_w = text_w("AS-BUILT", 15.0, true) + 26.0;
-    let customer_line = if f.customer.is_empty() { String::new() } else { format!("Prepared for: {}", f.customer) };
+    let (sev_label, sev_color) = severity(lang, &f.severity);
+    let stamp_w = text_w(lang.text("frame.as_built"), 15.0, true) + 26.0;
+    let customer_line = if f.customer.is_empty() { String::new() } else { lang.format("frame.customer", &[("value", &f.customer)]) };
     let supplier_line = {
         let by = join(&[&f.company, &f.author]);
-        if by.is_empty() { by } else { format!("Prepared by: {by}") }
+        if by.is_empty() { by } else { lang.format("frame.prepared", &[("value", &by)]) }
     };
     let (head, mut foot, side) = match f.template {
         T::Lines | T::Blueprint => (if has_sub { 54.0 } else { 40.0 }, 26.0, 0.0),
@@ -426,14 +472,14 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
         let by = inner.y + inner.h - bh;
         o.hline(inner.x, inner.x + inner.w, by, &color, 0.75);
         let mut cells: Vec<(&str, &str, f64)> = vec![];
-        for (caption, value) in [("AUTHOR", f.author.as_str()), ("NOTE", f.note.as_str()), ("PAGE", f.page.as_str()), ("LAST CHANGE", changed)] {
+        for (caption, value) in [(lang.text("frame.author"), f.author.as_str()), (lang.text("frame.note"), f.note.as_str()), (lang.text("frame.page"), f.page.as_str()), (lang.text("frame.last_change"), changed)] {
             if !value.is_empty() {
                 cells.push((caption, value, text_w(value, 12.0, false).max(text_w(caption, 7.0, true)) + 20.0));
             }
         }
         let others: f64 = cells.iter().map(|c| c.2).sum();
         let mut cx = inner.x;
-        o.cell(Pt::new(cx, by + 4.0), "TITLE", &f.title, 14.0, true, &color);
+        o.cell(Pt::new(cx, by + 4.0), lang.text("frame.title"), &f.title, 14.0, true, &color);
         o.text(Pt::new(cx + 6.0, by + 40.0), &join(&[&f.subtitle, file]), 9.0, false, MUTED, Align::Left);
         cx += (inner.w - others).max(0.0);
         for (caption, value, cw) in cells {
@@ -463,7 +509,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
                 let tw: f64 = rev_cols.iter().sum();
                 let (tx, ty) = (inner.x + inner.w - tw, by - rev_h);
                 o.rect(Rect { x: tx, y: ty, w: tw, h: rev_h }, Some(WHITE), Some(&color), 0.75);
-                let rows = std::iter::once(["REV", "DATE", "CHANGE", "BY"].map(String::from))
+                let rows = std::iter::once([lang.text("frame.rev"), lang.text("frame.date"), lang.text("frame.change"), lang.text("frame.by")].map(String::from))
                     .chain(revisions.iter().map(|r| [r.rev.clone(), r.date.clone(), r.change.clone(), r.author.clone()]));
                 for (i, row) in rows.enumerate() {
                     let ry = ty + 15.0 * i as f64;
@@ -564,12 +610,12 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             o.rect(Rect { x: bx, y: by, w: bw, h: bh }, Some(WHITE), Some(&color), 1.0);
             o.hline(bx, bx + bw, by + 32.0, &color, 0.75);
             o.hline(bx, bx + bw, by + 58.0, &color, 0.75);
-            o.cell(Pt::new(bx, by + 2.0), "TITLE", &f.title, 13.0, true, &color);
+            o.cell(Pt::new(bx, by + 2.0), lang.text("frame.title"), &f.title, 13.0, true, &color);
             o.text(Pt::new(bx + bw - 6.0, by + 22.0), &f.subtitle, 8.5, false, MUTED, Align::Right);
             let date_only = changed.split(' ').next().unwrap_or("");
             for (row, y) in [
-                ([("DRAWING NO.", f.doc_id.as_str()), ("REV", f.revision.as_str()), ("SHEET", f.page.as_str())], by + 32.0),
-                ([("DRAWN", f.author.as_str()), ("CHECKED", f.approver.as_str()), ("DATE", date_only)], by + 58.0),
+                ([(lang.text("frame.drawing_no"), f.doc_id.as_str()), (lang.text("frame.rev"), f.revision.as_str()), (lang.text("frame.sheet"), f.page.as_str())], by + 32.0),
+                ([(lang.text("frame.drawn"), f.author.as_str()), (lang.text("frame.checked"), f.approver.as_str()), (lang.text("frame.date"), date_only)], by + 58.0),
             ] {
                 for (i, (caption, value)) in row.iter().enumerate() {
                     let cx = bx + bw * [0.0, 0.45, 0.7][i];
@@ -616,7 +662,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             o.rect(outer, Some(WHITE), Some(&color), 1.5);
             o.hline(x, right, top + head, &color, 1.0);
             o.hline(x, right, bottom - foot, &color, 1.0);
-            let id = if f.doc_id.is_empty() { String::new() } else { format!("Change {}", f.doc_id) };
+            let id = if f.doc_id.is_empty() { String::new() } else { lang.format("frame.changeId", &[("value", &f.doc_id)]) };
             titles(&mut o, x + 12.0, top, head, 18.0, &color, &join(&[&id, &f.subtitle]), MUTED);
             let mut rx = right - 12.0;
             if let Some((label, bc)) = &badge {
@@ -627,8 +673,8 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             }
             put_logo(&mut o, rx, top + head / 2.0, (head - 18.0).min(30.0));
             let who = join(&[
-                &if f.author.is_empty() { String::new() } else { format!("Author: {}", f.author) },
-                &if f.approver.is_empty() { String::new() } else { format!("Approved by: {}", f.approver) },
+                &if f.author.is_empty() { String::new() } else { lang.format("frame.authorValue", &[("value", &f.author)]) },
+                &if f.approver.is_empty() { String::new() } else { lang.format("frame.approver", &[("value", &f.approver)]) },
                 file,
             ]);
             let fy = bottom - foot / 2.0;
@@ -637,7 +683,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             o.text(Pt::new(right - 12.0, fy), &footer[2], 11.0, false, &color, Align::Right);
         }
         T::Classification => {
-            let (label, lc) = level(&f.level);
+            let (label, lc) = level(lang, &f.level);
             o.rect(outer, Some(WHITE), Some(lc), 1.5);
             for by in [top, bottom - 22.0] {
                 o.rect(Rect { x, y: by, w, h: 22.0 }, Some(lc), None, 0.0);
@@ -659,7 +705,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             if code_w > 0.0 {
                 let r = Rect { x: rx - code_w, y: top + head / 2.0 - 18.0, w: code_w, h: 36.0 };
                 o.rect(r, Some(&tint(&color, 0.92)), Some(&color), 1.0);
-                o.cell(Pt::new(r.x + 2.0, r.y + 2.0), "SITE", &f.doc_id, 14.0, true, &color);
+                o.cell(Pt::new(r.x + 2.0, r.y + 2.0), lang.text("frame.site"), &f.doc_id, 14.0, true, &color);
                 rx = r.x - 12.0;
             }
             put_logo(&mut o, rx, top + head / 2.0, (head - 18.0).min(32.0));
@@ -668,7 +714,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             let mut lx = x + 12.0;
             for (k, c) in &info.legend {
                 o.sample(*k, lx, fy, 26.0, c);
-                let label = kind_label(*k);
+                let label = kind_label_in(*k, lang);
                 o.text(Pt::new(lx + 34.0, fy), label, 10.0, false, MUTED, Align::Left);
                 lx += 26.0 + 8.0 + text_w(label, 10.0, false) + 18.0;
             }
@@ -689,14 +735,14 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
                     if j > 0 {
                         o.vline(cx, top + rh * i as f64, top + rh * (i + 1) as f64, &color, 0.5);
                     }
-                    let c = if *caption == "CLASSIFICATION" { level(&f.level).1 } else { color.as_str() };
-                    o.cell(Pt::new(cx, top + rh * i as f64 - 2.0), caption, value, 10.0, *caption == "CLASSIFICATION", c);
+                    let c = if *caption == lang.text("frame.classification") { level(lang, &f.level).1 } else { color.as_str() };
+                    o.cell(Pt::new(cx, top + rh * i as f64 - 2.0), caption, value, 10.0, *caption == lang.text("frame.classification"), c);
                     cx += control_cols[j];
                 }
             }
             put_logo(&mut o, tx - 12.0, top + head / 2.0, (head - 18.0).min(30.0));
             let fy = bottom - foot / 2.0;
-            o.text(Pt::new(x + 12.0, fy), &join(&["Uncontrolled when printed", &f.author]), 10.0, false, MUTED, Align::Left);
+            o.text(Pt::new(x + 12.0, fy), &join(&[lang.text("frame.uncontrolled_when_printed"), &f.author]), 10.0, false, MUTED, Align::Left);
             o.text(Pt::new(x + w / 2.0, fy), &f.note, 10.0, false, &color, Align::Center);
             o.text(Pt::new(right - 12.0, fy), &join(&[file, &page]), 10.0, false, &color, Align::Right);
         }
@@ -712,7 +758,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             let bw = w / 3.0;
             let date_only = changed.split(' ').next().unwrap_or("");
             for (i, (caption, name, when)) in
-                [("PREPARED BY", &f.author, date_only), ("REVIEWED BY", &f.reviewer, ""), ("APPROVED BY", &f.approver, "")].into_iter().enumerate()
+                [(lang.text("frame.prepared_by"), &f.author, date_only), (lang.text("frame.reviewed_by"), &f.reviewer, ""), (lang.text("frame.approved_by"), &f.approver, "")].into_iter().enumerate()
             {
                 let cx = x + bw * i as f64;
                 if i > 0 {
@@ -723,8 +769,8 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
                 o.hline(cx + 10.0, cx + bw * 0.62, line_y, MUTED, 0.75);
                 o.hline(cx + bw * 0.68, cx + bw - 10.0, line_y, MUTED, 0.75);
                 o.text(Pt::new(cx + bw * 0.68, line_y - 7.0), when, 10.0, false, &color, Align::Left);
-                o.text(Pt::new(cx + 10.0, line_y + 9.0), "Signature", 7.0, false, MUTED, Align::Left);
-                o.text(Pt::new(cx + bw * 0.68, line_y + 9.0), "Date", 7.0, false, MUTED, Align::Left);
+                o.text(Pt::new(cx + 10.0, line_y + 9.0), lang.text("frame.signature"), 7.0, false, MUTED, Align::Left);
+                o.text(Pt::new(cx + bw * 0.68, line_y + 9.0), lang.text("frame.signatureDate"), 7.0, false, MUTED, Align::Left);
             }
         }
         T::Solution => {
@@ -739,8 +785,8 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
                 o.text(Pt::new(r.x + r.w / 2.0, r.y + 10.0), label, 10.0, true, WHITE, Align::Center);
             }
             let meta = join(&[
-                &if f.version.is_empty() { String::new() } else { format!("Version {}", f.version) },
-                &if f.owner.is_empty() { String::new() } else { format!("Owner: {}", f.owner) },
+                &if f.version.is_empty() { String::new() } else { lang.format("frame.versionValue", &[("value", &f.version)]) },
+                &if f.owner.is_empty() { String::new() } else { lang.format("frame.ownerValue", &[("value", &f.owner)]) },
             ]);
             o.text(Pt::new(rx, cy + 14.0), &meta, 10.0, false, MUTED, Align::Right);
             rx -= badge_w.max(text_w(&meta, 10.0, false)) + 14.0;
@@ -748,8 +794,8 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             o.hline(x, right, top + head, &tint(&color, 0.7), 0.75);
             o.hline(x, right, bottom - foot, &tint(&color, 0.7), 0.75);
             let who = join(&[
-                &if f.author.is_empty() { String::new() } else { format!("Author: {}", f.author) },
-                &if f.reviewer.is_empty() { String::new() } else { format!("Reviewed by: {}", f.reviewer) },
+                &if f.author.is_empty() { String::new() } else { lang.format("frame.authorValue", &[("value", &f.author)]) },
+                &if f.reviewer.is_empty() { String::new() } else { lang.format("frame.reviewer", &[("value", &f.reviewer)]) },
                 file,
             ]);
             let fy = bottom - foot / 2.0 + 2.0;
@@ -776,9 +822,9 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             let notice = if !f.note.is_empty() {
                 f.note.clone()
             } else if f.customer.is_empty() {
-                "Confidential. Do not distribute.".into()
+                lang.text("frame.confidential_do_not_distribute").into()
             } else {
-                format!("Confidential. Prepared for {}; do not distribute.", f.customer)
+                lang.format("frame.confidentialFor", &[("value", &f.customer)])
             };
             o.hline(x + 16.0, right - 16.0, bottom - foot, &tint(&color, 0.75), 0.75);
             let fy = bottom - foot / 2.0;
@@ -809,7 +855,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             let foot_text = 26.0;
             o.rect(Rect { x: px, y: top + head, w: PANEL, h: outer.h - head - foot_text }, Some(&tint(&color, 0.95)), None, 0.0);
             o.vline(px, top + head, bottom - foot_text, &color, 2.0);
-            o.text(Pt::new(px + 14.0, top + head + 18.0), "SUMMARY", 8.0, true, &color, Align::Left);
+            o.text(Pt::new(px + 14.0, top + head + 18.0), lang.text("frame.summary"), 8.0, true, &color, Align::Left);
             for (i, line) in summary.iter().enumerate() {
                 o.text(Pt::new(px + 14.0, top + head + 38.0 + 16.0 * i as f64), line, 11.0, false, "#334155", Align::Left);
             }
@@ -819,24 +865,24 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
         T::AsBuilt => {
             o.rect(outer, Some(WHITE), Some(&color), 1.5);
             o.hline(x, right, top + head, &color, 1.0);
-            let drawn = if f.author.is_empty() { String::new() } else { format!("Drawn by {}", f.author) };
+            let drawn = if f.author.is_empty() { String::new() } else { lang.format("frame.drawnBy", &[("value", &f.author)]) };
             titles(&mut o, x + 12.0, top, head, 18.0, &color, &join(&[&f.subtitle, &f.note, &drawn]), MUTED);
             // The stamp: red, double framed.
             let red = "#b91c1c";
             let r = Rect { x: right - 12.0 - stamp_w, y: top + head / 2.0 - 15.0, w: stamp_w, h: 30.0 };
             o.rrect(r, None, Some(red), 2.0, 3.0);
             o.rect(Rect { x: r.x + 3.0, y: r.y + 3.0, w: r.w - 6.0, h: r.h - 6.0 }, None, Some(red), 0.75);
-            o.text(Pt::new(r.x + r.w / 2.0, r.y + 15.0), "AS-BUILT", 15.0, true, red, Align::Center);
+            o.text(Pt::new(r.x + r.w / 2.0, r.y + 15.0), lang.text("frame.as_built"), 15.0, true, red, Align::Center);
             put_logo(&mut o, r.x - 14.0, top + head / 2.0, (head - 16.0).min(30.0));
             // The handover table along the bottom.
             let by = bottom - foot;
             o.hline(x, right, by, &color, 1.0);
             let cells = [
-                ("INSTALLED BY", f.installer.as_str()),
-                ("COMMISSIONED", f.commissioned.as_str()),
-                ("ACCEPTED BY", f.approver.as_str()),
-                ("LAST CHANGE", changed),
-                ("PAGE", if f.page.is_empty() { file } else { f.page.as_str() }),
+                (lang.text("frame.installed_by"), f.installer.as_str()),
+                (lang.text("frame.commissioned"), f.commissioned.as_str()),
+                (lang.text("frame.accepted_by"), f.approver.as_str()),
+                (lang.text("frame.last_change"), changed),
+                (lang.text("frame.page"), if f.page.is_empty() { file } else { f.page.as_str() }),
             ];
             let cw = w / cells.len() as f64;
             for (i, (caption, value)) in cells.iter().enumerate() {
@@ -845,7 +891,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
                     o.vline(cx, by, bottom, &color, 0.75);
                 }
                 o.cell(Pt::new(cx + 2.0, by + 4.0), caption, value, 11.0, false, &color);
-                if *caption == "ACCEPTED BY" {
+                if *caption == lang.text("frame.accepted_by") {
                     o.hline(cx + 10.0, cx + cw - 10.0, by + 40.0, MUTED, 0.75);
                 }
             }
@@ -857,19 +903,19 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             o.hline(x, right, bottom - foot, &color, 1.0);
             o.text(Pt::new(x + 12.0, top + 24.0), &f.title, 18.0, true, &color, Align::Left);
             let when = join(&[
-                &if f.start.is_empty() { String::new() } else { format!("Start: {}", f.start) },
-                &if f.end.is_empty() { String::new() } else { format!("End: {}", f.end) },
+                &if f.start.is_empty() { String::new() } else { lang.format("frame.start", &[("value", &f.start)]) },
+                &if f.end.is_empty() { String::new() } else { lang.format("frame.end", &[("value", &f.end)]) },
                 &f.subtitle,
             ]);
             o.text(Pt::new(x + 12.0, top + 46.0), &when, 11.0, false, MUTED, Align::Left);
             if !f.services.is_empty() {
-                o.text(Pt::new(x + 12.0, top + 62.0), &format!("Affected: {}", f.services), 11.0, true, sev_color, Align::Left);
+                o.text(Pt::new(x + 12.0, top + 62.0), &lang.format("frame.affected", &[("value", &f.services)]), 11.0, true, sev_color, Align::Left);
             }
             let bw = text_w(&sev_label, 10.0, true) + 20.0;
             let r = Rect { x: right - 12.0 - bw, y: top + 14.0, w: bw, h: 20.0 };
             o.rrect(r, Some(sev_color), None, 0.0, 10.0);
             o.text(Pt::new(r.x + r.w / 2.0, r.y + 10.0), &sev_label, 10.0, true, WHITE, Align::Center);
-            let id = if f.doc_id.is_empty() { String::new() } else { format!("Incident {}", f.doc_id) };
+            let id = if f.doc_id.is_empty() { String::new() } else { lang.format("frame.incidentId", &[("value", &f.doc_id)]) };
             o.text(Pt::new(right - 12.0, top + 46.0), &id, 11.0, true, &color, Align::Right);
             put_logo(&mut o, r.x - 12.0, top + 24.0, 26.0);
             footer_texts(&mut o, bottom - foot / 2.0, 10.5, &color, 12.0);
@@ -885,7 +931,7 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
             if code_w > 0.0 {
                 let r = Rect { x: rx - code_w, y: top + head / 2.0 - 18.0, w: code_w, h: 36.0 };
                 o.rect(r, Some(&tint(&color, 0.92)), Some(&color), 1.0);
-                o.cell(Pt::new(r.x + 2.0, r.y + 2.0), "LOCATION", &f.doc_id, 14.0, true, &color);
+                o.cell(Pt::new(r.x + 2.0, r.y + 2.0), lang.text("frame.location"), &f.doc_id, 14.0, true, &color);
                 rx = r.x - 12.0;
             }
             put_logo(&mut o, rx, top + head / 2.0, (head - 18.0).min(32.0));
@@ -916,9 +962,14 @@ pub fn layout(f: &Frame, content: Rect, info: &Info) -> FrameLayout {
     if !mark.is_empty() {
         let diag = content.w.hypot(content.h).max(200.0);
         let size = (diag * 0.7 / (mark.chars().count() as f64 * 0.62)).clamp(24.0, 220.0);
-        let c = if mark.to_uppercase().contains("CONFIDENTIAL") || mark.to_uppercase().contains("RESTRICTED") { "#dc2626" } else { "#64748b" };
+        let upper = mark.to_uppercase();
+        // Watermarks are document text: an English interface can open a Chinese watermark and vice versa.
+        let sensitive = [crate::i18n::Language::English, crate::i18n::Language::Chinese].iter().any(|language| {
+            ["frame.confidential", "frame.restricted"].iter().any(|key| upper.contains(language.text(key)))
+        });
+        let c = if sensitive { "#dc2626" } else { "#64748b" };
         let at = Pt::new(content.x + content.w / 2.0, content.y + content.h / 2.0);
-        overlay.0.push(Prim::Watermark { at, text: mark.to_uppercase(), size, color: c.into(), angle: -30.0, opacity: 0.13 });
+        overlay.0.push(Prim::Watermark { at, text: upper, size, color: c.into(), angle: -30.0, opacity: 0.13 });
     }
     FrameLayout { outer, prims: o.0, overlay: overlay.0 }
 }
@@ -930,16 +981,24 @@ pub const LOGO_MAX_BYTES: usize = 1024 * 1024;
 
 /// A PNG or JPEG file as a data URI, with its size in pixels.
 pub fn logo_from_file(path: &std::path::Path) -> Result<(String, f64, f64), String> {
-    let bytes = std::fs::read(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-    logo_from_bytes(&bytes)
+    read_logo_file(path).map_err(|e| e.render(crate::i18n::Language::English))
+}
+
+fn read_logo_file(path: &std::path::Path) -> Result<(String, f64, f64), Diagnostic> {
+    let bytes = std::fs::read(path).map_err(|e| Diagnostic::new("cli.read", [("path", path.display().to_string()), ("error", e.to_string())]))?;
+    parse_logo_bytes(&bytes)
 }
 
 /// A logo given as a file path or as a `data:` URI with base64 content
 /// (as a browser reads an image).
 pub fn logo_from(value: &str) -> Result<(String, f64, f64), String> {
-    let Some(rest) = value.strip_prefix("data:") else { return logo_from_file(std::path::Path::new(value)) };
-    let data = rest.split_once(";base64,").map(|(_, d)| d).ok_or("the logo must be base64 encoded")?;
-    logo_from_bytes(&base64_decode(data).ok_or("the logo's data is not valid base64")?)
+    parse_logo(value).map_err(|e| e.render(crate::i18n::Language::English))
+}
+
+pub(crate) fn parse_logo(value: &str) -> Result<(String, f64, f64), Diagnostic> {
+    let Some(rest) = value.strip_prefix("data:") else { return read_logo_file(std::path::Path::new(value)) };
+    let data = rest.split_once(";base64,").map(|(_, d)| d).ok_or_else(|| Diagnostic::new("logo.base64", []))?;
+    parse_logo_bytes(&base64_decode(data).ok_or_else(|| Diagnostic::new("logo.invalidBase64", []))?)
 }
 
 /// Whether `logo` is a PNG or JPEG kept inside the diagram (a data URI),
@@ -951,19 +1010,23 @@ pub fn is_embedded_logo(logo: &str) -> bool {
 
 /// A PNG or JPEG image as a data URI, with its size in pixels.
 pub fn logo_from_bytes(bytes: &[u8]) -> Result<(String, f64, f64), String> {
+    parse_logo_bytes(bytes).map_err(|e| e.render(crate::i18n::Language::English))
+}
+
+fn parse_logo_bytes(bytes: &[u8]) -> Result<(String, f64, f64), Diagnostic> {
     if bytes.len() > LOGO_MAX_BYTES {
-        return Err(format!("the logo is larger than {} KB", LOGO_MAX_BYTES / 1024));
+        return Err(Diagnostic::new("logo.tooLarge", [("limit", (LOGO_MAX_BYTES / 1024).to_string())]));
     }
     let (mime, (w, h)) = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") && bytes.len() >= 24 {
         let be = |i: usize| u32::from_be_bytes([bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]]) as f64;
         ("image/png", (be(16), be(20)))
     } else if bytes.starts_with(&[0xff, 0xd8]) {
-        ("image/jpeg", jpeg_size(bytes).ok_or("cannot read the JPEG's size")?)
+        ("image/jpeg", jpeg_size(bytes).ok_or_else(|| Diagnostic::new("logo.jpeg", []))?)
     } else {
-        return Err("the logo must be a PNG or JPEG image".into());
+        return Err(Diagnostic::new("logo.format", []));
     };
     if w <= 0.0 || h <= 0.0 {
-        return Err("the logo has no size".into());
+        return Err(Diagnostic::new("logo.size", []));
     }
     Ok((format!("data:{mime};base64,{}", base64_encode(bytes)), w, h))
 }
@@ -1160,6 +1223,18 @@ mod tests {
         let l = layout(&f, Rect { x: 0.0, y: 0.0, w: 600.0, h: 300.0 }, &info());
         assert!(matches!(&l.overlay[..], [Prim::Watermark { text, at, .. }] if text == "DRAFT" && *at == Pt::new(300.0, 150.0)));
         assert!(l.prims.iter().all(|p| !matches!(p, Prim::Watermark { .. })));
+    }
+
+    #[test]
+    fn sensitive_watermark_color_follows_document_text_across_ui_languages() {
+        use crate::i18n::Language;
+        for lang in [Language::English, Language::Chinese] {
+            for (mark, expected) in [("机密", "#dc2626"), ("受限", "#dc2626"), ("Confidential", "#dc2626"), ("草稿", "#64748b")] {
+                let f = Frame { watermark: mark.into(), ..Frame::default() };
+                let l = layout_in(&f, Rect { x: 0.0, y: 0.0, w: 600.0, h: 300.0 }, &info(), lang);
+                assert!(matches!(&l.overlay[..], [Prim::Watermark { text, color, .. }] if *text == mark.to_uppercase() && color == expected));
+            }
+        }
     }
 
     #[test]

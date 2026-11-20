@@ -20,18 +20,21 @@
 //   host.dirty(bool)         unsaved changes appeared or went away (optional)
 //   host.theme               "light", "deep" or "neon" until the user picks one (optional)
 
+import { composing } from "./keyboard.js"
+import { language, languages, languageEvents, setLanguage, tr } from "./i18n.js"
+import { MessageError, translate, translateStatus } from "./locales/messages.mjs"
 import init, { Stratagram } from "./pkg/stratagram_web.js"
 import { DiagramView } from "./canvas.js"
 import { KIND_GROUPS, Panel, h } from "./panel.js"
 
 const LAYOUTS = [
-    ["hierarchy", "Hierarchy ↓", "Layers from the internet and firewalls down to servers; redundant pairs side by side"],
-    ["hierarchy-lr", "Hierarchy →", "The same, left to right"],
-    ["radial", "Radial", "Rings around the most upstream device"],
-    ["circle", "Circle", "All devices on one circle, neighbors together"],
-    ["grid", "Grid", "Rows of equal cells, neighbors together"],
-    ["force", "Force-directed", "Organic: linked devices pull together (run again to refine)"],
-    ["tidy", "Tidy", "Straighten what is there: align rows and columns, center, straight lines; devices barely move"],
+    ["hierarchy", "layout.hierarchy", "layout.hierarchyHint"],
+    ["hierarchy-lr", "layout.hierarchyLR", "layout.hierarchyLRHint"],
+    ["radial", "layout.radial", "layout.radialHint"],
+    ["circle", "layout.circle", "layout.circleHint"],
+    ["grid", "layout.grid", "layout.gridHint"],
+    ["force", "layout.force", "layout.forceHint"],
+    ["tidy", "layout.tidy", "layout.tidyHint"],
 ]
 
 // Clipboard format for Stratagram's own copies (draw.io XML goes as text).
@@ -62,7 +65,7 @@ export class App {
     constructor(root, options) {
         this.root = root
         this.host = options.host || fileHost()
-        this.ctl = new Stratagram()
+        this.ctl = new Stratagram(language)
         this.prefs = new Prefs({ panelVisible: true, layoutGap: 60, layoutTidyPorts: true, layoutAvoid: true,
                                  showGrid: true, snap: true })
         this.clip = null
@@ -92,13 +95,34 @@ export class App {
         this.handle = h("div", { className: "sg-handle", onclick: () => this.togglePanel() })
         main.appendChild(this.handle)
         this.panel = new Panel(this, main)
+        this.el.lang = language
+        this.ctl.setLanguage(language)
         this.buildToolbar()
+        this.languageChanged = () => {
+            this.closePopup()
+            const hadFocus = this.languageBox === document.activeElement
+            const quick = this.quick.value
+            this.el.lang = language
+            this.ctl.setLanguage(language)
+            this.buildToolbar()
+            this.quick.value = quick
+            this.deepButton.classList.toggle("sg-on", this.view.deepZoom)
+            this.zoomLabel.textContent = Math.round(this.view.zoom * 100) + "%"
+            this.setPanelVisible(this.prefs.get("panelVisible"))
+            this.panel.render()
+            this.panel.renderLayers()
+            this.lastSheets = null
+            this.changed()
+            this.view.repaint()
+            if (hadFocus) this.languageBox.focus()
+        }
+        languageEvents.addEventListener("change", this.languageChanged)
         this.setPanelVisible(this.prefs.get("panelVisible"))
         this.listen()
 
         const initial = this.host.initial
         if (initial && initial.json) this.ctl.load(initial.json, initial.name || "diagram.stratagram")
-        else this.ctl.setStatus("Double-click to add a device. Drag from a device border or port to another device to connect.")
+        else this.setStatus("status.welcome")
         this.ctl.setView(1, this.prefs.get("snap"))
         this.changed()
         requestAnimationFrame(() => this.view.fit())
@@ -112,8 +136,10 @@ export class App {
         this.view.setScene(ctl.scene())
         this.view.setEditBox(ctl.editBox())
         this.panel.update(ctl.selection(), ctl.layers())
-        this.status.textContent = ctl.status()
-        this.status.title = ctl.status()
+        const status = ctl.status()
+        if (this.uiStatus && this.uiStatus.text !== status) this.uiStatus = null
+        this.status.textContent = this.uiStatus ? tr(this.uiStatus.key, this.uiStatus.values) : translateStatus(language, status)
+        this.status.title = this.status.textContent
         this.buttons.undo.disabled = !ctl.canUndo()
         this.buttons.redo.disabled = !ctl.canRedo()
         const sheets = ctl.sheets()
@@ -123,7 +149,7 @@ export class App {
             this.renderSheets(list)
             this.sheetShown(list.findIndex(x => x.active))
         }
-        const title = ctl.title()
+        const title = ctl.fileName() ? ctl.title() : tr(ctl.dirty() ? "file.untitledDirty" : "file.untitled")
         if (title !== this.lastTitle) {
             this.lastTitle = title
             if (this.host.title) this.host.title(title)
@@ -146,15 +172,15 @@ export class App {
         const tabs = list.map((sheet, i) => {
             const name = h("span", { className: "sg-sheet-name" }, sheet.name)
             const close = list.length > 1 ? h("button", {
-                className: "sg-sheet-close", title: "Remove this sheet",
+                className: "sg-sheet-close", title: tr("sheet.removeHint"),
                 onclick: (e) => {
                     e.stopPropagation()
-                    if (sheet.empty || confirm(`Remove "${sheet.name}" and everything on it?\nYou can undo this with Ctrl+Z.`))
+                    if (sheet.empty || confirm(tr("confirm.removeSheet", { name: sheet.name })))
                         this.run(() => ctl.removeSheet(i))
                     this.view.focus()
                 },
             }, "×") : null
-            const tab = h("div", { className: "sg-sheet" + (sheet.active ? " sg-active" : ""), title: "Double-click to rename" },
+            const tab = h("div", { className: "sg-sheet" + (sheet.active ? " sg-active" : ""), title: tr("sheet.renameHint") },
                 name, close)
             tab.addEventListener("click", () => {
                 // (A drag ends in a click too: it only reorders.)
@@ -166,7 +192,7 @@ export class App {
             tab.addEventListener("dblclick", () => this.renameSheet(i, sheet.name, name))
             return tab
         })
-        const add = h("button", { className: "sg-sheet-add", title: "Add a sheet",
+        const add = h("button", { className: "sg-sheet-add", title: tr("sheet.addHint"),
                                   onclick: () => { this.run(() => ctl.addSheet()); this.view.focus() } }, "+")
         this.sheetBar.replaceChildren(...tabs, add)
     }
@@ -227,6 +253,7 @@ export class App {
             this.view.focus()
         }
         field.addEventListener("keydown", (e) => {
+            if (composing(e)) return
             e.stopPropagation()
             if (e.key === "Enter") finish(true)
             else if (e.key === "Escape") finish(false)
@@ -271,6 +298,12 @@ export class App {
         this.changed()
     }
 
+    setStatus(key, values) {
+        const text = translate("en", key, values)
+        this.uiStatus = { key, values, text }
+        this.ctl.setStatus(text)
+    }
+
     run(f) { f(); this.changed() }
 
     // toolbar
@@ -280,45 +313,49 @@ export class App {
         const b = (label, title, f, extra = {}) => h("button", Object.assign({ title, onclick: () => { f(); view.focus() } }, extra), label)
         const sep = () => h("span", { className: "sg-sep" })
         this.buttons = {
-            undo: b("Undo", "Undo (Ctrl+Z)", () => this.run(() => ctl.undo())),
-            redo: b("Redo", "Redo (Ctrl+Shift+Z)", () => this.run(() => ctl.redo())),
+            undo: b(tr("edit.undo"), tr("edit.undoHint"), () => this.run(() => ctl.undo())),
+            redo: b(tr("edit.redo"), tr("edit.redoHint"), () => this.run(() => ctl.redo())),
         }
         const canNew = this.host.canNew !== false
         const file = [
-            canNew ? b("New", "A new diagram", () => this.newDiagram()) : null,
-            this.host.open ? b("Open…", "Open a diagram (Ctrl+O)", () => this.open()) : null,
-            b("Save", "Save (Ctrl+S)", () => this.save(false)),
-            this.host.saveAs !== false ? b("Save as…", "Save under another name (Ctrl+Shift+S)", () => this.save(true)) : null,
+            canNew ? b(tr("file.new"), tr("file.newHint"), () => this.newDiagram()) : null,
+            this.host.open ? b(tr("file.open"), tr("file.openHint"), () => this.open()) : null,
+            b(tr("file.save"), tr("file.saveHint"), () => this.save(false)),
+            this.host.saveAs !== false ? b(tr("file.saveAs"), tr("file.saveAsHint"), () => this.save(true)) : null,
         ]
-        const exportButton = b("Export ▾", "Export and copy", () => this.menu(exportButton, [
-            ["Export SVG…", "Ctrl+E", () => this.exportSvg()],
-            ["Export PNG…", "Ctrl+Alt+E", () => this.exportPng()],
-            ["Export draw.io…", "Ctrl+Shift+E", () => this.exportDrawio()],
-            ["Export CML lab…", "", () => this.exportCml()],
+        const exportButton = b(tr("file.exportMenu"), tr("file.exportHint"), () => this.menu(exportButton, [
+            [tr("file.exportSvg"), "Ctrl+E", () => this.exportSvg()],
+            [tr("file.exportPng"), "Ctrl+Alt+E", () => this.exportPng()],
+            [tr("file.exportDrawio"), "Ctrl+Shift+E", () => this.exportDrawio()],
+            [tr("file.exportCml"), "", () => this.exportCml()],
             null,
-            ["Copy for draw.io", "Ctrl+C", () => this.copyButton()],
-            ["Copy sheet with layers and frame", "", () => this.copySheet()],
-            ["Paste (from Stratagram or draw.io)", "Ctrl+V", () => this.pasteButton()],
+            [tr("file.copyDrawio"), "Ctrl+C", () => this.copyButton()],
+            [tr("file.copySheet"), "", () => this.copySheet()],
+            [tr("file.paste"), "Ctrl+V", () => this.pasteButton()],
         ]))
         const center = (f) => () => { const c = view.viewCenter(); this.run(() => f(c)) }
         const addOf = (kind) => center(c => ctl.addDeviceOf(kind, c.x, c.y))
-        const addKind = b("▾", "Add a device of a type", () => this.menu(addKind, [
-            ["plain device", "", addOf("")],
-            ...KIND_GROUPS.flatMap(([group, kinds]) => [group, ...kinds.map(k => [k, "", addOf(k)])]),
+        const addKind = b("▾", tr("add.typeHint"), () => this.menu(addKind, [
+            [tr("menu.plainDevice"), "", addOf("")],
+            ...KIND_GROUPS.flatMap(([group, kinds]) => [tr(group), ...kinds.map(k => [tr("device." + k.replace(/ /g, "_")), "", addOf(k)])]),
         ]), { className: "sg-split-arrow" })
-        this.layoutButton = b("Layout ▾", "Auto layout (Ctrl+L)", () => this.layoutPopup())
+        this.layoutButton = b(tr("layout.menu"), tr("layout.shortcut"), () => this.layoutPopup())
         const snap = h("input", { type: "checkbox", checked: this.prefs.get("snap") })
         snap.addEventListener("change", () => { this.prefs.set("snap", snap.checked); this.viewChanged() })
         this.gridBox = h("input", { type: "checkbox", checked: this.prefs.get("showGrid") })
         this.gridBox.addEventListener("change", () => this.setGrid(this.gridBox.checked))
-        this.themeBox = h("select", { className: "sg-theme", title: "Theme: the colors of the diagram, its exports (SVG, PNG) and the editor.\nThe file keeps its own colors." },
-                          ...[["light", "Light"], ["deep", "Dark"], ["neon", "Neon"]].map(([v, t]) => h("option", { value: v }, t)))
+        this.themeBox = h("select", { className: "sg-theme", title: tr("view.themeHint") },
+                          ...[["light", tr("view.light")], ["deep", tr("view.dark")], ["neon", tr("view.neon")]].map(([v, t]) => h("option", { value: v }, t)))
         this.themeBox.value = this.theme
         this.themeBox.addEventListener("change", () => this.setTheme(this.themeBox.value))
-        this.quick = h("input", { type: "text", className: "sg-quick", placeholder: "Quick add (Ctrl+K): Firewall, Router, switch|my-box",
-                                   title: "Comma-separated devices, then Enter.\n\"Router\" adds a router labeled Router;\n" +
-                                          "\"router|edge-01\" (type, then name) adds a router labeled edge-01." })
+        this.languageBox = h("select", { className: "sg-theme", title: tr("ui.language"), "aria-label": tr("ui.language") },
+            Object.entries(languages).map(([value, name]) => h("option", { value, lang: value }, name)))
+        this.languageBox.value = language
+        this.languageBox.addEventListener("change", () => setLanguage(this.languageBox.value))
+        this.quick = h("input", { type: "text", className: "sg-quick", placeholder: tr("quickAdd.placeholder"),
+                                   title: tr("quickAdd.tooltip") })
         this.quick.addEventListener("keydown", (e) => {
+            if (composing(e)) return
             e.stopPropagation()
             if (e.key === "Enter") {
                 const c = view.viewCenter()
@@ -330,32 +367,32 @@ export class App {
                 }
             } else if (e.key === "Escape") { this.quick.value = ""; view.focus() }
         })
-        this.deepButton = b("Zoom into", "Deep zoom (Ctrl+I): zoom into a device without limit and add things inside it", () => this.toggleDeep())
+        this.deepButton = b(tr("view.deep"), tr("view.deepHint"), () => this.toggleDeep())
         this.zoomLabel = h("span", { className: "sg-zoom" }, "100%")
-        this.panelButton = b("Panel", "Show or hide the panel (Ctrl+B)", () => this.togglePanel())
+        this.panelButton = b(tr("view.panel"), tr("view.panelHint"), () => this.togglePanel())
         // (Buttons the host leaves out are null.)
         const items = [
             ...file, exportButton, sep(),
             // "+ Device" adds a plain device; the arrow beside it one of a type.
-            b("+ Device", "Add a device", center(c => ctl.addDevice(c.x, c.y)), { className: "sg-strong sg-split-main" }),
+            b(tr("add.device"), tr("add.deviceHint"), center(c => ctl.addDevice(c.x, c.y)), { className: "sg-strong sg-split-main" }),
             addKind,
-            b("+ Text", "Add a text", center(c => ctl.addNote(c.x - 20, c.y - 10)), { className: "sg-strong" }),
-            b("+ Point", "Free connection point for lines that point at nothing", center(c => ctl.addPoint(c.x, c.y)), { className: "sg-strong" }),
+            b(tr("add.text"), tr("add.textHint"), center(c => ctl.addNote(c.x - 20, c.y - 10)), { className: "sg-strong" }),
+            b(tr("add.point"), tr("add.pointHint"), center(c => ctl.addPoint(c.x, c.y)), { className: "sg-strong" }),
             this.buttons.undo, this.buttons.redo,
-            b("Duplicate", "Duplicate (Ctrl+D)", () => this.run(() => ctl.duplicate())),
-            b("Delete", "Delete (Del)", () => this.run(() => ctl.deleteSelected())),
+            b(tr("edit.duplicate"), tr("edit.duplicateHint"), () => this.run(() => ctl.duplicate())),
+            b(tr("edit.delete"), tr("edit.deleteHint"), () => this.run(() => ctl.deleteSelected())),
             sep(), this.layoutButton, sep(),
-            h("label", { className: "sg-check", title: "Snap to grid" }, snap, "Snap"),
-            h("label", { className: "sg-check", title: "Show the grid (Ctrl+')" }, this.gridBox, "Grid"),
-            this.themeBox,
+            h("label", { className: "sg-check", title: tr("view.snapHint") }, snap, tr("view.snap")),
+            h("label", { className: "sg-check", title: tr("view.gridHint") }, this.gridBox, tr("layout.grid")),
+            this.themeBox, this.languageBox,
             sep(), this.quick,
             ...(this.host.buttons || []).map(x => b(x.label, x.title || "", () => x.run(this))),
             h("span", { className: "sg-grow" }),
             this.deepButton,
-            b("−", "Zoom out (Ctrl+-)", () => view.zoomBy(1 / 1.2)), this.zoomLabel, b("+", "Zoom in (Ctrl++)", () => view.zoomBy(1.2)),
-            b("Fit", "Fit the diagram into view (Ctrl+0)", () => view.fit()),
+            b("−", tr("view.zoomOut"), () => view.zoomBy(1 / 1.2)), this.zoomLabel, b("+", tr("view.zoomIn"), () => view.zoomBy(1.2)),
+            b(tr("view.fit"), tr("view.fitHint"), () => view.fit()),
             sep(), this.panelButton]
-        this.toolbar.append(...items.filter(Boolean))
+        this.toolbar.replaceChildren(...items.filter(Boolean))
     }
 
     // A dropdown menu under `anchor` (again: closes it): items are [label,
@@ -377,6 +414,8 @@ export class App {
         const multi = type === "multi"
         const devices = type === "device" || (multi && sel.devices > 0)
         const kind = type === "device" ? sel.kind : (multi && sel.dev && !(sel.dev.kind === null || sel.dev.kind === undefined) ? sel.dev.kind : null)
+        const knownKind = KIND_GROUPS.some(([, kinds]) => kinds.includes(kind))
+        const kindLabel = kind ? (knownKind ? tr("device." + kind.replace(/ /g, "_")) : kind) : tr("menu.plainDevice")
         const layers = JSON.parse(this.ctl.layers()).filter(l => !l.frame)
         const at = { getBoundingClientRect: () => ({ left: clientX, right: clientX, top: clientY, bottom: clientY }),
                      classList: { add() {}, remove() {} }, contains: () => false }
@@ -392,21 +431,21 @@ export class App {
             m.style.top = top + "px"
         }
         const show = (items) => { m.replaceChildren(...items); m.scrollTop = 0; if (m.isConnected) fit() }
-        const back = () => item("‹ Back", "", () => show(main()))
+        const back = () => item(tr("menu.back"), "", () => show(main()))
         const types = () => [back(), h("hr"),
-            item("plain device", "", act(() => this.ctl.setProp("device:kind", "")), kind === ""),
-            ...KIND_GROUPS.flatMap(([group, kinds]) => [h("div", { className: "sg-menu-head" }, group),
-                ...kinds.map(k => item(k, "", act(() => this.ctl.setProp("device:kind", k)), k === kind))])]
+            item(tr("menu.plainDevice"), "", act(() => this.ctl.setProp("device:kind", "")), kind === ""),
+            ...KIND_GROUPS.flatMap(([group, kinds]) => [h("div", { className: "sg-menu-head" }, tr(group)),
+                ...kinds.map(k => item(tr("device." + k.replace(/ /g, "_")), "", act(() => this.ctl.setProp("device:kind", k)), k === kind))])]
         const moves = () => [back(), h("hr"),
-            ...layers.map(l => item("\u00a0\u00a0".repeat(l.depth) + l.name + (l.shown ? "" : " (hidden)") + (l.held ? " (locked)" : ""), "",
+            ...layers.map(l => item("\u00a0\u00a0".repeat(l.depth) + l.name + (l.shown ? "" : tr("value.hiddenSuffix")) + (l.held ? tr("value.lockedSuffix") : ""), "",
                 act(() => this.ctl.setProp("layer", String(l.id))), l.id === sel.layer))]
         const main = () => [
-            devices ? item("Type" + (kind !== null ? ": " + (kind || "plain device") : ""), "▸", () => show(types())) : null,
-            item("Move to layer", "▸", () => show(moves())),
+            devices ? item(tr("property.type") + (kind !== null ? ": " + kindLabel : ""), "▸", () => show(types())) : null,
+            item(tr("menu.moveToLayer"), "▸", () => show(moves())),
             h("hr"),
             (type === "device" || type === "note" || (multi && sel.devices + sel.notes > 0))
-                ? item("Clone", "Ctrl+D", act(() => this.ctl.duplicate())) : null,
-            item("Delete", "Del", act(() => this.ctl.deleteSelected())),
+                ? item(tr("edit.clone"), "Ctrl+D", act(() => this.ctl.duplicate())) : null,
+            item(tr("edit.delete"), "Del", act(() => this.ctl.deleteSelected())),
         ].filter(Boolean)
         show(main())
         this.popup(at, m)
@@ -423,7 +462,7 @@ export class App {
         anchor.classList.add("sg-on")
         this.popupAnchor = anchor
         const outside = (e) => { if (!el.contains(e.target) && !anchor.contains(e.target)) this.closePopup() }
-        const escape = (e) => { if (e.key === "Escape") { this.closePopup(); this.view.focus() } }
+        const escape = (e) => { if (!composing(e) && e.key === "Escape") { this.closePopup(); this.view.focus() } }
         this.popupCleanup = () => {
             document.removeEventListener("pointerdown", outside, true)
             document.removeEventListener("keydown", escape, true)
@@ -462,17 +501,17 @@ export class App {
         const check = (key, label, title) => {
             const c = h("input", { type: "checkbox", checked: p.get(key) })
             c.addEventListener("change", () => p.set(key, c.checked))
-            return h("label", { className: "sg-check", title }, c, label)
+            return h("label", { className: "sg-check", title: title && tr(title) }, c, tr(label))
         }
         const el = h("div", { className: "sg-popup sg-layout" },
-            h("h3", {}, "Auto layout"),
-            h("p", { className: "sg-hint" }, "Arranges the selected devices, or all shown and unlocked ones when fewer than two are selected. Ctrl+Z undoes."),
+            h("h3", {}, tr("layout.title")),
+            h("p", { className: "sg-hint" }, tr("layout.instructions")),
             LAYOUTS.map(([kind, name, about]) => h("button", { className: "sg-choice", onclick: () => apply(kind) },
-                h("b", {}, name), h("span", {}, about))),
-            h("label", { className: "sg-inline" }, "Spacing", gap),
-            check("layoutTidyPorts", "Move ports to face their links"),
-            check("layoutAvoid", "Route lines around objects",
-                  "Lines that would cross a device or text get a routing that does not (straight or orthogonal if that is enough, else around objects)"))
+                h("b", {}, tr(name)), h("span", {}, tr(about)))),
+            h("label", { className: "sg-inline" }, tr("layout.spacing"), gap),
+            check("layoutTidyPorts", "layout.orientPorts"),
+            check("layoutAvoid", "layout.avoidObjects",
+                  "layout.avoidObjectsHint"))
         this.popup(this.layoutButton, el)
     }
 
@@ -504,7 +543,7 @@ export class App {
         this.panel.el.hidden = !on
         this.panelButton.classList.toggle("sg-on", on)
         this.handle.textContent = on ? "▸" : "◂"
-        this.handle.title = (on ? "Hide" : "Show") + " panel (Ctrl+B)"
+        this.handle.title = tr(on ? "view.hidePanel" : "view.showPanel")
     }
 
     togglePanel() { this.setPanelVisible(!this.prefs.get("panelVisible")) }
@@ -521,6 +560,7 @@ export class App {
     listen() {
         const editable = (t) => t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)
         this.keyHandler = (e) => {
+            if (composing(e)) return
             // Only while the editor has focus (or nothing else on the page does).
             const a = document.activeElement
             if (!this.el.contains(a) && a !== document.body) return
@@ -567,13 +607,13 @@ export class App {
             if (!onCanvas(e)) return
             const cut = e.type === "cut"
             const xml = this.ctl.copyDrawio()
-            if (xml === "") { if (cut) this.run(() => this.ctl.setStatus("Select something to cut.")); return }
+            if (xml === "") { if (cut) this.run(() => this.setStatus("clipboard.selectToCut")); return }
             const native = this.ctl.copyNative()
             this.clip = { xml, native }
             e.clipboardData.setData("text/plain", xml)
             try { e.clipboardData.setData(NATIVE_TYPE, native) } catch { /* the copy in memory serves */ }
             e.preventDefault()
-            if (cut) this.run(() => { this.ctl.deleteSelected(); this.ctl.setStatus("Cut: paste it with Ctrl+V, here or in draw.io.") })
+            if (cut) this.run(() => { this.ctl.deleteSelected(); this.setStatus("clipboard.cut") })
             else this.changed()
         }
         this.pasteHandler = (e) => {
@@ -594,6 +634,7 @@ export class App {
 
     // Stop listening to the page (when the editor is taken off it).
     destroy() {
+        languageEvents.removeEventListener("change", this.languageChanged)
         document.removeEventListener("keydown", this.keyHandler)
         document.removeEventListener("copy", this.copyHandler)
         document.removeEventListener("cut", this.copyHandler)
@@ -615,9 +656,9 @@ export class App {
         this.clip = { xml, native: this.ctl.copyNative() }
         try {
             await navigator.clipboard.writeText(xml)
-            this.run(() => this.ctl.setStatus("Copied: paste it with Ctrl+V, here or in draw.io."))
+            this.run(() => this.setStatus("clipboard.copied"))
         } catch {
-            this.run(() => this.ctl.setStatus("The browser did not allow copying; use Ctrl+C."))
+            this.run(() => this.setStatus("clipboard.copyShortcut"))
         }
     }
 
@@ -637,7 +678,7 @@ export class App {
         const ok = document.execCommand("copy")
         area.remove()
         if (ok) this.changed()
-        else this.run(() => this.ctl.setStatus("The browser did not allow copying."))
+        else this.run(() => this.setStatus("clipboard.copyDenied"))
         this.view.focus()
     }
 
@@ -646,7 +687,7 @@ export class App {
             const text = await navigator.clipboard.readText()
             this.paste(this.clip && this.clip.xml === text ? this.clip.native : "", text)
         } catch {
-            this.run(() => this.ctl.setStatus("The browser did not allow reading the clipboard; use Ctrl+V."))
+            this.run(() => this.setStatus("clipboard.pasteDenied"))
         }
     }
 
@@ -654,7 +695,7 @@ export class App {
 
     // Go on only when unsaved changes may be dropped.
     discardOk() {
-        return !this.ctl.dirty() || confirm("The diagram has unsaved changes. Discard them?")
+        return !this.ctl.dirty() || confirm(tr("file.discardConfirm"))
     }
 
     newDiagram() {
@@ -697,27 +738,28 @@ export class App {
             const saved = await this.host.save(this.ctl.toJson(), name, as)
             if (saved) this.ctl.savedAs(saved)
         } catch (e) {
-            this.ctl.setStatus("Not saved: " + (e && e.message ? e.message : e))
+            this.setStatus("status.saveFailed", { error: e })
         }
         this.changed()
     }
 
     exportSvg() {
         download(this.ctl.exportSvg(), this.baseName() + ".svg", "image/svg+xml")
-        this.run(() => this.ctl.setStatus("Exported " + this.baseName() + ".svg"))
+        this.run(() => this.setStatus("status.exported", { name: this.baseName() + ".svg" }))
     }
 
     exportDrawio() {
         download(this.ctl.exportDrawio(this.baseName()), this.baseName() + ".drawio", "application/xml")
-        this.run(() => this.ctl.setStatus("Exported " + this.baseName() + ".drawio"))
+        this.run(() => this.setStatus("status.exported", { name: this.baseName() + ".drawio" }))
     }
 
     // Cisco Modeling Labs: the sheet in view as a lab to import.
     exportCml() {
-        const yaml = this.ctl.exportCml(this.baseName())
-        download(yaml, this.baseName() + ".yaml", "application/x-yaml")
-        const left = this.ctl.status()
-        this.run(() => this.ctl.setStatus("Exported " + this.baseName() + ".yaml" + (left ? "; " + left : "")))
+        const title = this.baseName()
+        const filename = title + ".yaml"
+        const yaml = this.ctl.exportCml(title, filename)
+        download(yaml, filename, "application/x-yaml")
+        this.changed()
     }
 
     // PNG: the SVG export drawn at twice its size (sharp on high resolution
@@ -727,7 +769,7 @@ export class App {
         const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))
         try {
             const img = new Image()
-            await new Promise((ok, fail) => { img.onload = ok; img.onerror = () => fail(new Error("cannot draw the SVG")); img.src = url })
+            await new Promise((ok, fail) => { img.onload = ok; img.onerror = () => fail(new MessageError("error.svg")); img.src = url })
             const canvas = document.createElement("canvas")
             canvas.width = Math.ceil(img.naturalWidth * scale)
             canvas.height = Math.ceil(img.naturalHeight * scale)
@@ -736,9 +778,9 @@ export class App {
             ctx.drawImage(img, 0, 0)
             const blob = await new Promise(ok => canvas.toBlob(ok, "image/png"))
             download(blob, this.baseName() + ".png", "image/png")
-            this.run(() => this.ctl.setStatus("Exported " + this.baseName() + ".png"))
+            this.run(() => this.setStatus("status.exported", { name: this.baseName() + ".png" }))
         } catch (e) {
-            this.run(() => this.ctl.setStatus("PNG export failed: " + e.message))
+            this.run(() => this.setStatus("status.pngFailed", { error: e }))
         } finally {
             URL.revokeObjectURL(url)
         }
@@ -761,12 +803,12 @@ export function download(data, name, type) {
 // every save is a download.
 export function fileHost() {
     let handle = null
-    const types = [{ description: "Network diagrams", accept: { "application/json": [".stratagram", ".netdiag", ".json"] } }]
+    const types = () => [{ description: tr("file.filterName"), accept: { "application/json": [".stratagram", ".netdiag", ".json"] } }]
     return {
         async open() {
             if (window.showOpenFilePicker) {
                 try {
-                    const [h] = await window.showOpenFilePicker({ types })
+                    const [h] = await window.showOpenFilePicker({ types: types() })
                     const file = await h.getFile()
                     handle = h
                     return { json: await file.text(), name: file.name }
@@ -794,7 +836,7 @@ export function fileHost() {
             const suggested = name.replace(/\.(netdiag|json)$/i, "").replace(/(\.stratagram)?$/i, ".stratagram")
             if (window.showSaveFilePicker) {
                 try {
-                    if (as || !handle) handle = await window.showSaveFilePicker({ suggestedName: suggested, types: types.slice(0, 1) })
+                    if (as || !handle) handle = await window.showSaveFilePicker({ suggestedName: suggested, types: types() })
                     const w = await handle.createWritable()
                     await w.write(json)
                     await w.close()

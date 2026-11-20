@@ -22,15 +22,18 @@ pub struct Stratagram {
 
 impl Default for Stratagram {
     fn default() -> Self {
-        Self::new()
+        Self::new(None)
     }
 }
 
 #[wasm_bindgen]
 impl Stratagram {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Stratagram {
-        Stratagram { editor: Editor::default() }
+    pub fn new(language: Option<String>) -> Stratagram {
+        let mut editor = Editor::default();
+        editor.language = stratagram_core::i18n::Language::from_tag(language.as_deref().unwrap_or("en"));
+        editor.new_diagram();
+        Stratagram { editor }
     }
 
     /// The program version.
@@ -371,13 +374,7 @@ impl Stratagram {
     }
     /// Open a diagram from its text, under `name`. Returns "" or what went wrong.
     pub fn load(&mut self, json: &str, name: &str) -> String {
-        match self.editor.load_json(json, Path::new(name)) {
-            Ok(()) => String::new(),
-            Err(e) => {
-                self.editor.status = format!("Cannot open {name}: {e}");
-                e
-            }
-        }
+        self.editor.load_json(json, Path::new(name)).err().unwrap_or_default()
     }
     /// The document (all sheets) as a .stratagram file.
     #[wasm_bindgen(js_name = toJson)]
@@ -392,7 +389,7 @@ impl Stratagram {
     /// The sheet in view as SVG, in the theme's colors.
     #[wasm_bindgen(js_name = exportSvg)]
     pub fn export_svg(&self) -> String {
-        stratagram_core::svg::export_themed(&self.editor.doc, &self.editor.file_name(), self.editor.theme)
+        stratagram_core::svg::export_themed_in(&self.editor.doc, &self.editor.file_name(), self.editor.theme, self.editor.language)
     }
     /// Draw (and export) in a theme: "light", "deep" or "neon". False for
     /// an unknown name (the theme stays).
@@ -407,6 +404,11 @@ impl Stratagram {
             }
             None => false,
         }
+    }
+
+    #[wasm_bindgen(js_name = setLanguage)]
+    pub fn set_language(&mut self, tag: &str) {
+        self.editor.set_language(stratagram_core::i18n::Language::from_tag(tag));
     }
 
     #[wasm_bindgen(js_name = setTheme)]
@@ -425,10 +427,9 @@ impl Stratagram {
     /// The sheet in view as a Cisco Modeling Labs lab (YAML); what was
     /// left out (tunnels...) goes to the status.
     #[wasm_bindgen(js_name = exportCml)]
-    pub fn export_cml(&mut self, title: &str) -> String {
-        let (yaml, skipped) = stratagram_core::cml::export(&self.editor.doc, title);
-        let left_out = skipped.summary();
-        self.editor.status = if left_out.is_empty() { String::new() } else { format!("{left_out} (not cables in a lab).") };
+    pub fn export_cml(&mut self, title: &str, filename: Option<String>) -> String {
+        let (yaml, skipped) = stratagram_core::cml::export_in(&self.editor.doc, title, self.editor.language);
+        self.editor.report_cml_export(filename, skipped);
         yaml
     }
     #[wasm_bindgen(js_name = exportDrawio)]

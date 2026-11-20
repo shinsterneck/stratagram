@@ -4,3 +4,7 @@ Copyright 2026 Shin Sterneck
 This product includes Stratagram, a network diagram editor with a NetBox
 plugin, developed by Shin Sterneck and licensed under the Apache License,
 Version 2.0 (see LICENSE).
+
+The Windows installer includes the Simplified Chinese messages maintained by
+Zhenghan Yang, from Inno Setup 6.7.4 (Files/Languages/Unofficial). See
+packaging/windows/Inno-Setup-LICENSE.txt.

@@ -20,6 +20,7 @@ pub mod qobject {
 
         include!("stratagram/cpp/app.h");
         fn setup_app();
+        fn system_language() -> QString;
 
         include!("stratagram/cpp/png.h");
         fn svg_to_png(svg: &QString, path: &QString, scale: f64) -> QString;
@@ -176,6 +177,8 @@ pub mod qobject {
         #[qinvokable]
         fn export_svg(self: Pin<&mut DiagramController>, url: &QUrl) -> bool;
         #[qinvokable]
+        fn set_language(self: Pin<&mut DiagramController>, tag: &QString);
+        #[qinvokable]
         fn set_theme(self: Pin<&mut DiagramController>, name: &QString);
         #[qinvokable]
         fn export_drawio(self: Pin<&mut DiagramController>, url: &QUrl) -> bool;
@@ -201,7 +204,7 @@ use crate::editor::Editor;
 pub const PNG_SCALE: f64 = 2.0;
 
 /// Write the diagram's SVG export as a PNG picture, `scale` pixels per unit.
-pub fn export_png(svg: &str, path: &std::path::Path, scale: f64) -> Result<(), String> {
+pub fn export_png(svg: &str, path: &std::path::Path, scale: f64, lang: stratagram_core::i18n::Language) -> Result<(), String> {
     let err = qobject::svg_to_png(
         &QString::from(svg),
         &QString::from(path.display().to_string().as_str()),
@@ -210,7 +213,13 @@ pub fn export_png(svg: &str, path: &std::path::Path, scale: f64) -> Result<(), S
     if err.is_empty() {
         Ok(())
     } else {
-        Err(err.to_string())
+        let message = match err.to_string().as_str() {
+            "png.render" => lang.text("png.render").to_owned(),
+            "png.empty" => lang.text("png.empty").to_owned(),
+            "png.tooLarge" => lang.text("png.tooLarge").to_owned(),
+            _ => lang.format("png.write", &[("path", &path.display().to_string())]),
+        };
+        Err(message)
     }
 }
 use crate::model::{Id, Pt, Side};
@@ -659,26 +668,14 @@ impl qobject::DiagramController {
     }
 
     fn open_path(mut self: Pin<&mut Self>, path: PathBuf) -> bool {
-        match self.as_mut().edit(|e| e.load(&path)) {
-            Ok(()) => true,
-            Err(msg) => {
-                self.set_status_text(msg);
-                false
-            }
-        }
+        self.as_mut().edit(|e| e.load(&path)).is_ok()
     }
 
     pub fn save(mut self: Pin<&mut Self>) -> bool {
         let Some(path) = self.rust().editor.path.clone() else {
             return false;
         };
-        match self.as_mut().edit(|e| e.save(&path)) {
-            Ok(()) => true,
-            Err(msg) => {
-                self.set_status_text(msg);
-                false
-            }
-        }
+        self.as_mut().edit(|e| e.save(&path)).is_ok()
     }
 
     pub fn save_as(mut self: Pin<&mut Self>, url: &QUrl) -> bool {
@@ -688,19 +685,18 @@ impl qobject::DiagramController {
         };
         // Qt's own dialog does not always add the suffix itself.
         let path = crate::editor::with_file_ext(&path);
-        match self.as_mut().edit(|e| e.save(&path)) {
-            Ok(()) => true,
-            Err(msg) => {
-                self.set_status_text(msg);
-                false
-            }
-        }
+        self.as_mut().edit(|e| e.save(&path)).is_ok()
     }
 
     pub fn export_svg(self: Pin<&mut Self>, url: &QUrl) -> bool {
         let ed = &self.rust().editor;
-        let svg = crate::svg::export_themed(&ed.doc, &ed.file_name(), ed.theme);
+        let svg = crate::svg::export_themed_in(&ed.doc, &ed.file_name(), ed.theme, ed.language);
         self.write_export(url, svg)
+    }
+
+    pub fn set_language(mut self: Pin<&mut Self>, tag: &QString) {
+        self.as_mut().rust_mut().editor.set_language(stratagram_core::i18n::Language::from_tag(&tag.to_string()));
+        self.refresh();
     }
 
     pub fn set_theme(mut self: Pin<&mut Self>, name: &QString) {
@@ -722,8 +718,8 @@ impl qobject::DiagramController {
             path
         };
         let ed = &self.rust().editor;
-        let svg = crate::svg::export_themed(&ed.doc, &ed.file_name(), ed.theme);
-        match export_png(&svg, &path, PNG_SCALE) {
+        let svg = crate::svg::export_themed_in(&ed.doc, &ed.file_name(), ed.theme, ed.language);
+        match export_png(&svg, &path, PNG_SCALE, ed.language) {
             Ok(()) => {
                 self.set_status_text(format!("Exported {}", path.display()));
                 true
@@ -744,15 +740,10 @@ impl qobject::DiagramController {
 
     pub fn export_cml(mut self: Pin<&mut Self>, url: &QUrl) -> bool {
         let title = self.file_base_name().to_string();
-        let (yaml, skipped) = stratagram_core::cml::export(&self.rust().editor.doc, &title);
+        let (yaml, skipped) = stratagram_core::cml::export_in(&self.rust().editor.doc, &title, self.rust().editor.language);
         let ok = self.as_mut().write_export(url, yaml);
-        let left_out = skipped.summary();
-        if ok && !left_out.is_empty() {
-            let status = format!(
-                "{}; {left_out} (not cables in a lab).",
-                self.rust().editor.status
-            );
-            self.set_status_text(status);
+        if ok && let Some(path) = url_to_path(url) {
+            self.edit(|e| e.report_cml_export(Some(path.display().to_string()), skipped));
         }
         ok
     }
@@ -773,6 +764,8 @@ impl qobject::DiagramController {
 
     /// Open the file given on the command line, if any.
     pub fn startup(mut self: Pin<&mut Self>) {
+        let language = self.rust().editor.language;
+        self.as_mut().rust_mut().editor.doc = crate::model::Diagram::empty_in(language);
         if let Some(arg) = std::env::args().nth(1) {
             let path = PathBuf::from(&arg);
             if path.exists() {
