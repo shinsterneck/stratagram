@@ -5,6 +5,7 @@
 // The properties panel: an editor for the current selection, with the layer
 // list pinned underneath (a port of qml/PropertiesPanel.qml).
 
+import { composing } from "./keyboard.js"
 import { tr } from "./i18n.js"
 
 // Device types by category, as in the desktop app. "" is a plain device.
@@ -250,7 +251,7 @@ export class Panel {
         if (multi && dev) {
             const pattern = h("input", { type: "text", placeholder: tr("property.renameExample") })
             const rename = () => { if (pattern.value.trim() !== "") { this.set("name_pattern", pattern.value); pattern.value = "" } }
-            pattern.addEventListener("keydown", (e) => { if (e.key === "Enter") rename() })
+            pattern.addEventListener("keydown", (e) => { if (!composing(e) && e.key === "Enter") rename() })
             out.push(h("label", {}, tr("property.renamePattern")),
                      h("div", { className: "sg-inline" }, pattern, h("button", { onclick: rename }, tr("property.rename"))))
         }
@@ -573,6 +574,7 @@ export class Panel {
                     this.app.changed()
                 }
                 field.addEventListener("keydown", (e) => {
+                    if (composing(e)) return
                     e.stopPropagation()
                     if (e.key === "Enter") field.blur()
                     else if (e.key === "Escape") { finish(false); field.blur() }
@@ -691,7 +693,7 @@ export class Panel {
         }
         const close = () => { pop.remove(); document.removeEventListener("pointerdown", outside, true) }
         const outside = (e) => { if (!pop.contains(e.target)) close() }
-        pop.addEventListener("keydown", (e) => { if (e.key === "Escape") close() })
+        pop.addEventListener("keydown", (e) => { if (!composing(e) && e.key === "Escape") close() })
         build()
         this.app.el.appendChild(pop)
         const r = this.el.getBoundingClientRect(), app = this.app.el.getBoundingClientRect()

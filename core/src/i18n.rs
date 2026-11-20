@@ -58,10 +58,56 @@ impl Language {
     }
 }
 
+/// A message retained for redisplay after the user changes languages.
+#[derive(Debug)]
+pub(crate) struct Diagnostic {
+    key: &'static str,
+    args: Vec<(&'static str, String)>,
+}
+
+impl Diagnostic {
+    pub(crate) fn new<const N: usize>(key: &'static str, args: [(&'static str, String); N]) -> Self {
+        Self { key, args: args.into() }
+    }
+
+    pub(crate) fn render(&self, lang: Language) -> String {
+        let args: Vec<_> = self.args.iter().map(|(key, value)| (*key, value.as_str())).collect();
+        lang.format(self.key, &args)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{editor::Editor, model::Pt};
+
+    #[test]
+    fn switching_languages_rerenders_file_errors_without_parsing_values() {
+        let mut editor = Editor::default();
+        let filename = std::path::Path::new("a: {error}.stratagram");
+        editor.set_language(Language::Chinese);
+        assert!(editor.load_json(r#"{"format":"bad: {name}","version":1}"#, filename).is_err());
+        assert_eq!(editor.status, "无法打开 a: {error}.stratagram：文件格式应为 stratagram，实际为“bad: {name}”");
+        editor.set_language(Language::English);
+        assert_eq!(editor.status, r#"Cannot open a: {error}.stratagram: not a stratagram file (format "bad: {name}")"#);
+        editor.set_language(Language::Chinese);
+        assert!(editor.status.contains("文件格式应为 stratagram"));
+        editor.status = "Saved ok.stratagram".to_owned();
+        editor.set_language(Language::English);
+        assert_eq!(editor.status, "Saved ok.stratagram");
+    }
+
+    #[test]
+    fn bad_logo_status_retains_the_error_key_across_language_changes() {
+        let mut editor = Editor::default();
+        editor.set_frame("template", "iso");
+        assert!(!editor.set_frame("logo", "data:image/png;base64,QkM="));
+        assert_eq!(editor.status, "Logo not set: the logo must be a PNG or JPEG image.");
+        editor.set_language(Language::Chinese);
+        assert_eq!(editor.status, "设置标志失败：标志图像必须为 PNG 或 JPEG 格式。");
+        editor.set_language(Language::English);
+        assert_eq!(editor.status, "Logo not set: the logo must be a PNG or JPEG image.");
+    }
 
     #[test]
     fn catalogs_agree_on_keys_and_parameters() {

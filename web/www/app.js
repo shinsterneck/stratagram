@@ -20,8 +20,9 @@
 //   host.dirty(bool)         unsaved changes appeared or went away (optional)
 //   host.theme               "light", "deep" or "neon" until the user picks one (optional)
 
+import { composing } from "./keyboard.js"
 import { language, languages, languageEvents, setLanguage, tr } from "./i18n.js"
-import { translate, translateStatus } from "./locales/messages.mjs"
+import { MessageError, translate, translateStatus } from "./locales/messages.mjs"
 import init, { Stratagram } from "./pkg/stratagram_web.js"
 import { DiagramView } from "./canvas.js"
 import { KIND_GROUPS, Panel, h } from "./panel.js"
@@ -252,6 +253,7 @@ export class App {
             this.view.focus()
         }
         field.addEventListener("keydown", (e) => {
+            if (composing(e)) return
             e.stopPropagation()
             if (e.key === "Enter") finish(true)
             else if (e.key === "Escape") finish(false)
@@ -353,6 +355,7 @@ export class App {
         this.quick = h("input", { type: "text", className: "sg-quick", placeholder: tr("quickAdd.placeholder"),
                                    title: tr("quickAdd.tooltip") })
         this.quick.addEventListener("keydown", (e) => {
+            if (composing(e)) return
             e.stopPropagation()
             if (e.key === "Enter") {
                 const c = view.viewCenter()
@@ -459,7 +462,7 @@ export class App {
         anchor.classList.add("sg-on")
         this.popupAnchor = anchor
         const outside = (e) => { if (!el.contains(e.target) && !anchor.contains(e.target)) this.closePopup() }
-        const escape = (e) => { if (e.key === "Escape") { this.closePopup(); this.view.focus() } }
+        const escape = (e) => { if (!composing(e) && e.key === "Escape") { this.closePopup(); this.view.focus() } }
         this.popupCleanup = () => {
             document.removeEventListener("pointerdown", outside, true)
             document.removeEventListener("keydown", escape, true)
@@ -557,6 +560,7 @@ export class App {
     listen() {
         const editable = (t) => t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)
         this.keyHandler = (e) => {
+            if (composing(e)) return
             // Only while the editor has focus (or nothing else on the page does).
             const a = document.activeElement
             if (!this.el.contains(a) && a !== document.body) return
@@ -734,7 +738,7 @@ export class App {
             const saved = await this.host.save(this.ctl.toJson(), name, as)
             if (saved) this.ctl.savedAs(saved)
         } catch (e) {
-            this.setStatus("status.saveFailed", { error: e.message || String(e) })
+            this.setStatus("status.saveFailed", { error: e })
         }
         this.changed()
     }
@@ -764,7 +768,7 @@ export class App {
         const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))
         try {
             const img = new Image()
-            await new Promise((ok, fail) => { img.onload = ok; img.onerror = () => fail(new Error(tr("error.svg"))); img.src = url })
+            await new Promise((ok, fail) => { img.onload = ok; img.onerror = () => fail(new MessageError("error.svg")); img.src = url })
             const canvas = document.createElement("canvas")
             canvas.width = Math.ceil(img.naturalWidth * scale)
             canvas.height = Math.ceil(img.naturalHeight * scale)
@@ -775,7 +779,7 @@ export class App {
             download(blob, this.baseName() + ".png", "image/png")
             this.run(() => this.setStatus("status.exported", { name: this.baseName() + ".png" }))
         } catch (e) {
-            this.run(() => this.setStatus("status.pngFailed", { error: e.message }))
+            this.run(() => this.setStatus("status.pngFailed", { error: e }))
         } finally {
             URL.revokeObjectURL(url)
         }

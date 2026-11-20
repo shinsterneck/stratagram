@@ -14,6 +14,7 @@ const CORE = [
     "./",
     "app.js",
     "i18n.js",
+    "keyboard.js",
     "locales/messages.mjs",
     "locales/core-messages.mjs",
     "locales/en.mjs",

@@ -122,6 +122,14 @@ pub fn type_layer_name(kind: &str) -> String {
     if kind == "internet" {
         return "Internet".into();
     }
+    // Custom names are verbatim. English inflection applies to the built-in stencils.
+    if !crate::editor::KINDS.iter().any(|(k, _)| *k == kind) {
+        return kind.into();
+    }
+    plural_type_name(kind)
+}
+
+fn plural_type_name(kind: &str) -> String {
     let plural = if kind.ends_with('s') || kind.ends_with('x') || kind.ends_with("ch") || kind.ends_with("sh") {
         format!("{kind}es")
     } else if let Some(stem) = kind.strip_suffix('y').filter(|s| !s.ends_with(['a', 'e', 'i', 'o', 'u'])) {
@@ -135,11 +143,70 @@ pub fn type_layer_name(kind: &str) -> String {
         .enumerate()
         .map(|(i, w)| match w {
             "aws" | "wlan" | "aci" | "ospf" | "bgp" | "ap" | "aps" => w.to_uppercase().replace("APS", "APs"),
-            _ if i == 0 => w[..1].to_uppercase() + &w[1..],
+            _ if i == 0 => {
+                let mut chars = w.chars();
+                chars.next().map_or_else(String::new, |c| c.to_uppercase().to_string() + chars.as_str())
+            }
             _ => w.to_string(),
         })
         .collect();
     words.join(" ")
+}
+
+pub(crate) fn group_label(layer: &Layer, lang: crate::i18n::Language) -> &str {
+    if lang == crate::i18n::Language::English { return &layer.name; }
+    match layer.netbox_group.as_str() {
+        "cables" if layer.name == CABLES_LAYER => lang.text("netbox.cablesLayer"),
+        "outside" if layer.name == OUTSIDE_LAYER => lang.text("netbox.outsideLayer"),
+        "gone" if layer.name == GONE_LAYER => lang.text("netbox.goneLayer"),
+        "base" if layer.name == "Layer 1" => lang.text("netbox.baseLayer"),
+        group => {
+            if let Some(kind) = group.strip_prefix("type/")
+                && (layer.name == type_layer_name(kind) || layer.name == plural_type_name(kind))
+            {
+                if kind.is_empty() { return lang.text("netbox.otherDevices"); }
+                return crate::shape::kind_label_in(kind, lang);
+            }
+            &layer.name
+        }
+    }
+}
+
+/// Upgrade documents written before groups had identifiers. Infer a type group from
+/// imported devices and the layer's old default label rather than naming unrelated layers.
+pub(crate) fn identify_legacy_groups(doc: &mut Diagram) {
+    if doc.layers.iter().any(|l| !l.netbox_group.is_empty())
+        || !(doc.source.starts_with("dcim.") || doc.devices.iter().any(|d| d.source.starts_with("dcim.")))
+    {
+        return;
+    }
+    let mut groups = HashMap::new();
+    for device in doc.devices.iter().filter(|d| !d.source.is_empty()) {
+        if let Some(layer) = doc.layer(device.layer) {
+            let old = if layer.source == device.source { doc.layer(layer.parent) } else { Some(layer) };
+            if let Some(old) = old.filter(|l| l.source.is_empty() && l.frame.is_none() && (l.name == type_layer_name(&device.kind) || l.name == plural_type_name(&device.kind))) {
+                groups.insert(old.id, format!("type/{}", device.kind));
+            }
+        }
+    }
+    // Names were the only identity of these groups. Their order and show-name
+    // checkboxes were always editable. With duplicate names, prefer the one
+    // containing imported items; leave genuinely ambiguous candidates alone.
+    for (name, group) in [(CABLES_LAYER, "cables"), (OUTSIDE_LAYER, "outside"), (GONE_LAYER, "gone"), ("Layer 1", "base")] {
+        let candidates: Vec<_> = doc.layers.iter()
+            .filter(|l| l.parent == 0 && l.frame.is_none() && l.source.is_empty() && l.name == name)
+            .map(|l| l.id).collect();
+        let with_imports: Vec<_> = candidates.iter().copied().filter(|id| {
+            doc.links.iter().any(|link| link.layer == *id && !link.source.is_empty())
+                || doc.devices.iter().any(|d| d.layer == *id && !d.source.is_empty())
+        }).collect();
+        if let [id] = if candidates.len() == 1 { &candidates[..] } else { &with_imports[..] } {
+            groups.insert(*id, group.to_owned());
+        }
+    }
+    for (id, group) in groups {
+        if let Some(layer) = doc.layer_mut(id) { layer.netbox_group = group; }
+    }
 }
 
 impl SiteData {
@@ -500,10 +567,9 @@ fn order_layers(doc: &mut Diagram, key: impl Fn(&Layer, usize) -> (u8, usize)) {
 fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) -> Diagram {
     let mut doc = Diagram::default();
     // With layers by type, the first layer (where lines go) holds the cables.
-    if opts.type_layers
-        && let Some(l) = doc.layers.first_mut()
-    {
-        l.name = CABLES_LAYER.into();
+    if let Some(l) = doc.layers.first_mut() {
+        l.netbox_group = if opts.type_layers { "cables" } else { "base" }.into();
+        if opts.type_layers { l.name = CABLES_LAYER.into(); }
     }
     let mut type_layers: HashMap<(Id, String), Id> = HashMap::new();
     let tree: Vec<(u64, String, Option<u64>)> = location_tree(data)
@@ -558,6 +624,7 @@ fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) ->
                             layer
                         }
                     };
+                    doc.layer_mut(layer).expect("new type layer").netbox_group = format!("type/{kind}");
                     type_layers.insert(key, layer);
                     layer
                 }
@@ -602,6 +669,7 @@ fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) ->
                 let layer = doc.add_layer(OUTSIDE_LAYER);
                 // Its name on its devices tells them apart.
                 if let Some(l) = doc.layer_mut(layer) {
+                    l.netbox_group = "outside".into();
                     l.show_name = true;
                 }
                 doc.active_layer = home;
@@ -688,7 +756,7 @@ fn diagram_of(data: &SiteData, opts: &Options, within: Option<&HashSet<u64>>) ->
             (1, *r as usize)
         } else if located.contains_key(&l.id) {
             (2, tree_pos(l))
-        } else if l.name == OUTSIDE_LAYER && l.parent == 0 {
+        } else if l.netbox_group == "outside" && l.parent == 0 {
             (3, 0)
         } else {
             (1, 1000 + i)
@@ -742,6 +810,10 @@ pub struct Refreshed {
 
 impl Refreshed {
     pub fn summary(&self) -> String {
+        self.summary_with_gone_layers(&std::collections::BTreeMap::new())
+    }
+
+    pub(crate) fn summary_with_gone_layers(&self, gone: &std::collections::BTreeMap<String, usize>) -> String {
         let mut parts = vec![];
         let n = |count: usize, one: &str, many: &str| format!("{count} {}", if count == 1 { one } else { many });
         if self.added_devices > 0 {
@@ -759,8 +831,12 @@ impl Refreshed {
         if self.relocated > 0 {
             parts.push(n(self.relocated, "device in another location", "devices in another location"));
         }
-        if self.gone > 0 {
+        if self.gone > 0 && gone.is_empty() {
             parts.push(format!("{} gone (on the layer \"{GONE_LAYER}\")", self.gone));
+        }
+        for (name, count) in gone {
+            let quoted = serde_json::to_string(name).expect("serializing a string");
+            parts.push(format!("{count} gone (on the layer {quoted})"));
         }
         if parts.is_empty() { "Up to date with NetBox.".into() } else { format!("From NetBox: {}.", parts.join(", ")) }
     }
@@ -772,30 +848,26 @@ impl Refreshed {
 /// and links NetBox no longer has move to the layer [`GONE_LAYER`] (and
 /// back if they return). Nothing else moves; drawn items stay as they are.
 pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
+    identify_legacy_groups(doc);
     let mut out = Refreshed::default();
     let by_source: HashMap<String, Id> =
         doc.devices.iter().filter(|d| !d.source.is_empty()).map(|d| (d.source.clone(), d.id)).collect();
-    let home = doc.layers.iter().find(|l| l.frame.is_none() && l.name != GONE_LAYER && l.name != OUTSIDE_LAYER).map(|l| l.id);
-    let gone_layer = doc.layers.iter().find(|l| l.name == GONE_LAYER).map(|l| l.id);
+    let home = doc.layers.iter().find(|l| l.frame.is_none() && !matches!(l.netbox_group.as_str(), "gone" | "outside")).map(|l| l.id);
+    let gone_layer = doc.layers.iter().find(|l| l.netbox_group == "gone").map(|l| l.id);
     // With layers by type, fresh devices and cables go on the layers of
     // their names (made when missing); a diagram from before them gets them
     // at its first refresh, NetBox's devices and cables moving onto them.
-    let by_type = fresh.layers.iter().any(|l| l.name == CABLES_LAYER);
-    let regroup = by_type && !doc.layers.iter().any(|l| l.name == CABLES_LAYER);
-    let managed: HashSet<String> = fresh
-        .layers
-        .iter()
-        .filter(|l| l.name != OUTSIDE_LAYER && l.frame.is_none() && l.source.is_empty())
-        .map(|l| l.name.clone())
-        .collect();
+    let by_type = fresh.layers.iter().any(|l| l.netbox_group == "cables");
+    let regroup = by_type && !doc.layers.iter().any(|l| l.netbox_group == "cables");
     // (None without layers by type: new items go on the active layer.)
     let layer_for = |doc: &mut Diagram, id: Id| -> Option<Id> { if by_type { layer_like(doc, fresh, id) } else { None } };
     // Devices from other locations (on a location's sheet) on their layer.
-    let fresh_outside = fresh.layers.iter().find(|l| l.name == OUTSIDE_LAYER).map(|l| l.id);
-    let mut outside = doc.layers.iter().find(|l| l.name == OUTSIDE_LAYER).map(|l| l.id);
+    let fresh_outside = fresh.layers.iter().find(|l| l.netbox_group == "outside").map(|l| l.id);
+    let mut outside = doc.layers.iter().find(|l| l.netbox_group == "outside").map(|l| l.id);
     if outside.is_none() && fresh_outside.is_some_and(|o| fresh.devices.iter().any(|d| d.layer == o)) {
         let id = doc.add_layer(OUTSIDE_LAYER);
         if let Some(l) = doc.layer_mut(id) {
+            l.netbox_group = "outside".into();
             l.show_name = true;
         }
         outside = Some(id);
@@ -816,11 +888,11 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
                 let layer = doc.device(id).expect("device by source").layer;
                 let on = doc.layer(layer);
                 let on_own = on.is_some_and(|l| !l.source.is_empty() && l.source == f.source);
-                let regular = Some(layer) == home || on.is_some_and(|l| managed.contains(&l.name) || !l.source.is_empty());
+                let regular = Some(layer) == home || on.is_some_and(|l| !l.netbox_group.is_empty() || !l.source.is_empty());
                 let back = gone_layer.is_some() && Some(layer) == gone_layer;
                 let fl = fresh.layer(f.layer);
-                let type_name = fl.and_then(|l| fresh.layer(l.parent)).map(|p| p.name.as_str());
-                let to_own = by_type && fl.is_some_and(|l| !l.source.is_empty()) && !on_own && on.is_some_and(|l| Some(l.name.as_str()) == type_name);
+                let type_group = fl.and_then(|l| fresh.layer(l.parent)).map(|p| p.netbox_group.as_str());
+                let to_own = by_type && fl.is_some_and(|l| !l.source.is_empty()) && !on_own && on.is_some_and(|l| l.netbox_group.starts_with("type/") && Some(l.netbox_group.as_str()) == type_group);
                 let moved = if out_now && (regular || back) {
                     outside
                 } else if !out_now && (back || outside.is_some() && Some(layer) == outside || regroup && Some(layer) == home || to_own) {
@@ -829,7 +901,10 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
                     None
                 };
                 // Its own layer is named after it.
-                if let Some(l) = doc.layers.iter_mut().find(|l| !l.source.is_empty() && l.source == f.source) {
+                let old_name = doc.device(id).expect("device by source").name.clone();
+                if let Some(l) = doc.layers.iter_mut().find(|l| !l.source.is_empty() && l.source == f.source)
+                    && l.name == old_name
+                {
                     l.name = f.name.clone();
                 }
                 if on_own
@@ -944,6 +1019,7 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
             let id = doc.add_layer(GONE_LAYER);
             // Its name on its devices marks them on the drawing.
             if let Some(l) = doc.layer_mut(id) {
+                l.netbox_group = "gone".into();
                 l.show_name = true;
             }
             id
@@ -978,7 +1054,7 @@ pub fn refresh(doc: &mut Diagram, fresh: &Diagram) -> Refreshed {
             .iter()
             .filter(|l| {
                 let gone_own = !l.source.is_empty() && !fresh_sources.contains(l.source.as_str());
-                let emptied_type = l.source.is_empty() && l.name != CABLES_LAYER && managed.contains(&l.name) && Some(l.id) != home;
+                let emptied_type = l.netbox_group.starts_with("type/") && Some(l.id) != home;
                 gone_own || emptied_type
             })
             .filter(|l| doc.layer_count(l.id) == 0 && !doc.layers.iter().any(|x| x.parent == l.id) && l.id != doc.active_layer)
@@ -1022,7 +1098,7 @@ fn layer_like(doc: &mut Diagram, fresh: &Diagram, id: Id) -> Option<Id> {
     }
     let parent = if fl.parent == 0 { 0 } else { layer_like(doc, fresh, fl.parent)? };
     if fl.source.is_empty()
-        && let Some(l) = doc.layers.iter().find(|l| l.frame.is_none() && l.parent == parent && l.name == fl.name)
+        && let Some(l) = doc.layers.iter().find(|l| l.frame.is_none() && l.parent == parent && l.netbox_group == fl.netbox_group && (!fl.netbox_group.is_empty() || l.name == fl.name))
     {
         return Some(l.id);
     }
@@ -1036,6 +1112,7 @@ fn layer_like(doc: &mut Diagram, fresh: &Diagram, id: Id) -> Option<Id> {
     };
     if let Some(l) = doc.layer_mut(own) {
         l.source = fl.source.clone();
+        l.netbox_group = fl.netbox_group.clone();
         l.background = fl.background.clone();
         l.show_name = fl.show_name;
     }
@@ -1465,6 +1542,51 @@ mod tests {
             .map(|k| type_layer_name(k))
             .collect();
         assert_eq!(names, ["Switches", "Patch panels", "Access points", "Cloud proxies", "WLAN controllers", "Other devices", "Internet", "AWS transit gateways"]);
+    }
+
+    #[test]
+    fn localized_groups_survive_refresh_and_round_trip() {
+        use crate::i18n::Language::{Chinese, English};
+        let data: SiteData = serde_json::from_value(site()).unwrap();
+        let opts = Options { type_layers: true, ..Options::default() };
+        let fresh = site_diagram(&data, &opts);
+        let mut doc = fresh.clone();
+        let switches = doc.layers.iter().find(|l| l.netbox_group == "type/switch").unwrap().id;
+        let cables = doc.layers.iter().find(|l| l.netbox_group == "cables").unwrap().id;
+        assert_eq!(doc.layer(switches).unwrap().display_name(Chinese), "交换机");
+        assert_eq!(doc.layer(cables).unwrap().display_name(Chinese), "线缆");
+        // A pre-localization document has the same names but no role metadata.
+        doc.layers.reverse();
+        let gone = doc.add_layer(GONE_LAYER);
+        let archived = by_name(&doc, "fw-01").id;
+        doc.device_mut(archived).unwrap().layer = gone;
+        let outside = doc.add_layer(OUTSIDE_LAYER);
+        assert!(!doc.layer(gone).unwrap().show_name && !doc.layer(outside).unwrap().show_name);
+        for layer in &mut doc.layers { layer.netbox_group.clear(); }
+        let mut doc = Diagram::from_json(&doc.to_json()).unwrap();
+        assert_eq!(doc.layer(switches).unwrap().display_name(Chinese), "交换机");
+        assert_eq!(doc.layer(cables).unwrap().netbox_group, "cables");
+        assert_eq!(doc.layer(gone).unwrap().netbox_group, "gone");
+        assert_eq!(doc.layer(outside).unwrap().netbox_group, "outside");
+        doc.layer_mut(switches).unwrap().name = "现场交换组".into();
+        doc.layer_mut(cables).unwrap().name = "布线".into();
+        assert_eq!(layer_like(&mut doc, &fresh, switches), Some(switches));
+        assert_eq!(layer_like(&mut doc, &fresh, cables), Some(cables));
+        refresh(&mut doc, &fresh);
+        let doc = Diagram::from_json(&doc.to_json()).unwrap();
+        assert_ne!(doc.device(archived).unwrap().layer, gone);
+        assert_eq!(doc.layer(switches).unwrap().display_name(Chinese), "现场交换组");
+        assert_eq!(doc.layer(switches).unwrap().display_name(English), "现场交换组");
+        assert_eq!(doc.layer(cables).unwrap().display_name(Chinese), "布线");
+
+        for custom in ["自研交换机", "My Appliance"] {
+            let opts = Options { kinds: [("core-switch".into(), custom.into())].into(), type_layers: true, ..Options::default() };
+            let custom_doc = site_diagram(&data, &opts);
+            let parent = custom_doc.layer(by_name(&custom_doc, "core-01").layer).unwrap().parent;
+            let group = custom_doc.layer(parent).unwrap();
+            assert_eq!(group.display_name(Chinese), custom);
+            assert_eq!(group.display_name(English), custom);
+        }
     }
 
     fn a1_h(_: &Diagram) -> f64 {

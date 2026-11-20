@@ -18,10 +18,24 @@ export function matchLanguage(tags) {
     return "en"
 }
 
+// Preserve the message key when a host or an export operation rejects a promise.
+export class MessageError extends Error {
+    constructor(key) {
+        super(en[key] ?? key)
+        this.key = key
+    }
+}
+
 export function translate(language, key, values) {
     const catalog = catalogs[language] || en
     const message = catalog[key] ?? en[key] ?? key
-    return values ? message.replace(/\{(\w+)\}/g, (token, name) => values[name] ?? token) : message
+    if (!values) return message
+    return message.replace(/\{(\w+)\}/g, (token, name) => {
+        const value = values[name]
+        if (value instanceof MessageError) return translate(language, value.key)
+        if (value instanceof Error) return value.message
+        return value ?? token
+    })
 }
 
 // Older WASM and native controllers both return fully formatted English.
@@ -46,26 +60,35 @@ function translateStatusValue(language, value) {
     return key ? translate(language, key) : value
 }
 
+// NetBox quotes layer names as JSON strings, including names with commas.
+function netboxParts(text) {
+    return text.match(/(?:"(?:\\.|[^"\\])*"|[^",]|,(?! ))+/g)?.map(part => part.trim()) || []
+}
+
 export function translateStatus(language, message) {
     if (!message) return message
     const key = coreKeys.get(message)
     if (key) return translate(language, key)
     if (/^(From NetBox:|Up to date with NetBox\.)/.test(message)) {
-        const sentences = message.split(/ (?=\d+ (?:new )?location sheets? (?:added|renamed)\.)/)
-        if (sentences.length > 1) return sentences.map(part => translateStatus(language, part)).join(" ")
+        const suffix = / (\d+ (?:new )?location sheets? (?:added|renamed)\.)$/.exec(message)
+        if (suffix) return translateStatus(language, message.slice(0, suffix.index)) + " " + translateStatus(language, suffix[1])
     }
     for (const { key, names, pattern } of patterns) {
         const match = pattern.exec(message)
         if (!match) continue
         const values = {}
         names.forEach((key, i) => { values[key] = match[i + 1] })
+        if (key === "netbox.gone") {
+            try { values.name = JSON.parse('"' + values.name + '"') } catch (error) { /* older controller */ }
+            if (values.name === "Gone from NetBox") values.name = translate(language, "netbox.goneLayer")
+        }
         if (values.error) values.error = translateStatusValue(language, values.error)
         if (values.layout) values.layout = translateStatusValue(language, values.layout)
         if (values.locations) values.locations = translateStatus(language, values.locations)
         if (values.changes) {
             const fromNetbox = key === "netbox.changes"
-            const separator = fromNetbox ? ", " : "; "
-            values.changes = values.changes.split(separator).map(part => translateStatus(language, part)).join(translate(language, fromNetbox ? "list.separator" : "list.detailSeparator"))
+            const parts = fromNetbox ? netboxParts(values.changes) : values.changes.split("; ")
+            values.changes = parts.map(part => translateStatus(language, part)).join(translate(language, fromNetbox ? "list.separator" : "list.detailSeparator"))
         }
         return translate(language, key, values)
     }

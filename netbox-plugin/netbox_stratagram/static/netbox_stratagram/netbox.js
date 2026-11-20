@@ -12,7 +12,7 @@ const config = JSON.parse(document.getElementById("stratagram-config").textConte
 // The editor build (its folder changes with every build, see build.sh).
 const { mount } = await import(config.editorBase + "app.js")
 const i18n = await import(config.editorBase + "i18n.js")
-const { languageEvents, tr } = i18n
+const { languageEvents, tr, MessageError } = i18n
 const csrf = config.csrfToken
 const savedLine = document.getElementById("stratagram-saved")
 const options = JSON.stringify(config.options)
@@ -26,7 +26,8 @@ function showSaved(when, dirty) {
 
 async function fetchJson(url, init) {
     const r = await fetch(url, Object.assign({ credentials: "same-origin", headers: { "Accept": "application/json" } }, init))
-    if (!r.ok) throw new Error(r.status === 403 ? tr("error.permission") : (await r.text()) || r.statusText)
+    if (r.status === 403) throw new MessageError("error.permission")
+    if (!r.ok) throw new Error((await r.text()) || r.statusText)
     return r.json()
 }
 
@@ -52,7 +53,7 @@ const host = {
     title() { /* NetBox's page keeps its title */ },
     dirty(d) { showSaved(savedAt, d) },
     async save(json, name) {
-        if (!config.canSave) throw new Error(tr("error.netboxPermission"))
+        if (!config.canSave) throw new MessageError("error.netboxPermission")
         const r = await fetchJson(config.diagramUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRFToken": csrf, "Accept": "application/json" },
@@ -73,7 +74,7 @@ const host = {
                 const err = app.ctl.refreshNetbox(await netboxData(), options)
                 if (err) app.setStatus("status.refreshFailed", { error: err })
             } catch (e) {
-                app.setStatus("status.netboxFailed", { error: e.message })
+                app.setStatus("status.netboxFailed", { error: e })
             }
             app.changed()
         },
@@ -99,7 +100,7 @@ if (!saved) {
         const err = app.ctl.importNetbox(await netboxData(), options)
         if (err) app.ctl.setStatus(err)
     } catch (e) {
-        app.setStatus("status.netboxFailed", { error: e.message })
+        app.setStatus("status.netboxFailed", { error: e })
     }
     app.changed()
     app.view.fit()
@@ -111,7 +112,7 @@ if (config.sheet && !app.ctl.showSheetOf(config.sheet)) {
         const err = app.ctl.refreshNetbox(await netboxData(), options)
         if (err) app.setStatus("status.refreshFailed", { error: err })
     } catch (e) {
-        app.setStatus("status.netboxFailed", { error: e.message })
+        app.setStatus("status.netboxFailed", { error: e })
     }
     if (!app.ctl.showSheetOf(config.sheet)) app.setStatus("netbox.missingSheet")
 }

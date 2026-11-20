@@ -6,6 +6,7 @@
 // keyboard input in world coordinates (a port of qml/DiagramCanvas.qml).
 // Pan: middle/right drag or Space+drag. Zoom: mouse wheel.
 
+import { composing } from "./keyboard.js"
 import { language } from "./i18n.js"
 import { translateTip } from "./locales/messages.mjs"
 
@@ -641,6 +642,7 @@ export class DiagramView {
         }, { passive: false })
         c.addEventListener("keydown", (e) => this.keyDown(e))
         c.addEventListener("keyup", (e) => {
+            if (composing(e)) return
             if (e.key === " ") { this.spaceHeld = false; this.updateCursor(); e.preventDefault() }
         })
         c.addEventListener("blur", () => { this.spaceHeld = false; this.updateCursor() })
@@ -651,6 +653,7 @@ export class DiagramView {
     }
 
     keyDown(e) {
+        if (composing(e)) return
         if (e.ctrlKey || e.metaKey || e.altKey) return  // shortcuts: the app's
         const step = e.shiftKey ? 1 : 10
         const ctl = this.ctl
@@ -716,6 +719,7 @@ export class DiagramView {
             }
         })).observe(field)
         field.addEventListener("keydown", (e) => {
+            if (composing(e)) return
             e.stopPropagation()
             if (e.key === "Enter" && !(this.edit && this.edit.multi && e.shiftKey)) { e.preventDefault(); this.commitEdit() }
             else if (e.key === "Escape") { e.preventDefault(); this.cancelEdit() }

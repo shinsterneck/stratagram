@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { languages, matchLanguage, translate } from "./locales/messages.mjs"
+export { MessageError } from "./locales/messages.mjs"
 export { languages }
 export const languageEvents = new EventTarget()
 export let language = preferredLanguage()

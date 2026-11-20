@@ -668,26 +668,14 @@ impl qobject::DiagramController {
     }
 
     fn open_path(mut self: Pin<&mut Self>, path: PathBuf) -> bool {
-        match self.as_mut().edit(|e| e.load(&path)) {
-            Ok(()) => true,
-            Err(msg) => {
-                self.set_status_text(msg);
-                false
-            }
-        }
+        self.as_mut().edit(|e| e.load(&path)).is_ok()
     }
 
     pub fn save(mut self: Pin<&mut Self>) -> bool {
         let Some(path) = self.rust().editor.path.clone() else {
             return false;
         };
-        match self.as_mut().edit(|e| e.save(&path)) {
-            Ok(()) => true,
-            Err(msg) => {
-                self.set_status_text(msg);
-                false
-            }
-        }
+        self.as_mut().edit(|e| e.save(&path)).is_ok()
     }
 
     pub fn save_as(mut self: Pin<&mut Self>, url: &QUrl) -> bool {
@@ -697,13 +685,7 @@ impl qobject::DiagramController {
         };
         // Qt's own dialog does not always add the suffix itself.
         let path = crate::editor::with_file_ext(&path);
-        match self.as_mut().edit(|e| e.save(&path)) {
-            Ok(()) => true,
-            Err(msg) => {
-                self.set_status_text(msg);
-                false
-            }
-        }
+        self.as_mut().edit(|e| e.save(&path)).is_ok()
     }
 
     pub fn export_svg(self: Pin<&mut Self>, url: &QUrl) -> bool {
@@ -713,7 +695,7 @@ impl qobject::DiagramController {
     }
 
     pub fn set_language(mut self: Pin<&mut Self>, tag: &QString) {
-        self.as_mut().rust_mut().editor.language = stratagram_core::i18n::Language::from_tag(&tag.to_string());
+        self.as_mut().rust_mut().editor.set_language(stratagram_core::i18n::Language::from_tag(&tag.to_string()));
         self.refresh();
     }
 

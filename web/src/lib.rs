@@ -374,13 +374,7 @@ impl Stratagram {
     }
     /// Open a diagram from its text, under `name`. Returns "" or what went wrong.
     pub fn load(&mut self, json: &str, name: &str) -> String {
-        match self.editor.load_json(json, Path::new(name)) {
-            Ok(()) => String::new(),
-            Err(e) => {
-                self.editor.status = format!("Cannot open {name}: {e}");
-                e
-            }
-        }
+        self.editor.load_json(json, Path::new(name)).err().unwrap_or_default()
     }
     /// The document (all sheets) as a .stratagram file.
     #[wasm_bindgen(js_name = toJson)]
@@ -414,7 +408,7 @@ impl Stratagram {
 
     #[wasm_bindgen(js_name = setLanguage)]
     pub fn set_language(&mut self, tag: &str) {
-        self.editor.language = stratagram_core::i18n::Language::from_tag(tag);
+        self.editor.set_language(stratagram_core::i18n::Language::from_tag(tag));
     }
 
     #[wasm_bindgen(js_name = setTheme)]

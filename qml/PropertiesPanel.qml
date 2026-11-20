@@ -555,16 +555,24 @@ Pane {
                         // ones by category.
                         editable: true
                         model: root.kindItems
-                        textRole: "key"
+                        textRole: "name"
                         property string current: root.dev && !root.mixed(root.dev.kind) ? root.dev.kind : ""
-                        function indexOfKind(k) { return root.kindItems.findIndex(i => !i.header && i.key === k) }
-                        onCurrentChanged: { currentIndex = indexOfKind(current); editText = current }
-                        Component.onCompleted: { currentIndex = indexOfKind(current); editText = current }
+                        function syncKind() {
+                            currentIndex = root.kindItems.findIndex(i => !i.header && i.key === current)
+                            editText = currentIndex < 0 ? current : root.kindItems[currentIndex].name
+                        }
+                        onCurrentChanged: syncKind()
+                        onModelChanged: Qt.callLater(syncKind)
+                        Component.onCompleted: syncKind()
                         onActivated: (i) => {
-                            if (root.kindItems[i].header) { currentIndex = indexOfKind(current); editText = current; return }
+                            if (root.kindItems[i].header) { syncKind(); return }
                             root.setFor("device", "kind", root.kindItems[i].key)
                         }
-                        onAccepted: root.setFor("device", "kind", editText.trim())
+                        onAccepted: {
+                            const typed = editText.trim()
+                            const match = root.kindItems.find(i => !i.header && i.name === typed)
+                            root.setFor("device", "kind", match ? match.key : typed)
+                        }
                         delegate: ItemDelegate {
                             required property var modelData
                             required property int index

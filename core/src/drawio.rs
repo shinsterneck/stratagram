@@ -34,6 +34,8 @@ fn esc(s: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\n', "&#xa;")
+        .replace('\r', "&#xd;")
+        .replace('\t', "&#x9;")
 }
 
 /// Escape text that goes into an `html=1` label (escaped once for HTML,
@@ -139,11 +141,12 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device, lang: crate::i18n::Language) 
     let stroke = geom::darken(&fill, 0.45);
     let font = geom::text_on(&fill);
     let mut label = format!("<b>{}</b>", html_text(&d.name));
+    let caption = crate::shape::kind_label_in(&d.kind, lang).to_uppercase();
     if !d.kind.is_empty() {
         label.push_str(&format!(
             "<br><span style=\"font-size:{:.1}px;opacity:0.7\">{}</span>",
             10.0 * d.scale,
-            html_text(&crate::shape::kind_label_in(&d.kind, lang).to_uppercase())
+            html_text(&caption)
         ));
     }
     // Shape and symbols in the device's own frame (unscaled, at 0,0).
@@ -160,7 +163,7 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device, lang: crate::i18n::Language) 
     }
     let _ = writeln!(
         out,
-        r#"        <object id="{id}" label="{label}" kind="{kind}" stratagram_id="{nid}">
+        r#"        <object id="{id}" label="{label}" kind="{kind}" stratagram_id="{nid}" stratagram_caption="{caption}">
           <mxCell style="{shape}whiteSpace=wrap;html=1;fillColor={fill};strokeColor={stroke};fontColor={font};fontSize={fs13:.1};strokeWidth={sw:.2};" vertex="1" parent="{layer}">
             <mxGeometry x="{x:.1}" y="{y:.1}" width="{w:.1}" height="{h:.1}" as="geometry"/>
           </mxCell>
@@ -174,6 +177,7 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device, lang: crate::i18n::Language) 
         kind = esc(&d.kind),
         shape = style,
         nid = d.id,
+        caption = esc(&caption),
         x = d.x + ox,
         y = d.y + oy,
         w = d.w,
@@ -198,7 +202,7 @@ fn device(out: &mut String, ctx: &Ctx, d: &Device, lang: crate::i18n::Language) 
         );
     }
 
-    if let Some(name) = doc.layer_badge(d) {
+    if let Some(name) = doc.layer_badge_in(d, lang) {
         // Layer name in the lower right corner, as a child so it moves along.
         let _ = writeln!(
             out,
@@ -455,7 +459,7 @@ fn cells(doc: &Diagram, flat: bool, file: &str, lang: crate::i18n::Language) -> 
             r#"        <mxCell id="{id}" value="{name}" parent="0"{hidden}/>"#,
             id = layer_id(l.id),
             // draw.io has no sub-layers: theirs have the names above them.
-            name = esc(&doc.layer_path(l.id)),
+            name = esc(&doc.layer_path_in(l.id, lang)),
             hidden = if doc.layer_visible(l.id) { "" } else { r#" visible="0""# },
         );
     }
@@ -602,7 +606,11 @@ fn frame_cell(out: &mut String, id: &str, parent: &str, p: &crate::frame::Prim, 
 /// (Ctrl+V) as editable shapes into the current layer, as if copied in
 /// draw.io itself.
 pub fn clipboard(doc: &Diagram) -> String {
-    let (cells, _) = cells(doc, true, "", crate::i18n::Language::English);
+    clipboard_in(doc, crate::i18n::Language::English)
+}
+
+pub fn clipboard_in(doc: &Diagram, lang: crate::i18n::Language) -> String {
+    let (cells, _) = cells(doc, true, "", lang);
     format!("<mxGraphModel><root>\n        <mxCell id=\"0\"/>\n        <mxCell id=\"1\" parent=\"0\"/>\n{cells}</root></mxGraphModel>\n")
 }
 

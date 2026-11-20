@@ -463,7 +463,7 @@ fn device(s: &mut String, doc: &Diagram, d: &Device, dirs: &HashMap<Id, Vec<Pt>>
             esc(&crate::shape::kind_label_in(&d.kind, lang).to_uppercase())
         );
     }
-    if let Some(name) = doc.layer_badge(d) {
+    if let Some(name) = doc.layer_badge_in(d, lang) {
         let _ = writeln!(
             s,
             r##"<text x="{:.1}" y="{:.1}" font-size="9" text-anchor="end" fill="{text}" fill-opacity="0.55">{}</text>"##,

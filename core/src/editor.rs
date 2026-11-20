@@ -467,6 +467,33 @@ enum Target {
 /// Marks a copy of a whole sheet with its layers and frame.
 const SHEET_COPY: &str = "stratagram_sheet_copy";
 
+/// The display context is separate from raw filename and error arguments.
+enum FileErrorContext {
+    Open(String),
+    Paste,
+    PasteDrawio,
+    Logo,
+    Direct,
+}
+
+struct ReportedFileError {
+    context: FileErrorContext,
+    error: crate::i18n::Diagnostic,
+}
+
+impl ReportedFileError {
+    fn render(&self, lang: crate::i18n::Language) -> String {
+        let detail = self.error.render(lang);
+        match &self.context {
+            FileErrorContext::Open(name) => lang.format("file.openFailed", &[("name", name), ("error", &detail)]),
+            FileErrorContext::Paste => lang.format("file.pasteFailed", &[("error", &detail)]),
+            FileErrorContext::PasteDrawio => lang.format("file.drawioPasteFailed", &[("error", &detail)]),
+            FileErrorContext::Logo => lang.format("file.logoFailed", &[("error", &detail)]),
+            FileErrorContext::Direct => detail,
+        }
+    }
+}
+
 pub struct Editor {
     pub doc: Diagram,
     pub selection: Selection,
@@ -489,6 +516,7 @@ pub struct Editor {
     /// Style applied to newly drawn links; follows the last edited link.
     pub link_defaults: LinkStyle,
     pub status: String,
+    file_error: Option<ReportedFileError>,
     /// Folder of the last opened or saved file, kept across "New".
     pub last_dir: Option<PathBuf>,
     /// All sheets of the document, in order; the active one's place holds
@@ -539,6 +567,7 @@ impl Default for Editor {
             spacings: vec![],
             link_defaults: LinkStyle::default(),
             status: String::new(),
+            file_error: None,
             last_dir: None,
             sheets: Arc::new(vec![Diagram::default()]),
             active_sheet: 0,
@@ -2586,13 +2615,13 @@ impl Editor {
                 let slot = if key == "logo" { (&mut f.logo, &mut f.logo_w, &mut f.logo_h) } else { (&mut f.logo2, &mut f.logo2_w, &mut f.logo2_h) };
                 (*slot.0, *slot.1, *slot.2) = (String::new(), 0.0, 0.0);
             }
-            "logo" | "logo2" => match crate::frame::logo_from_in(value, self.language) {
+            "logo" | "logo2" => match crate::frame::parse_logo(value) {
                 Ok((data, w, h)) => {
                     let slot = if key == "logo" { (&mut f.logo, &mut f.logo_w, &mut f.logo_h) } else { (&mut f.logo2, &mut f.logo2_w, &mut f.logo2_h) };
                     (*slot.0, *slot.1, *slot.2) = (data, w, h);
                 }
                 Err(e) => {
-                    self.status = format!("Logo not set: {e}.");
+                    self.report_file_error(FileErrorContext::Logo, e);
                     return false;
                 }
             },
@@ -2821,7 +2850,7 @@ impl Editor {
         }
         let what = if self.selected_ids().is_empty() { "the diagram" } else { "the selection" };
         self.status = format!("Copied {what} ({n} item{}): paste it into draw.io with Ctrl+V.", if n == 1 { "" } else { "s" });
-        Some(crate::drawio::clipboard(&d))
+        Some(crate::drawio::clipboard_in(&d, self.language))
     }
 
     /// The same as [`Editor::copy_drawio`] in stratagram's own format, for
@@ -2860,18 +2889,18 @@ impl Editor {
         let native = if native.trim().is_empty() && ours(text) { text } else { native };
         if !native.trim().is_empty() {
             let whole = serde_json::from_str::<Value>(native).ok().is_some_and(|v| v.get(SHEET_COPY) == Some(&Value::Bool(true)));
-            match Diagram::document_from_json_in(native, self.language).map(|mut sheets| sheets.remove(0)) {
+            match Diagram::parse_document(native).map(|mut sheets| sheets.remove(0)) {
                 Ok(d) if whole => return self.insert_sheet(d),
                 Ok(d) => return self.insert(d, Some(native), view),
-                Err(e) => self.status = format!("Cannot paste: {e}"),
+                Err(error) => { self.report_file_error(FileErrorContext::Paste, error); }
             }
             return false;
         }
         if crate::drawio_import::looks_like_drawio(text) {
-            return match crate::drawio_import::import_in(text, self.language) {
+            return match crate::drawio_import::parse_import(text) {
                 Ok(d) => self.insert(d, None, view),
                 Err(e) => {
-                    self.status = format!("Cannot paste the draw.io shapes: {e}");
+                    self.report_file_error(FileErrorContext::PasteDrawio, e);
                     false
                 }
             };
@@ -3734,7 +3763,7 @@ impl Editor {
 
     pub fn rename_layer(&mut self, id: Id, name: &str) -> bool {
         let name = name.trim();
-        if name.is_empty() || self.doc.layer(id).is_none_or(|l| l.name == name) {
+        if name.is_empty() || self.doc.layer(id).is_none_or(|l| l.display_name(self.language) == name) {
             return false;
         }
         self.checkpoint();
@@ -3809,14 +3838,14 @@ impl Editor {
             .into_iter()
             .map(|(l, depth)| {
                 let above = doc.layer_ancestors(l.id);
-                json!({"id": l.id, "name": l.name, "visible": l.visible, "locked": l.locked, "show_name": l.show_name,
+                json!({"id": l.id, "name": l.display_name(self.language), "visible": l.visible, "locked": l.locked, "show_name": l.show_name,
                        "active": l.id == doc.active_layer, "count": doc.layer_count(l.id),
                        "frame": l.frame.is_some(),
                        "parent": l.parent, "depth": depth, "expanded": l.expanded,
                        "children": doc.layers.iter().filter(|x| x.parent == l.id).count(),
                        "folded": above.iter().any(|a| doc.layer(*a).is_some_and(|p| !p.expanded)),
                        "shown": doc.layer_visible(l.id), "held": doc.layer_locked(l.id),
-                       "path": doc.layer_path(l.id),
+                       "path": doc.layer_path_in(l.id, self.language),
                        "background": l.background.as_ref().map(|b| json!({
                            "margin": b.margin, "fill": b.fill, "opacity": b.opacity, "border": b.border.as_str(),
                            "border_color": b.border_color, "border_width": b.border_width, "rounded": b.rounded,
@@ -4009,8 +4038,33 @@ impl Editor {
         }
     }
 
+    pub fn set_language(&mut self, lang: crate::i18n::Language) {
+        if lang == self.language { return; }
+        if let Some(error) = self.file_error.take()
+            && self.status == error.render(self.language)
+        {
+            self.status = error.render(lang);
+            self.file_error = Some(error);
+        }
+        self.language = lang;
+    }
+
+    fn report_file_error(&mut self, context: FileErrorContext, error: crate::i18n::Diagnostic) -> String {
+        let detail = error.render(self.language);
+        let reported = ReportedFileError { context, error };
+        self.status = reported.render(self.language);
+        self.file_error = Some(reported);
+        detail
+    }
+
+    fn io_error(&mut self, key: &'static str, path: &Path, error: std::io::Error) -> String {
+        self.report_file_error(FileErrorContext::Direct, crate::i18n::Diagnostic::new(key, [
+            ("path", path.display().to_string()), ("error", error.to_string()),
+        ]))
+    }
+
     pub fn load(&mut self, path: &Path) -> Result<(), String> {
-        let text = std::fs::read_to_string(path).map_err(|e| self.language.format("cli.read", &[("path", &path.display().to_string()), ("error", &e.to_string())]))?;
+        let text = std::fs::read_to_string(path).map_err(|e| self.io_error("cli.read", path, e))?;
         self.load_json(&text, path)?;
         self.last_dir = path.parent().map(Path::to_path_buf);
         Ok(())
@@ -4019,7 +4073,8 @@ impl Editor {
     /// Open a diagram given as text, named `path` (just a name where there
     /// are no files, as in the browser).
     pub fn load_json(&mut self, text: &str, path: &Path) -> Result<(), String> {
-        let sheets = Diagram::document_from_json_in(text, self.language)?;
+        let sheets = Diagram::parse_document(text)
+            .map_err(|error| self.report_file_error(FileErrorContext::Open(path.display().to_string()), error))?;
         *self = Editor {
             zoom: self.zoom,
             snap: self.snap,
@@ -4045,8 +4100,8 @@ impl Editor {
 
     pub fn save(&mut self, path: &Path) -> Result<(), String> {
         let tmp = path.with_extension("tmp~");
-        std::fs::write(&tmp, self.document_json()).map_err(|e| self.language.format("cli.write", &[("path", &path.display().to_string()), ("error", &e.to_string())]))?;
-        std::fs::rename(&tmp, path).map_err(|e| self.language.format("cli.write", &[("path", &path.display().to_string()), ("error", &e.to_string())]))?;
+        std::fs::write(&tmp, self.document_json()).map_err(|e| self.io_error("cli.write", path, e))?;
+        std::fs::rename(&tmp, path).map_err(|e| self.io_error("cli.write", path, e))?;
         self.path = Some(path.to_path_buf());
         self.last_dir = path.parent().map(Path::to_path_buf);
         self.dirty = false;
@@ -4367,17 +4422,22 @@ impl Editor {
             all[0].source = site.source.clone();
         }
         let mut total = crate::netbox::Refreshed::default();
+        let mut gone_layers = std::collections::BTreeMap::new();
         let mut sheets_renamed = 0;
         for sheet in all.iter_mut() {
             let Some(fresh) = std::iter::once(&site).chain(&locations).find(|f| !f.source.is_empty() && f.source == sheet.source) else {
                 continue;
             };
-        let r = crate::netbox::refresh(sheet,fresh);
+            let r = crate::netbox::refresh(sheet, fresh);
             total.added_devices += r.added_devices;
             total.added_links += r.added_links;
             total.renamed += r.renamed;
             total.gone += r.gone;
+            if r.gone > 0 && let Some(group) = sheet.layers.iter().find(|l| l.netbox_group == "gone") {
+                *gone_layers.entry(group.name.clone()).or_default() += r.gone;
+            }
             total.panels += r.panels;
+            total.relocated += r.relocated;
             if fresh.source != site.source && !fresh.name.is_empty() && sheet.name != fresh.name {
                 sheet.name = fresh.name.clone();
                 sheets_renamed += 1;
@@ -4408,7 +4468,7 @@ impl Editor {
         self.redo.clear();
             self.touch();
             self.selection = Selection::None;
-        let mut status = total.summary();
+        let mut status = total.summary_with_gone_layers(&gone_layers);
         if sheets_renamed > 0 {
             status = format!("{} {sheets_renamed} location sheet{} renamed.", status, if sheets_renamed == 1 { "" } else { "s" });
         }
@@ -4608,7 +4668,7 @@ impl Editor {
                     "sel": sel_items.contains(&d.id),
                     "editing": self.editing == Some(EditTarget::DeviceName(d.id)),
                     "ports": ports,
-                    "badge": doc.layer_badge(d).unwrap_or(""),
+                    "badge": doc.layer_badge_in(d, self.language).unwrap_or(""),
                     "container": container,
                     "s": d.scale,
                     "a": alpha(d.scale),

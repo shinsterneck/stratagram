@@ -7,6 +7,7 @@
 //! lines, texts and an image (the logo), which the canvas, the SVG export
 //! and the draw.io export each draw the same way.
 
+use crate::i18n::Diagnostic;
 use crate::geom;
 use crate::model::*;
 
@@ -961,9 +962,14 @@ fn layout_in(f: &Frame, content: Rect, info: &Info, lang: crate::i18n::Language)
     if !mark.is_empty() {
         let diag = content.w.hypot(content.h).max(200.0);
         let size = (diag * 0.7 / (mark.chars().count() as f64 * 0.62)).clamp(24.0, 220.0);
-        let c = if mark.to_uppercase().contains("CONFIDENTIAL") || mark.to_uppercase().contains("RESTRICTED") { "#dc2626" } else { "#64748b" };
+        let upper = mark.to_uppercase();
+        // Watermarks are document text: an English interface can open a Chinese watermark and vice versa.
+        let sensitive = [crate::i18n::Language::English, crate::i18n::Language::Chinese].iter().any(|language| {
+            ["frame.confidential", "frame.restricted"].iter().any(|key| upper.contains(language.text(key)))
+        });
+        let c = if sensitive { "#dc2626" } else { "#64748b" };
         let at = Pt::new(content.x + content.w / 2.0, content.y + content.h / 2.0);
-        overlay.0.push(Prim::Watermark { at, text: mark.to_uppercase(), size, color: c.into(), angle: -30.0, opacity: 0.13 });
+        overlay.0.push(Prim::Watermark { at, text: upper, size, color: c.into(), angle: -30.0, opacity: 0.13 });
     }
     FrameLayout { outer, prims: o.0, overlay: overlay.0 }
 }
@@ -975,24 +981,24 @@ pub const LOGO_MAX_BYTES: usize = 1024 * 1024;
 
 /// A PNG or JPEG file as a data URI, with its size in pixels.
 pub fn logo_from_file(path: &std::path::Path) -> Result<(String, f64, f64), String> {
-    logo_from_file_in(path, crate::i18n::Language::English)
+    read_logo_file(path).map_err(|e| e.render(crate::i18n::Language::English))
 }
 
-pub(crate) fn logo_from_file_in(path: &std::path::Path, lang: crate::i18n::Language) -> Result<(String, f64, f64), String> {
-    let bytes = std::fs::read(path).map_err(|e| lang.format("cli.read", &[("path", &path.display().to_string()), ("error", &e.to_string())]))?;
-    logo_from_bytes_in(&bytes, lang)
+fn read_logo_file(path: &std::path::Path) -> Result<(String, f64, f64), Diagnostic> {
+    let bytes = std::fs::read(path).map_err(|e| Diagnostic::new("cli.read", [("path", path.display().to_string()), ("error", e.to_string())]))?;
+    parse_logo_bytes(&bytes)
 }
 
 /// A logo given as a file path or as a `data:` URI with base64 content
 /// (as a browser reads an image).
 pub fn logo_from(value: &str) -> Result<(String, f64, f64), String> {
-    logo_from_in(value, crate::i18n::Language::English)
+    parse_logo(value).map_err(|e| e.render(crate::i18n::Language::English))
 }
 
-pub(crate) fn logo_from_in(value: &str, lang: crate::i18n::Language) -> Result<(String, f64, f64), String> {
-    let Some(rest) = value.strip_prefix("data:") else { return logo_from_file_in(std::path::Path::new(value), lang) };
-    let data = rest.split_once(";base64,").map(|(_, d)| d).ok_or(lang.text("logo.base64"))?;
-    logo_from_bytes_in(&base64_decode(data).ok_or(lang.text("logo.invalidBase64"))?, lang)
+pub(crate) fn parse_logo(value: &str) -> Result<(String, f64, f64), Diagnostic> {
+    let Some(rest) = value.strip_prefix("data:") else { return read_logo_file(std::path::Path::new(value)) };
+    let data = rest.split_once(";base64,").map(|(_, d)| d).ok_or_else(|| Diagnostic::new("logo.base64", []))?;
+    parse_logo_bytes(&base64_decode(data).ok_or_else(|| Diagnostic::new("logo.invalidBase64", []))?)
 }
 
 /// Whether `logo` is a PNG or JPEG kept inside the diagram (a data URI),
@@ -1004,23 +1010,23 @@ pub fn is_embedded_logo(logo: &str) -> bool {
 
 /// A PNG or JPEG image as a data URI, with its size in pixels.
 pub fn logo_from_bytes(bytes: &[u8]) -> Result<(String, f64, f64), String> {
-    logo_from_bytes_in(bytes, crate::i18n::Language::English)
+    parse_logo_bytes(bytes).map_err(|e| e.render(crate::i18n::Language::English))
 }
 
-pub(crate) fn logo_from_bytes_in(bytes: &[u8], lang: crate::i18n::Language) -> Result<(String, f64, f64), String> {
+fn parse_logo_bytes(bytes: &[u8]) -> Result<(String, f64, f64), Diagnostic> {
     if bytes.len() > LOGO_MAX_BYTES {
-        return Err(lang.format("logo.tooLarge", &[("limit", &(LOGO_MAX_BYTES / 1024).to_string())]));
+        return Err(Diagnostic::new("logo.tooLarge", [("limit", (LOGO_MAX_BYTES / 1024).to_string())]));
     }
     let (mime, (w, h)) = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") && bytes.len() >= 24 {
         let be = |i: usize| u32::from_be_bytes([bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]]) as f64;
         ("image/png", (be(16), be(20)))
     } else if bytes.starts_with(&[0xff, 0xd8]) {
-        ("image/jpeg", jpeg_size(bytes).ok_or(lang.text("logo.jpeg"))?)
+        ("image/jpeg", jpeg_size(bytes).ok_or_else(|| Diagnostic::new("logo.jpeg", []))?)
     } else {
-        return Err(lang.text("logo.format").into());
+        return Err(Diagnostic::new("logo.format", []));
     };
     if w <= 0.0 || h <= 0.0 {
-        return Err(lang.text("logo.size").into());
+        return Err(Diagnostic::new("logo.size", []));
     }
     Ok((format!("data:{mime};base64,{}", base64_encode(bytes)), w, h))
 }
@@ -1217,6 +1223,18 @@ mod tests {
         let l = layout(&f, Rect { x: 0.0, y: 0.0, w: 600.0, h: 300.0 }, &info());
         assert!(matches!(&l.overlay[..], [Prim::Watermark { text, at, .. }] if text == "DRAFT" && *at == Pt::new(300.0, 150.0)));
         assert!(l.prims.iter().all(|p| !matches!(p, Prim::Watermark { .. })));
+    }
+
+    #[test]
+    fn sensitive_watermark_color_follows_document_text_across_ui_languages() {
+        use crate::i18n::Language;
+        for lang in [Language::English, Language::Chinese] {
+            for (mark, expected) in [("机密", "#dc2626"), ("受限", "#dc2626"), ("Confidential", "#dc2626"), ("草稿", "#64748b")] {
+                let f = Frame { watermark: mark.into(), ..Frame::default() };
+                let l = layout_in(&f, Rect { x: 0.0, y: 0.0, w: 600.0, h: 300.0 }, &info(), lang);
+                assert!(matches!(&l.overlay[..], [Prim::Watermark { text, color, .. }] if *text == mark.to_uppercase() && color == expected));
+            }
+        }
     }
 
     #[test]
