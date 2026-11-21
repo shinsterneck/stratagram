@@ -288,6 +288,7 @@ enum Drag {
     /// Ctrl, into line with other items). `click_toggle`: a Ctrl+press,
     /// toggling the line in the selection if released unmoved.
     MoveLabel { id: Id, click_toggle: bool },
+    LinkEnd { link: Id, to_end: bool },
 }
 
 /// Something another item can line up with: a box edge or center, or a
@@ -513,6 +514,7 @@ pub struct Editor {
     /// How far the items being dragged may move (least and most), so items
     /// made inside a device stay in it; worked out on the first move.
     drag_limits: Option<(Pt, Pt)>,
+    relink: Option<Id>,
 }
 
 impl Default for Editor {
@@ -548,6 +550,7 @@ impl Default for Editor {
             last_paste: None,
             config_path: None,
             drag_limits: None,
+            relink: None,
         }
     }
 }
@@ -901,6 +904,15 @@ impl Editor {
         self.status.clear();
         self.align = ctrl;
         self.clear_guides();
+        self.relink = None;
+        if !shift
+            && !ctrl
+            && let Selection::Link(link) = self.selection
+            && let Some(to_end) = self.link_end_at(link, p)
+        {
+            self.drag = Drag::LinkEnd { link, to_end };
+            return;
+        }
         let hit = self.hit_test(p);
         self.drag = match hit {
             Hit::Resize(id) => {
@@ -986,6 +998,31 @@ impl Editor {
                 Drag::Rubber { start: p, cur: p, additive: ctrl || shift, base }
             }
         };
+    }
+
+    fn link_end_at(&self, link: Id, p: Pt) -> Option<bool> {
+        let l = self.doc.link(link)?;
+        if !self.reachable(link) {
+            return None;
+        }
+        let reach = (geom::PORT_HALF * l.scale + self.tol()).max(self.tol());
+        let near = |ep: Endpoint| {
+            if ep.is_point() {
+                return f64::MAX;
+            }
+            let exit = self.doc.endpoint_pos(ep).map(|(at, _)| at);
+            let socket = (!ep.is_point())
+                .then(|| self.doc.device(ep.device).and_then(|d| d.port(ep.port).map(|port| d.port_pos(port))))
+                .flatten();
+            exit.into_iter().chain(socket).map(|at| at.dist(p)).fold(f64::MAX, f64::min)
+        };
+        let (from, to) = (near(l.from), near(l.to));
+        match (from <= reach, to <= reach) {
+            (true, true) => Some(to < from),
+            (true, false) => Some(false),
+            (false, true) => Some(true),
+            _ => None,
+        }
     }
 
     fn is_item_selected(&self, id: Id) -> bool {
@@ -1081,6 +1118,27 @@ impl Editor {
                 }
             }
             Drag::NewLink { cursor, .. } => *cursor = p,
+            Drag::LinkEnd { link, to_end } => {
+                let (link, to_end) = (*link, *to_end);
+                let Some(l) = self.doc.link(link) else { return };
+                let old = if to_end { l.to } else { l.from };
+                let (layer, scale) = (l.layer, l.scale);
+                let q = self.doc.alloc_id();
+                let z = self.doc.top_z();
+                self.doc.points.push(Point { id: q, x: p.x, y: p.y, layer, z, scale, label: String::new(), color: String::new() });
+                if let Some(l) = self.doc.link_mut(link) {
+                    if to_end { l.to = Endpoint::point(q) } else { l.from = Endpoint::point(q) }
+                }
+                if !old.is_point()
+                    && self.doc.links_at_port(old.port) == 0
+                    && self.doc.device(old.device).and_then(|d| d.port(old.port)).is_some_and(|port| port.name.is_empty() && port.source.is_empty())
+                {
+                    self.doc.remove_port(old.device, old.port);
+                }
+                self.relink = Some(link);
+                self.selection = Selection::Items(vec![q]);
+                self.drag = Drag::MoveItems { start: p, origins: vec![(q, p)], click_toggle: None };
+            }
             Drag::MoveLabel { id, click_toggle } => {
                 // Along the line only: the nearest point of the line to the
                 // mouse, kept a little off its ends. A line bent through
@@ -1299,6 +1357,12 @@ impl Editor {
             }
             _ => {}
         }
+        if let Some(link) = self.relink.take()
+            && self.doc.link(link).is_some()
+        {
+            self.selection = Selection::Link(link);
+            self.status = "Moved the end of the line.".into();
+        }
         if let Some(snap) = self.snapshot.take()
             && snap != self.doc
         {
@@ -1405,6 +1469,11 @@ impl Editor {
         self.drag = Drag::None;
         self.hover = Hit::Empty;
         self.clear_guides();
+        if let Some(link) = self.relink.take()
+            && self.doc.link(link).is_some()
+        {
+            self.selection = Selection::Link(link);
+        }
         self.validate_selection();
     }
 
@@ -1674,6 +1743,11 @@ impl Editor {
     pub fn hover(&mut self, p: Pt) -> i32 {
         self.hover = self.hit_test(p);
         self.hover_at = p;
+        if let Selection::Link(link) = self.selection
+            && self.link_end_at(link, p).is_some()
+        {
+            return cursor::SIZE_ALL;
+        }
         self.cursor_for(self.hover)
     }
 
@@ -6224,6 +6298,49 @@ mod tests {
     }
 
     #[test]
+    fn the_selection_decides_whether_a_port_or_one_line_end_moves() {
+        let (mut e, a, b) = two_devices(); // 40..160 and 340..460 x 70..130
+        let c = e.add_device_at(Pt::new(400.0, 300.0)); // 340..460 x 270..330
+        let pa = e.doc.add_port(a, Side::Right, 0.5).unwrap();
+        let pb = e.doc.add_port(b, Side::Left, 0.5).unwrap();
+        let pc = e.doc.add_port(c, Side::Left, 0.5).unwrap();
+        let l1 = e.doc.add_link(pa, pb, LinkStyle::default());
+        let l2 = e.doc.add_link(pa, pc, LinkStyle::default());
+        let at_a = Pt::new(160.0, 100.0);
+
+        // The line selected: only its end moves, onto device c's top border.
+        e.selection = Selection::Link(l1);
+        drag(&mut e, at_a, Pt::new(400.0, 270.0));
+        let l = e.doc.link(l1).unwrap();
+        assert_eq!((l.from.device, l.to), (c, pb), "its end on c now, the other end where it was");
+        assert_eq!(e.doc.link(l2).unwrap().from, pa, "the other line stays at the port");
+        assert!(e.doc.device(a).unwrap().port(pa.port).is_some());
+        assert_eq!(e.selection, Selection::Link(l1), "the line stays selected");
+        e.undo();
+        assert_eq!(e.doc.link(l1).unwrap().from, pa);
+
+        // Dropped on empty space: a free end there.
+        e.selection = Selection::Link(l1);
+        drag(&mut e, at_a, Pt::new(200.0, 250.0));
+        let free = e.doc.link(l1).unwrap().from;
+        assert!(free.is_point() && e.doc.point(free.owner()).is_some_and(|q| q.pos().dist(Pt::new(200.0, 250.0)) < 1.0));
+        // The port's last line leaving it: a port made on the way goes.
+        e.selection = Selection::Link(l2);
+        drag(&mut e, at_a, Pt::new(250.0, 400.0));
+        assert!(e.doc.device(a).unwrap().port(pa.port).is_none(), "an unnamed port left without lines is removed");
+        e.undo();
+        e.undo();
+
+        // Not a line selected: the port moves, with all its lines.
+        e.selection = Selection::Items(vec![a]);
+        drag(&mut e, at_a, Pt::new(160.0, 80.0));
+        let port = e.doc.device(a).unwrap().port(pa.port).unwrap();
+        assert!((port.side, (port.t - 1.0 / 6.0).abs() < 0.05) == (Side::Right, true), "{:?} {}", port.side, port.t);
+        assert_eq!((e.doc.link(l1).unwrap().from, e.doc.link(l2).unwrap().from), (pa, pa));
+        assert_eq!(e.selection, Selection::Port(pa));
+    }
+
+    #[test]
     fn ports_and_points_take_a_color() {
         let (mut e, a, b) = two_devices();
         let pa = e.doc.add_port(a, Side::Right, 0.5).unwrap();
@@ -7903,8 +8020,9 @@ mod tests {
         // Now a port: clicked, not a new line.
         assert!(matches!(e.hit_test(s3), Hit::Port(ep) if ep == l.from));
 
-        // Dragged to socket 7, it moves there with its line.
+        // Dragged to socket 7 (the line not selected), it moves there with its line.
         let s7 = e.doc.device(pp).unwrap().socket_pos(7).unwrap();
+        e.selection = Selection::None;
         e.press(s3, false, false);
         e.drag_to(Pt::new((s3.x + s7.x) / 2.0, s7.y));
         e.drag_to(s7);

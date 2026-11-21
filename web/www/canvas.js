@@ -994,6 +994,18 @@ function drawLink(ctx, l) {
         ctx.strokeStyle = l.drop ? "rgba(22,163,74,0.45)" : "rgba(37,99,235,0.38)"
         ctx.stroke()
     }
+    if (l.sel && l.pts.length >= 4) {
+        const n = l.pts.length
+        for (const [x, y] of [[l.pts[0], l.pts[1]], [l.pts[n - 2], l.pts[n - 1]]]) {
+            ctx.beginPath()
+            ctx.arc(x, y, 6.5 * l.s, 0, 2 * Math.PI)
+            ctx.fillStyle = "rgba(37,99,235,0.18)"
+            ctx.fill()
+            ctx.lineWidth = 1.5 * l.s
+            ctx.strokeStyle = ACCENT
+            ctx.stroke()
+        }
+    }
     polyline(ctx, l.pts)
     applyDash(ctx, l.style, l.width)
     if (l.kind === "trunk" || l.kind === "l3sub") {
