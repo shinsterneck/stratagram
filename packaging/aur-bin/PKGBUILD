@@ -23,7 +23,7 @@ provides=("$_pkgname=$pkgver")
 conflicts=("$_pkgname")
 options=('!debug')
 source=("$_pkgname-$pkgver-linux-x86_64.tar.gz::https://github.com/shinsterneck/stratagram/releases/download/v$pkgver/$_pkgname-$pkgver-linux-x86_64.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('fdff1723998ddf710270fb93b89619d58e56ac4323d84a7e21cf41ced842b40d')
 
 package() {
   cd "$_pkgname-$pkgver-linux-x86_64"
