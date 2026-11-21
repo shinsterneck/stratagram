@@ -182,6 +182,9 @@ fn main() {
         // SAFETY: single-threaded at this point, before Qt starts.
         unsafe { std::env::set_var("QT_QUICK_CONTROLS_STYLE", "Fusion") };
     }
+    if std::env::var_os("QT_LOGGING_RULES").is_none() {
+        unsafe { std::env::set_var("QT_LOGGING_RULES", "qt.qpa.wayland.textinput=false;qt.qpa.services.warning=false") };
+    }
     // The desktop's own open and save dialogs, through the XDG desktop
     // portal (GNOME, KDE, Hyprland, Sway, ...), instead of Qt's built-in
     // ones. Qt falls back to its own if no portal answers.
