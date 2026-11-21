@@ -1007,9 +1007,6 @@ impl Editor {
         }
         let reach = (geom::PORT_HALF * l.scale + self.tol()).max(self.tol());
         let near = |ep: Endpoint| {
-            if ep.is_point() {
-                return f64::MAX;
-            }
             let exit = self.doc.endpoint_pos(ep).map(|(at, _)| at);
             let socket = (!ep.is_point())
                 .then(|| self.doc.device(ep.device).and_then(|d| d.port(ep.port).map(|port| d.port_pos(port))))
@@ -1123,6 +1120,14 @@ impl Editor {
                 let Some(l) = self.doc.link(link) else { return };
                 let old = if to_end { l.to } else { l.from };
                 let (layer, scale) = (l.layer, l.scale);
+                if old.is_point() && self.doc.links.iter().filter(|l| l.from == old || l.to == old).count() <= 1 {
+                    let Some(at) = self.doc.point(old.owner()).map(|q| q.pos()) else { return };
+                    self.relink = Some(link);
+                    self.selection = Selection::Items(vec![old.owner()]);
+                    self.drag = Drag::MoveItems { start: self.press_pos, origins: vec![(old.owner(), at)], click_toggle: None };
+                    self.drag_to(p);
+                    return;
+                }
                 let q = self.doc.alloc_id();
                 let z = self.doc.top_z();
                 self.doc.points.push(Point { id: q, x: p.x, y: p.y, layer, z, scale, label: String::new(), color: String::new() });
@@ -1345,6 +1350,19 @@ impl Editor {
                     && let Some(target) = self.dragged_point_target(id)
                 {
                     self.attach_dragged_point(id, target);
+                } else if let [(id, _)] = origins[..]
+                    && self.relink.is_some()
+                    && let Some(joint) = self.joint_under(id)
+                {
+                    for l in &mut self.doc.links {
+                        if l.from == Endpoint::point(id) {
+                            l.from = Endpoint::point(joint);
+                        }
+                        if l.to == Endpoint::point(id) {
+                            l.to = Endpoint::point(joint);
+                        }
+                    }
+                    self.doc.points.retain(|q| q.id != id);
                 } else {
                     if let (Some(link), Some(&(dev, _))) = (insert, origins.first())
                         && self.doc.insert_into_link(link, dev).is_some()
@@ -1441,6 +1459,30 @@ impl Editor {
             return Some((d.id, None, side, t, 0));
         }
         None
+    }
+
+    /// Another connection point under the dragged point `id`, that the
+    /// lines of `id` can join without one running from the point to itself.
+    fn joint_under(&self, id: Id) -> Option<Id> {
+        let at = self.doc.point(id)?.pos();
+        let tol = self.tol();
+        let own: Vec<Endpoint> = self
+            .doc
+            .links
+            .iter()
+            .filter_map(|l| match (l.from == Endpoint::point(id), l.to == Endpoint::point(id)) {
+                (true, _) => Some(l.to),
+                (_, true) => Some(l.from),
+                _ => None,
+            })
+            .collect();
+        self.doc
+            .points
+            .iter()
+            .filter(|q| q.id != id && self.reachable(q.id) && !own.contains(&Endpoint::point(q.id)))
+            .filter(|q| q.pos().dist(at) <= geom::PORT_HALF * q.scale + tol * 0.8)
+            .min_by(|a, b| a.pos().dist(at).total_cmp(&b.pos().dist(at)))
+            .map(|q| q.id)
     }
 
     fn attach_dragged_point(&mut self, id: Id, (device, port, side, t, socket): PointTarget) {
@@ -5899,7 +5941,7 @@ mod tests {
         let port = e.doc.device(b).unwrap().port(l.to.port).unwrap();
         assert_eq!((port.side, port.t), (Side::Left, 2.0 / 3.0));
         assert!(e.doc.points.is_empty());
-        assert_eq!(e.selection, Selection::Port(l.to));
+        assert_eq!(e.selection, Selection::Link(link), "the line it was dragged by stays selected");
         assert_eq!(e.undo.len(), undo_len + 1, "one undo step");
         e.undo();
         assert!(e.doc.link(link).unwrap().to.is_point());
@@ -6338,6 +6380,52 @@ mod tests {
         assert!((port.side, (port.t - 1.0 / 6.0).abs() < 0.05) == (Side::Right, true), "{:?} {}", port.side, port.t);
         assert_eq!((e.doc.link(l1).unwrap().from, e.doc.link(l2).unwrap().from), (pa, pa));
         assert_eq!(e.selection, Selection::Port(pa));
+    }
+
+    #[test]
+    fn a_selected_line_leaves_or_joins_a_joint_on_its_own() {
+        let (mut e, a, b) = two_devices();
+        let c = e.add_device_at(Pt::new(400.0, 300.0));
+        let pa = e.doc.add_port(a, Side::Right, 0.5).unwrap();
+        let pb = e.doc.add_port(b, Side::Left, 0.5).unwrap();
+        let pc = e.doc.add_port(c, Side::Left, 0.5).unwrap();
+        let j = e.doc.add_point(Pt::new(250.0, 200.0));
+        let k = e.doc.add_point(Pt::new(250.0, 400.0));
+        let (jp, kp) = (Endpoint::point(j), Endpoint::point(k));
+        let la = e.doc.add_link(pa, jp, LinkStyle::default());
+        let lb = e.doc.add_link(jp, pb, LinkStyle::default());
+        let lc = e.doc.add_link(pc, kp, LinkStyle::default());
+        let at_j = Pt::new(250.0, 200.0);
+
+        // The line selected: its end leaves the joint, the others stay on it.
+        e.selection = Selection::Link(lb);
+        drag(&mut e, at_j, Pt::new(250.0, 300.0));
+        let end = e.doc.link(lb).unwrap().from;
+        assert!(end.is_point() && end != jp, "a point of its own");
+        assert_eq!(e.doc.link(la).unwrap().to, jp);
+        assert!(e.doc.point(j).is_some_and(|q| q.pos().dist(at_j) < 1.0), "the joint stays put");
+        assert_eq!(e.selection, Selection::Link(lb));
+        e.undo();
+
+        // Dropped on another joint: it joins it.
+        e.selection = Selection::Link(lb);
+        drag(&mut e, at_j, Pt::new(252.0, 398.0));
+        assert_eq!(e.doc.link(lb).unwrap().from, kp);
+        assert_eq!((e.doc.points.len(), e.doc.link(lc).unwrap().to), (2, kp), "no point left over");
+        e.undo();
+
+        // A free end moves its point, and joins a joint too.
+        e.selection = Selection::Link(lc);
+        drag(&mut e, Pt::new(250.0, 400.0), Pt::new(251.0, 201.0));
+        assert_eq!(e.doc.link(lc).unwrap().to, jp);
+        assert!(e.doc.point(k).is_none());
+        e.undo();
+
+        // Not the line selected: the joint moves, with all its lines.
+        e.selection = Selection::None;
+        drag(&mut e, at_j, Pt::new(250.0, 250.0));
+        assert!(e.doc.point(j).is_some_and(|q| q.pos().dist(Pt::new(250.0, 250.0)) < 1.0));
+        assert_eq!((e.doc.link(la).unwrap().to, e.doc.link(lb).unwrap().from), (jp, jp));
     }
 
     #[test]

@@ -480,7 +480,7 @@ Pane {
                           "pull a port with lines off the device to turn it into a free point (the lines stay), " +
                           "or pull an unused port away to draw a link; its lines follow the port.<br><br>" +
                           "<b>Select a line and drag one of its ends</b> (the round handles) to move just that end " +
-                          "to another port, device or spot; the port's other lines stay.<br><br>" +
+                          "to another port, device, joint or spot; the other lines at the port or joint stay.<br><br>" +
                           "<b>Double-click</b> a device, port, link or text to edit it in place, " +
                           "or select it and press F2, Enter or just start typing.<br><br>" +
                           "<b>Quick add</b> (Ctrl+K): type devices into the toolbar field, comma-separated, " +
