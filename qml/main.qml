@@ -289,135 +289,206 @@ ApplicationWindow {
 
     // toolbar
     header: ToolBar {
-        RowLayout {
+        id: bar
+        readonly property bool moreLeft: barFlick.contentX > 1
+        readonly property bool moreRight: barFlick.contentX < barFlick.contentWidth - barFlick.width - 1
+        function scrollBy(dx) {
+            barFlick.contentX = Math.max(0, Math.min(barFlick.contentWidth - barFlick.width, barFlick.contentX + dx))
+        }
+        Flickable {
+            id: barFlick
             anchors.fill: parent
-            spacing: 2
-            ToolButton { action: actNew }
-            ToolButton { action: actOpen }
-            ToolButton { action: actSave }
-            ToolButton { action: actSaveAs }
-            ToolButton {
-                id: exportButton
-                text: "Export ▾"
-                onClicked: exportMenu.open()
-                Menu {
-                    id: exportMenu
-                    y: exportButton.height
-                    MenuItem { action: actExport }
-                    MenuItem { action: actExportPng }
-                    MenuItem { action: actExportDrawio }
-                    MenuItem { action: actExportCml }
-                    MenuSeparator {}
-                    MenuItem { action: actCopy }
-                    MenuItem { action: actCopySheet }
-                    MenuItem { action: actPaste; text: "Paste (from stratagram or draw.io)" }
-                }
+            contentWidth: barRow.width
+            contentHeight: height
+            clip: true
+            flickableDirection: Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            Behavior on contentX { NumberAnimation { duration: 150 } }
+            WheelHandler {
+                enabled: bar.moreLeft || bar.moreRight
+                onWheel: (ev) => bar.scrollBy(-(ev.angleDelta.y || ev.angleDelta.x))
             }
-            ToolSeparator {}
-            // "+ Device" adds a plain device; the arrow beside it one of a type.
-            ToolButton { action: actAdd; font.bold: true; rightPadding: 2 }
-            ToolButton {
-                id: addKindButton
-                text: "▾"
-                leftPadding: 2
-                rightPadding: 6
-                checkable: true
-                checked: kindPopup.visible
-                onClicked: kindPopup.visible ? kindPopup.close() : kindPopup.open()
-                ToolTip.visible: hovered && !kindPopup.visible
-                ToolTip.delay: 500
-                ToolTip.text: "Add a device of a type"
-            }
-            ToolButton { action: actNote; font.bold: true }
-            ToolButton {
-                action: actPoint; font.bold: true
-                ToolTip.visible: hovered
-                ToolTip.delay: 500
-                ToolTip.text: "Free connection point for lines that point at nothing (Ctrl+Shift+P)"
-            }
-            ToolButton { action: actUndo }
-            ToolButton { action: actRedo }
-            ToolButton { action: actDup }
-            ToolButton { action: actDel }
-            ToolSeparator {}
-            ToolButton {
-                id: layoutButton
-                text: "Layout ▾"
-                checkable: true
-                checked: layoutPopup.visible
-                onClicked: layoutPopup.visible ? layoutPopup.close() : layoutPopup.open()
-                ToolTip.visible: hovered && !layoutPopup.visible
-                ToolTip.delay: 500
-                ToolTip.text: "Auto layout (Ctrl+L)"
-            }
-            ToolSeparator {}
-            CheckBox {
-                text: "Snap"
-                ToolTip.visible: hovered
-                ToolTip.delay: 500
-                ToolTip.text: "Snap to grid"
-                checked: ctl.snap
-                onToggled: ctl.snap = checked
-            }
-            CheckBox {
-                action: actGrid
-                ToolTip.visible: hovered
-                ToolTip.delay: 500
-                ToolTip.text: "Show the grid (Ctrl+')"
-            }
-            ComboBox {
-                id: themeBox
-                model: [{ value: "light", text: "Light" }, { value: "deep", text: "Dark" }, { value: "neon", text: "Neon" }]
-                textRole: "text"
-                valueRole: "value"
-                Layout.preferredWidth: 92
-                currentIndex: Math.max(0, ["light", "deep", "neon"].indexOf(prefs.theme))
-                onActivated: prefs.theme = currentValue
-                ToolTip.visible: hovered && !popup.visible
-                ToolTip.delay: 500
-                ToolTip.text: "Theme: the colors of the diagram, its exports (SVG, PNG) and the panels.\nThe file keeps its own colors."
-            }
-            ToolSeparator {}
-            TextField {
-                id: quickAdd
-                Layout.fillWidth: true
-                Layout.maximumWidth: 420
-                Layout.minimumWidth: 100
-                placeholderText: "Quick add (Ctrl+K): Firewall, Router, switch|my-box"
-                selectByMouse: true
-                ToolTip.visible: activeFocus && text === ""
-                ToolTip.delay: 300
-                ToolTip.text: "Comma-separated devices, then Enter.\n" +
-                              "\"Router\" adds a router labeled Router;\n" +
-                              "\"router|edge-01\" (type, then name) adds a router labeled edge-01."
-                onAccepted: {
-                    const c = canvas.viewCenter()
-                    if (ctl.quickAdd(text, c.x, c.y) > 0) {
-                        text = ""
-                        canvas.revealSelection()
-                        canvas.forceActiveFocus()
+            RowLayout {
+                id: barRow
+                width: Math.max(barFlick.width, implicitWidth)
+                height: barFlick.height
+                spacing: 2
+                ToolButton { action: actNew }
+                ToolButton { action: actOpen }
+                ToolButton { action: actSave }
+                ToolButton { action: actSaveAs }
+                ToolButton {
+                    id: exportButton
+                    text: "Export ▾"
+                    onClicked: exportMenu.open()
+                    Menu {
+                        id: exportMenu
+                        y: exportButton.height
+                        MenuItem { action: actExport }
+                        MenuItem { action: actExportPng }
+                        MenuItem { action: actExportDrawio }
+                        MenuItem { action: actExportCml }
+                        MenuSeparator {}
+                        MenuItem { action: actCopy }
+                        MenuItem { action: actCopySheet }
+                        MenuItem { action: actPaste; text: "Paste (from stratagram or draw.io)" }
                     }
                 }
-                Keys.onEscapePressed: { text = ""; canvas.forceActiveFocus() }
+                ToolSeparator {}
+                // "+ Device" adds a plain device; the arrow beside it one of a type.
+                ToolButton { action: actAdd; font.bold: true; rightPadding: 2 }
+                ToolButton {
+                    id: addKindButton
+                    text: "▾"
+                    leftPadding: 2
+                    rightPadding: 6
+                    checkable: true
+                    checked: kindPopup.visible
+                    onClicked: kindPopup.visible ? kindPopup.close() : kindPopup.open()
+                    ToolTip.visible: hovered && !kindPopup.visible
+                    ToolTip.delay: 500
+                    ToolTip.text: "Add a device of a type"
+                }
+                ToolButton { action: actNote; font.bold: true }
+                ToolButton {
+                    action: actPoint; font.bold: true
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 500
+                    ToolTip.text: "Free connection point for lines that point at nothing (Ctrl+Shift+P)"
+                }
+                ToolButton { action: actUndo }
+                ToolButton { action: actRedo }
+                ToolButton { action: actDup }
+                ToolButton { action: actDel }
+                ToolSeparator {}
+                ToolButton {
+                    id: layoutButton
+                    text: "Layout ▾"
+                    checkable: true
+                    checked: layoutPopup.visible
+                    onClicked: layoutPopup.visible ? layoutPopup.close() : layoutPopup.open()
+                    ToolTip.visible: hovered && !layoutPopup.visible
+                    ToolTip.delay: 500
+                    ToolTip.text: "Auto layout (Ctrl+L)"
+                }
+                ToolSeparator {}
+                CheckBox {
+                    text: "Snap"
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 500
+                    ToolTip.text: "Snap to grid"
+                    checked: ctl.snap
+                    onToggled: ctl.snap = checked
+                }
+                CheckBox {
+                    action: actGrid
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 500
+                    ToolTip.text: "Show the grid (Ctrl+')"
+                }
+                ComboBox {
+                    id: themeBox
+                    model: [{ value: "light", text: "Light" }, { value: "deep", text: "Dark" }, { value: "neon", text: "Neon" }]
+                    textRole: "text"
+                    valueRole: "value"
+                    Layout.preferredWidth: 92
+                    currentIndex: Math.max(0, ["light", "deep", "neon"].indexOf(prefs.theme))
+                    onActivated: prefs.theme = currentValue
+                    ToolTip.visible: hovered && !popup.visible
+                    ToolTip.delay: 500
+                    ToolTip.text: "Theme: the colors of the diagram, its exports (SVG, PNG) and the panels.\nThe file keeps its own colors."
+                }
+                ToolSeparator {}
+                TextField {
+                    id: quickAdd
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 420
+                    Layout.minimumWidth: 100
+                    placeholderText: "Quick add (Ctrl+K): Firewall, Router, switch|my-box"
+                    selectByMouse: true
+                    ToolTip.visible: activeFocus && text === ""
+                    ToolTip.delay: 300
+                    ToolTip.text: "Comma-separated devices, then Enter.\n" +
+                                  "\"Router\" adds a router labeled Router;\n" +
+                                  "\"router|edge-01\" (type, then name) adds a router labeled edge-01."
+                    onAccepted: {
+                        const c = canvas.viewCenter()
+                        if (ctl.quickAdd(text, c.x, c.y) > 0) {
+                            text = ""
+                            canvas.revealSelection()
+                            canvas.forceActiveFocus()
+                        }
+                    }
+                    Keys.onEscapePressed: { text = ""; canvas.forceActiveFocus() }
+                }
+                Item { Layout.fillWidth: true }
+                ToolButton {
+                    action: actObjectZoom
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 500
+                    ToolTip.text: "Deep zoom (Ctrl+I): zoom into a device without limit and add things inside it;\n" +
+                                  "they fade out when you zoom back out and reappear when you zoom in"
+                }
+                ToolButton { text: "−"; onClicked: canvas.zoomBy(1 / 1.2) }
+                Label {
+                    text: Math.round(canvas.zoom * 100) + "%"
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.preferredWidth: 44
+                }
+                ToolButton { text: "+"; onClicked: canvas.zoomBy(1.2) }
+                ToolButton { action: actFit }
+                ToolSeparator {}
+                ToolButton { action: actPanel }
             }
-            Item { Layout.fillWidth: true }
-            ToolButton {
-                action: actObjectZoom
-                ToolTip.visible: hovered
-                ToolTip.delay: 500
-                ToolTip.text: "Deep zoom (Ctrl+I): zoom into a device without limit and add things inside it;\n" +
-                              "they fade out when you zoom back out and reappear when you zoom in"
+        }
+        MouseArea {
+            anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: -bar.leftPadding }
+            width: 44
+            visible: bar.moreLeft
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: bar.scrollBy(-300)
+            Rectangle {
+                anchors.fill: parent
+                rotation: 180
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: Qt.rgba(bar.palette.window.r, bar.palette.window.g, bar.palette.window.b, 0) }
+                    GradientStop { position: 0.55; color: bar.palette.window }
+                    GradientStop { position: 1.0; color: bar.palette.window }
+                }
             }
-            ToolButton { text: "−"; onClicked: canvas.zoomBy(1 / 1.2) }
-            Label {
-                text: Math.round(canvas.zoom * 100) + "%"
-                horizontalAlignment: Text.AlignHCenter
-                Layout.preferredWidth: 44
+            Text {
+                anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 8 }
+                text: "‹"
+                font.pixelSize: 18
+                color: bar.palette.text
+                opacity: parent.containsMouse ? 0.9 : 0.45
             }
-            ToolButton { text: "+"; onClicked: canvas.zoomBy(1.2) }
-            ToolButton { action: actFit }
-            ToolSeparator {}
-            ToolButton { action: actPanel }
+        }
+        MouseArea {
+            anchors { right: parent.right; top: parent.top; bottom: parent.bottom; rightMargin: -bar.rightPadding }
+            width: 44
+            visible: bar.moreRight
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: bar.scrollBy(300)
+            Rectangle {
+                anchors.fill: parent
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: Qt.rgba(bar.palette.window.r, bar.palette.window.g, bar.palette.window.b, 0) }
+                    GradientStop { position: 0.55; color: bar.palette.window }
+                    GradientStop { position: 1.0; color: bar.palette.window }
+                }
+            }
+            Text {
+                anchors { verticalCenter: parent.verticalCenter; right: parent.right; rightMargin: 8 }
+                text: "›"
+                font.pixelSize: 18
+                color: bar.palette.text
+                opacity: parent.containsMouse ? 0.9 : 0.45
+            }
         }
     }
 

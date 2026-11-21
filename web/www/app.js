@@ -78,7 +78,7 @@ export class App {
         this.toolbar = h("div", { className: "sg-toolbar" })
         const main = h("div", { className: "sg-main" })
         this.status = h("div", { className: "sg-status" })
-        this.el.append(this.toolbar, main,
+        this.el.append(this.scrollingBar(this.toolbar), main,
                        h("div", { className: "sg-statusline" }, this.status,
                          h("span", { className: "sg-version" }, "Stratagram " + Stratagram.version())))
         // The canvas with the sheet tabs under it.
@@ -411,6 +411,27 @@ export class App {
         show(main())
         this.popup(at, m)
         fit()
+    }
+
+    scrollingBar(bar) {
+        const fade = (side, glyph, dx) => h("div", { className: "sg-barfade sg-" + side, title: "More",
+                                                     onclick: () => bar.scrollBy({ left: dx, behavior: "smooth" }) }, glyph)
+        const left = fade("left", "‹", -300), right = fade("right", "›", 300)
+        const update = () => {
+            left.classList.toggle("sg-more", bar.scrollLeft > 1)
+            right.classList.toggle("sg-more", bar.scrollLeft < bar.scrollWidth - bar.clientWidth - 1)
+        }
+        bar.addEventListener("scroll", () => {
+            update()
+            if (this.openPopup && bar.contains(this.popupAnchor)) this.closePopup()
+        })
+        bar.addEventListener("wheel", (e) => {
+            if (bar.scrollWidth <= bar.clientWidth || e.deltaX) return
+            e.preventDefault()
+            bar.scrollLeft += e.deltaY
+        }, { passive: false })
+        new ResizeObserver(update).observe(bar)
+        return h("div", { className: "sg-barwrap" }, bar, left, right)
     }
 
     popup(anchor, el) {
