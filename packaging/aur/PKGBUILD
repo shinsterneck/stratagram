@@ -23,7 +23,7 @@ optdepends=('xdg-desktop-portal: the desktop'"'"'s own open and save dialogs')
 # which the Rust linker cannot read.
 options=('!lto')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/shinsterneck/stratagram/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('c79fc227b855a8430b01b188587d59924cd6b585c35fea622d8eaf16d54a1dba')
 
 prepare() {
   cd "$pkgname-$pkgver"
