@@ -92,6 +92,11 @@
   </keywords>
 
   <releases>
+    <release version="1.2.1" date="2026-11-21">
+      <description>
+        <p>A selected line's end can be pulled off a joint, where other lines meet, or dropped onto one.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-11-21">
       <description>
         <p>Colors for ports and connection points. In the NetBox plugin, a dialog to choose what to bring in from NetBox, into the current sheet or a new one. Dragging the end of a selected line moves just that end.</p>
